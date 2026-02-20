@@ -1,0 +1,14 @@
+{
+  "name": "trendy-map",
+  "version": "1.0.0",
+  "description": "유행 상품 매장 지도 서비스",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "axios": "^1.6.2",
+    "cors": "^2.8.5"
+  }
+}
