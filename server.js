@@ -164,7 +164,7 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
   console.log(`\n🗺️  트렌디맵 서버 시작!`);
   console.log(`👉 브라우저에서 열기: http://localhost:${PORT}\n`);
