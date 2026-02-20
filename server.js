@@ -13,7 +13,7 @@ app.use(cors());
 app.use(express.json());
 
 // ✅ 카카오 REST API 키
-const KAKAO_REST_KEY = '58dd1509d39bb0a2685cfcf70d87e9c9'; // ← 입력
+const KAKAO_REST_KEY = process.env.KAKAO_REST_KEY || ''; // ← 입력
 
 // =====================================================
 // 카카오 로컬 키워드 검색
