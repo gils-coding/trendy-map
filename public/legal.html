@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>이용약관 및 개인정보처리방침 — 트렌디맵</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f7f7f5; --surface: #ffffff; --card: #f2f2f0;
+      --accent: #ff6b35; --accent2: #ff9500;
+      --text: #1a1a1a; --muted: #888888; --border: #e0e0e0;
+    }
+
+    body {
+      font-family: 'Noto Sans KR', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+    }
+
+    /* 헤더 */
+    header {
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 20px;
+      background: var(--surface);
+      border-bottom: 1.5px solid var(--border);
+      position: sticky; top: 0; z-index: 100;
+    }
+    .logo {
+      font-family: 'Black Han Sans', sans-serif;
+      font-size: 20px; color: var(--accent); text-decoration: none;
+    }
+    .logo span { color: var(--accent2); }
+    .header-sub { font-size: 12px; color: var(--muted); margin-left: 4px; }
+
+    /* 컨텐츠 */
+    .container {
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 40px 20px 80px;
+    }
+
+    /* 탭 네비게이션 */
+    .tab-nav {
+      display: flex; gap: 8px;
+      margin-bottom: 32px;
+      border-bottom: 1.5px solid var(--border);
+      padding-bottom: 0;
+    }
+    .tab-btn {
+      padding: 10px 20px;
+      font-family: inherit; font-size: 14px; font-weight: 700;
+      background: none; border: none; cursor: pointer;
+      color: var(--muted);
+      border-bottom: 2.5px solid transparent;
+      margin-bottom: -1.5px;
+      transition: all 0.2s;
+    }
+    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    /* 섹션 */
+    .section { display: none; }
+    .section.active { display: block; }
+
+    .doc-title {
+      font-family: 'Black Han Sans', sans-serif;
+      font-size: 24px; color: var(--text);
+      margin-bottom: 6px;
+    }
+    .doc-date {
+      font-size: 12px; color: var(--muted);
+      margin-bottom: 32px;
+      padding-bottom: 20px;
+      border-bottom: 1.5px solid var(--border);
+    }
+
+    .article {
+      margin-bottom: 32px;
+    }
+    .article-title {
+      font-size: 15px; font-weight: 700;
+      color: var(--text);
+      margin-bottom: 10px;
+      padding: 8px 14px;
+      background: var(--card);
+      border-left: 3px solid var(--accent);
+      border-radius: 0 6px 6px 0;
+    }
+    .article-body {
+      font-size: 13.5px; color: #333;
+      padding: 0 4px;
+    }
+    .article-body p { margin-bottom: 8px; }
+    .article-body ul { padding-left: 18px; }
+    .article-body ul li { margin-bottom: 6px; }
+    .article-body strong { color: var(--accent); }
+    .article-body .highlight {
+      background: #fff8f5;
+      border: 1px solid #ffd4c2;
+      border-radius: 6px;
+      padding: 10px 14px;
+      margin-top: 8px;
+      font-size: 13px;
+      color: #c0391b;
+    }
+
+    /* 하단 */
+    footer {
+      text-align: center;
+      padding: 24px;
+      font-size: 11px;
+      color: var(--muted);
+      border-top: 1.5px solid var(--border);
+      margin-top: 40px;
+    }
+    .back-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 10px 20px;
+      background: var(--accent); color: #fff;
+      border-radius: 20px; text-decoration: none;
+      font-size: 13px; font-weight: 700;
+      margin-bottom: 20px;
+      transition: opacity 0.2s;
+    }
+    .back-btn:hover { opacity: 0.85; }
+
+    @media (max-width: 600px) {
+      .container { padding: 24px 16px 60px; }
+      .doc-title { font-size: 20px; }
+      .tab-btn { padding: 8px 14px; font-size: 13px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <a href="/" class="logo">트렌디<span>맵</span></a>
+  <span class="header-sub">/ 법적 고지</span>
+</header>
+
+<div class="container">
+  <a href="/" class="back-btn">← 트렌디맵으로 돌아가기</a>
+
+  <div class="tab-nav">
+    <button class="tab-btn active" onclick="switchTab('terms', this)">서비스 이용약관</button>
+    <button class="tab-btn" onclick="switchTab('privacy', this)">개인정보처리방침</button>
+  </div>
+
+  <!-- ========== 서비스 이용약관 ========== -->
+  <div class="section active" id="terms">
+    <div class="doc-title">서비스 이용약관</div>
+    <div class="doc-date">시행일: 2025년 2월 1일</div>
+
+    <div class="article">
+      <div class="article-title">제 1 조 (목적)</div>
+      <div class="article-body">
+        <p>본 약관은 트렌디맵(이하 "서비스")이 제공하는 유행 매장 지도 서비스의 이용 조건 및 절차, 이용자와 서비스 운영자의 권리, 의무 및 책임 사항을 규정함을 목적으로 합니다.</p>
+      </div>
+    </div>
+
+    <div class="article">
+      <div class="article-title">제 2 조 (서비스의 내용 및 변경)</div>
+      <div class="article-body">
+        <ul>
+          <li>트렌디맵은 이용자에게 현재 유행 중인 음식·카페 매장의 위치 정보를 지도 기반으로 제공합니다.</li>
+          <li>매장 정보는 카카오 로컬 API를 통해 수집된 데이터를 기반으로 합니다.</li>
+          <li>서비스 운영자는 기술적 사정이나 운영상 필요에 따라 서비스 내용을 변경할 수 있으며, 중요한 변경이 있을 경우 서비스 내 공지를 통해 안내합니다.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="article">
+      <div class="article-title">제 3 조 (서비스 운영자의 면책 및 책임의 제한)</div>
+      <div class="article-body">
+        <ul>
+          <li>트렌디맵이 제공하는 매장 정보는 카카오 API 기반의 공개 데이터를 사용하며, <strong>실제 매장의 영업 상태, 위치, 메뉴 등과 다를 수 있습니다.</strong></li>
+          <li>서비스 운영자는 정보의 정확성·신뢰성으로 인해 발생하는 이용자의 손해(이동 비용 등)에 대하여 어떠한 법적 책임도 지지 않습니다.</li>
+          <li>이용자는 방문 전 반드시 해당 매장에 직접 확인할 것을 권장합니다.</li>
+        </ul>
+        <div class="highlight">⚠️ 표시된 매장 정보는 참고용이며 실제와 다를 수 있습니다. 방문 전 매장에 직접 확인하세요.</div>
+      </div>
+    </div>
+
+    <div class="article">
+      <div class="article-title">제 4 조 (서비스의 중단)</div>
+      <div class="article-body">
+        <p>서비스 운영자는 서버 점검, 시스템 장애, 천재지변 등의 사유로 서비스 제공을 일시적으로 중단할 수 있으며, 이에 따른 손해에 대해 책임을 지지 않습니다.</p>
+      </div>
+    </div>
+
+    <div class="article">
+      <div class="article-title">제 5 조 (이용자의 의무)</div>
+      <div class="article-body">
+        <ul>
+          <li>이용자는 서비스를 본래의 목적에 맞게 이용하여야 합니다.</li>
+          <li>이용자는 서비스를 통해 얻은 정보를 서비스 운영자의 동의 없이 상업적으로 이용하거나 제3자에게 제공할 수 없습니다.</li>
+          <li>이용자는 서비스의 정상적인 운영을 방해하는 행위를 하여서는 안 됩니다.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="article">
+      <div class="article-title">제 6 조 (광고)</div>
+      <div class="article-body">
+        <p>서비스는 Google AdSense 등 제3자 광고 서비스를 통해 광고를 게재할 수 있습니다. 광고는 서비스 운영 비용 충당을 위해 표시되며, 광고 내용에 대한 책임은 해당 광고주에게 있습니다.</p>
+      </div>
+    </div>
+
+    <div class="article">
+      <div class="article-title">제 7 조 (준거법 및 관할법원)</div>
+      <div class="article-body">
+        <p>본 약관은 대한민국 법령에 따라 해석되며, 서비스 이용과 관련한 분쟁은 대한민국 법원을 관할 법원으로 합니다.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 개인정보처리방침 ========== -->
+  <div class="section" id="privacy">
+    <div class="doc-title">개인정보처리방침</div>
+    <div class="doc-date">시행일: 2025년 2월 1일</div>
+
+    <div class="article">
+      <div class="article-title">제 1 조 (개인정보의 처리 목적)</div>
+      <div class="article-body">
+        <p>트렌디맵은 별도의 회원가입 없이 이용 가능한 서비스로, 이용자의 개인정보를 직접 수집하지 않습니다. 다만, 서비스 운영 및 개선을 위해 아래와 같은 정보가 자동으로 수집될 수 있습니다.</p>
+      </div>
+    </div>
+
+    <div class="article">
+      <div class="article-title">제 2 조 (수집하는 정보 및 수집 방법)</div>
+      <div class="article-body">
+        <ul>
+          <li><strong>자동 수집 정보:</strong> 접속 IP 주소, 브라우저 유형, 방문 시간, 접속 기기 정보 등 서버 로그 데이터</li>
+          <li><strong>위치 정보:</strong> 이용자가 지도를 조작하는 경우 해당 지도 중심 좌표(실제 개인 위치 정보는 수집하지 않음)</li>
+          <li><strong>쿠키 및 광고 식별자:</strong> Google AdSense를 통한 광고 서비스 제공 목적</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="article">
+      <div class="article-title">제 3 조 (쿠키 사용 안내)</div>
+      <div class="article-body">
+        <p>트렌디맵은 Google AdSense 광고 서비스를 이용하며, 이 과정에서 Google이 쿠키를 사용할 수 있습니다.</p>
+        <ul>
+          <li>Google은 쿠키를 사용하여 이용자의 관심사에 맞는 광고를 표시합니다.</li>
+          <li>이용자는 <a href="https://adssettings.google.com" target="_blank" style="color:var(--accent);">Google 광고 설정</a>에서 개인 맞춤 광고를 비활성화할 수 있습니다.</li>
+          <li>브라우저 설정을 통해 쿠키 저장을 거부할 수 있으나, 일부 서비스 이용이 제한될 수 있습니다.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="article">
+      <div class="article-title">제 4 조 (제3자 제공)</div>
+      <div class="article-body">
+        <ul>
+          <li><strong>카카오:</strong> 지도 표시 및 매장 검색을 위해 카카오 API를 사용합니다. 이용자가 지도를 사용하면 카카오의 개인정보처리방침이 적용될 수 있습니다.</li>
+          <li><strong>Google:</strong> Google AdSense 광고 게재를 위해 Google의 광고 서비스를 이용합니다. Google의 개인정보 처리에 대한 자세한 내용은 <a href="https://policies.google.com/privacy" target="_blank" style="color:var(--accent);">Google 개인정보처리방침</a>을 참고하세요.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="article">
+      <div class="article-title">제 5 조 (개인정보의 보유 및 이용 기간)</div>
+      <div class="article-body">
+        <p>트렌디맵은 이용자의 개인정보를 직접 저장하지 않습니다. 서버 로그는 운영상 필요에 따라 최대 30일간 보관 후 자동 삭제됩니다.</p>
+      </div>
+    </div>
+
+    <div class="article">
+      <div class="article-title">제 6 조 (이용자의 권리)</div>
+      <div class="article-body">
+        <p>이용자는 언제든지 아래 방법으로 개인정보 관련 문의를 하실 수 있습니다.</p>
+        <ul>
+          <li>Google 광고 맞춤 설정 거부: <a href="https://adssettings.google.com" target="_blank" style="color:var(--accent);">adssettings.google.com</a></li>
+          <li>기타 개인정보 관련 문의는 서비스 내 이메일로 문의해 주세요.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="article">
+      <div class="article-title">제 7 조 (개인정보처리방침 변경)</div>
+      <div class="article-body">
+        <p>본 방침은 법령 또는 서비스 변경에 따라 업데이트될 수 있습니다. 변경 시 서비스 내 공지를 통해 안내하며, 변경된 방침은 공지 후 7일이 경과한 날부터 효력이 발생합니다.</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  © 2025 트렌디맵. All rights reserved.
+</footer>
+
+<script>
+function switchTab(id, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+}
+</script>
+</body>
+</html>
