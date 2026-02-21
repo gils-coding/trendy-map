@@ -66,8 +66,7 @@
     .store-addr { font-size: 11px; color: var(--muted); margin-bottom: 6px; }
     .store-meta { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; }
     .badge { font-size: 10px; padding: 2px 7px; border-radius: 8px; font-weight: 500; background: var(--tag-bg); color: var(--muted); border: 1px solid var(--border); }
-    .badge.open-badge { background: #e8f8ef; color: var(--open); border-color: #b8e8cc; }
-    .badge.closed-badge { background: #fde8e8; color: var(--closed); border-color: #f8c0c0; }
+
 
     /* 지도 */
     .map-area { flex: 1; position: relative; }
@@ -79,14 +78,11 @@
     /* 상세 패널 */
     .detail-panel { position: absolute; bottom: 20px; right: 20px; width: 300px; background: var(--surface); border: 1.5px solid var(--border); border-radius: 14px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.12); transform: translateY(16px); opacity: 0; pointer-events: none; transition: all 0.25s ease; z-index: 50; max-height: calc(100vh - 160px); overflow-y: auto; }
     .detail-panel.show { transform: translateY(0); opacity: 1; pointer-events: all; }
-    .detail-top { padding: 10px 18px 10px; border-bottom: 1.5px solid var(--border); }
+    .detail-top { padding: 8px 18px 8px; border-bottom: 1.5px solid var(--border); }
     .detail-name { font-family: 'Black Han Sans', sans-serif; font-size: 17px; margin-bottom: 4px; padding-right: 26px; line-height: 1.3; color: var(--text); }
-    .open-status { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; margin-bottom: 6px; }
-    .open-dot { width: 7px; height: 7px; border-radius: 50%; }
-    .open-dot.on { background: var(--open); box-shadow: 0 0 5px var(--open); }
-    .open-dot.off { background: var(--closed); }
-    .open-dot.unk { background: var(--muted); }
-    .info-list { display: flex; flex-direction: column; gap: 9px; }
+
+
+    .info-list { display: flex; flex-direction: column; gap: 5px; }
     .info-row { display: flex; align-items: flex-start; gap: 9px; font-size: 12px; }
     .info-icon { flex-shrink: 0; width: 16px; text-align: center; margin-top: 1px; }
     .info-val { color: var(--text); line-height: 1.6; }
@@ -199,7 +195,6 @@
       <button class="close-btn" onclick="closeDetail()">✕</button>
       <div class="detail-top">
         <div class="detail-name" id="detailName"></div>
-        <div class="open-status" id="detailOpenStatus"></div>
         <div class="info-list">
           <div class="info-row">
             <span class="info-icon">📍</span>
@@ -333,15 +328,11 @@ function renderStoreList(stores) {
   }
 
   document.getElementById('storeList').innerHTML = stores.map((s, i) => {
-    let openBadge = '';
-    if (s.isOpen === true) openBadge = '<span class="badge open-badge">● 영업중</span>';
-    else if (s.isOpen === false) openBadge = '<span class="badge closed-badge">● 영업종료</span>';
     return `
       <div class="store-item" id="store-${i}" onclick="selectStore(${i})">
         <div class="store-name">${s.name}</div>
         <div class="store-addr">📍 ${s.addr}</div>
         <div class="store-meta">
-          ${openBadge}
           ${s.category ? `<span class="badge">${s.category.split('>').pop()}</span>` : ''}
           ${s.phone ? `<span class="badge">📞 ${s.phone}</span>` : ''}
         </div>
@@ -376,15 +367,7 @@ function selectStore(index) {
   const item = document.getElementById(`store-${index}`);
   if (item) { item.classList.add('selected'); item.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
 
-  // 영업 상태
-  const statusEl = document.getElementById('detailOpenStatus');
-  if (store.isOpen === true) {
-    statusEl.innerHTML = '<span class="open-dot on"></span><span style="color:#22a85a">영업중</span>';
-  } else if (store.isOpen === false) {
-    statusEl.innerHTML = '<span class="open-dot off"></span><span style="color:#e03434">영업종료</span>';
-  } else {
-    statusEl.innerHTML = '';
-  }
+
 
   document.getElementById('detailName').textContent = store.name;
   document.getElementById('detailAddr').textContent = store.addr || '주소 정보 없음';
