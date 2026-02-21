@@ -34,7 +34,7 @@
 
     /* 지역 검색바 */
     .region-bar { display: flex; align-items: center; gap: 8px; padding: 8px 16px; background: var(--surface); border-bottom: 1.5px solid var(--border); flex-shrink: 0; flex-wrap: wrap; }
-    .region-search { display: flex; gap: 6px; flex: 1; min-width: 0; }
+    .region-search { display: flex; gap: 6px; flex: 1; min-width: 160px; }
     .region-input { flex: 1; background: var(--card); border: 1.5px solid var(--border); border-radius: 8px; padding: 7px 12px; color: var(--text); font-size: 13px; font-family: inherit; outline: none; }
     .region-input:focus { border-color: var(--accent); }
     .region-input::placeholder { color: var(--muted); }
@@ -108,7 +108,7 @@
       .region-bar { padding: 6px 12px; gap: 6px; }
       .sido-select, .sigungu-select { min-width: 70px; font-size: 11px; padding: 6px 8px; }
       .region-input { font-size: 12px; padding: 6px 10px; }
-      .region-btn { padding: 6px 10px; font-size: 11px; display: inline-flex; align-items: center; flex-shrink: 0; }
+      .region-btn { padding: 6px 10px; font-size: 11px; }
 
       .main { position: relative; flex: 1; overflow: hidden; }
       .map-area { position: absolute; inset: 0; height: 100%; }
@@ -218,12 +218,9 @@
 
   <!-- 사이드바 / 모바일 바텀시트 -->
   <div class="sidebar" id="sidebar">
-    <div class="bottom-handle" onclick="toggleBottomSheet()">
-      <div class="handle-bar"></div>
-    </div>
-    <div class="sidebar-header" onclick="toggleBottomSheet()">
-      <h2 id="sidebar-title">🍪 두바이 쫀득쿠키</h2>
-      <p id="sidebar-count">지도를 움직이면 해당 지역 매장이 표시됩니다</p>
+
+    <div class="sidebar-header">
+      <h2 id="sidebar-title">🍪 두바이 쫀득쿠키</h2><span id="sidebar-count" style="font-size:11px;color:var(--muted);margin-left:6px;">지도를 움직이면 해당 지역 매장이 표시됩니다</span>
     </div>
     <div class="store-list" id="storeList">
       <div class="loading"><div class="spinner"></div>매장 검색 중...</div>
@@ -274,9 +271,6 @@ function initMap() {
   });
   kakao.maps.event.addListener(kakaoMap, 'dragend', () => scheduleSearch());
   kakao.maps.event.addListener(kakaoMap, 'zoom_changed', () => scheduleSearch());
-  kakao.maps.event.addListener(kakaoMap, 'click', () => {
-    if (document.getElementById('detailPanel').classList.contains('show')) closeDetail();
-  });
   loadStores();
 }
 
@@ -417,12 +411,6 @@ function selectStore(index) {
 function closeDetail() {
   document.getElementById('detailPanel').classList.remove('show');
   document.querySelectorAll('.store-item').forEach(el => el.classList.remove('selected'));
-  // 모바일: 바텀시트 원위치 (130px)
-  if (window.innerWidth <= 768) {
-    const sidebar = document.getElementById('sidebar');
-    sidebar.classList.remove('open');
-    sidebar.style.transform = 'translateY(calc(100% - 130px))';
-  }
 }
 
 function toggleBottomSheet() {
