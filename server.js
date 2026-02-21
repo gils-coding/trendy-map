@@ -3,13 +3,17 @@
 // - 카카오 로컬 API → 좌표 기반 매장 검색 + 영업시간
 // =====================================================
 
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 const express = require('express');
 const axios = require('axios');
 const cors = require('cors');
 const path = require('path');
 
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST'],
+}));
 app.use(express.json());
 
 // ✅ 카카오 REST API 키
