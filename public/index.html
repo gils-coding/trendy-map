@@ -79,9 +79,9 @@
     /* 상세 패널 */
     .detail-panel { position: absolute; bottom: 20px; right: 20px; width: 300px; background: var(--surface); border: 1.5px solid var(--border); border-radius: 14px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.12); transform: translateY(16px); opacity: 0; pointer-events: none; transition: all 0.25s ease; z-index: 50; max-height: calc(100vh - 160px); overflow-y: auto; }
     .detail-panel.show { transform: translateY(0); opacity: 1; pointer-events: all; }
-    .detail-top { padding: 18px 18px 14px; border-bottom: 1.5px solid var(--border); }
-    .detail-name { font-family: 'Black Han Sans', sans-serif; font-size: 17px; margin-bottom: 6px; padding-right: 26px; line-height: 1.3; color: var(--text); }
-    .open-status { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; margin-bottom: 12px; }
+    .detail-top { padding: 10px 18px 10px; border-bottom: 1.5px solid var(--border); }
+    .detail-name { font-family: 'Black Han Sans', sans-serif; font-size: 17px; margin-bottom: 4px; padding-right: 26px; line-height: 1.3; color: var(--text); }
+    .open-status { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; margin-bottom: 6px; }
     .open-dot { width: 7px; height: 7px; border-radius: 50%; }
     .open-dot.on { background: var(--open); box-shadow: 0 0 5px var(--open); }
     .open-dot.off { background: var(--closed); }
@@ -102,58 +102,44 @@
 
     /* 모바일 바텀시트 */
     @media (max-width: 768px) {
-      body { overflow: hidden; height: 100dvh; }
+      body { overflow: hidden; }
       .logo { font-size: 17px; }
       header { padding: 8px 12px; gap: 6px; }
+      .region-bar { padding: 6px 12px; gap: 6px; }
+      .sido-select, .sigungu-select { min-width: 70px; font-size: 11px; padding: 6px 8px; }
+      .region-input { font-size: 12px; padding: 6px 10px; }
+      .region-btn { padding: 6px 10px; font-size: 11px; }
 
-      /* 지역 검색바: 두 줄 레이아웃 */
-      .region-bar {
-        padding: 5px 10px; gap: 5px;
-        flex-wrap: wrap;
-        overflow: hidden;
-      }
-      /* 1행: 시/도 + 시/군/구 */
-      .sido-select { min-width: 0; flex: 1; font-size: 11px; padding: 5px 4px; }
-      .sigungu-select { min-width: 0; flex: 1; font-size: 11px; padding: 5px 4px; }
-      /* 2행: 검색창 + 이동버튼 */
-      .region-search { flex: 0 0 100%; display: flex; gap: 5px; }
-      .region-input { flex: 1; min-width: 0; font-size: 12px; padding: 5px 8px; }
-      .region-btn {
-        flex-shrink: 0;
-        padding: 5px 14px;
-        font-size: 12px;
-      }
+      .main { position: relative; flex: 1; overflow: hidden; }
+      .map-area { position: absolute; inset: 0; height: 100%; }
 
-      /* 메인: 지도 고정 높이 + 목록 나머지 */
-      .main { flex-direction: column; flex: 1; overflow: hidden; }
-      .map-area { height: 220px; flex-shrink: 0; position: relative; }
-      #map { width: 100%; height: 100%; }
-
-      /* 사이드바: 나머지 공간 전부 */
+      /* 바텀시트 */
       .sidebar {
-        width: 100%;
-        flex: 1;
-        border-right: none;
+        position: absolute; bottom: 0; left: 0; right: 0; width: 100%;
+        border-right: none; border-radius: 16px 16px 0 0;
         border-top: 1.5px solid var(--border);
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.12);
+        transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+        transform: translateY(calc(100% - 200px));
+        z-index: 200; max-height: 80vh;
         display: flex; flex-direction: column;
-        overflow: hidden;
-        min-height: 0;
       }
+      .sidebar.open { transform: translateY(0); }
 
-      /* 손잡이 숨김 */
-      .bottom-handle { display: none; }
+      /* 손잡이 */
+      .bottom-handle {
+        display: flex; flex-direction: column; align-items: center;
+        padding: 10px 18px 4px; cursor: pointer; flex-shrink: 0;
+      }
+      .handle-bar { width: 36px; height: 4px; background: var(--border); border-radius: 2px; }
+      .sidebar-header { padding: 8px 18px 10px; border-bottom: 1.5px solid var(--border); cursor: pointer; }
+      .store-list { overflow-y: auto; flex: 1; }
 
-      /* 헤더: 카운트 인라인 */
-      .sidebar-header { padding: 7px 14px; cursor: default; display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
-      .sidebar-header h2 { font-size: 14px; }
-      .sidebar-header p { font-size: 11px; color: var(--muted); }
-      .store-list { overflow-y: auto; flex: 1; -webkit-overflow-scrolling: touch; }
-
-      /* 상세 패널 */
+      /* 상세 패널: 바텀시트 위에 */
       .detail-panel {
-        position: fixed; bottom: 0; left: 0; right: 0;
+        position: fixed; bottom: 0; right: 0; left: 0;
         width: 100%; border-radius: 14px 14px 0 0;
-        max-height: 55vh; z-index: 300;
+        max-height: 70vh; z-index: 300;
       }
     }
 
@@ -414,8 +400,15 @@ function selectStore(index) {
   document.getElementById('btnKakao').href =
     store.kakaoUrl || `https://map.kakao.com/link/search/${encodeURIComponent(store.name)}`;
 
-  // 상세 패널 표시
-  document.getElementById('detailPanel').classList.add('show');
+  // 모바일: 바텀시트 닫고 상세 패널 열기
+  if (window.innerWidth <= 768) {
+    document.getElementById('sidebar').classList.remove('open');
+  }
+
+  // 상세 패널 표시 (약간 딜레이로 바텀시트 닫힌 후 표시)
+  setTimeout(() => {
+    document.getElementById('detailPanel').classList.add('show');
+  }, 50);
 }
 
 function closeDetail() {
@@ -424,7 +417,8 @@ function closeDetail() {
 }
 
 function toggleBottomSheet() {
-  // 고정 레이아웃 - 바텀시트 없음
+  if (window.innerWidth > 768) return;
+  document.getElementById('sidebar').classList.toggle('open');
 }
 
 function switchCategory(tabEl) {
