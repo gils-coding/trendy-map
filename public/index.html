@@ -34,7 +34,7 @@
 
     /* 지역 검색바 */
     .region-bar { display: flex; align-items: center; gap: 8px; padding: 8px 16px; background: var(--surface); border-bottom: 1.5px solid var(--border); flex-shrink: 0; flex-wrap: wrap; }
-    .region-search { display: flex; gap: 6px; flex: 1; min-width: 160px; }
+    .region-search { display: flex; gap: 6px; flex: 1; min-width: 0; }
     .region-input { flex: 1; background: var(--card); border: 1.5px solid var(--border); border-radius: 8px; padding: 7px 12px; color: var(--text); font-size: 13px; font-family: inherit; outline: none; }
     .region-input:focus { border-color: var(--accent); }
     .region-input::placeholder { color: var(--muted); }
@@ -108,7 +108,7 @@
       .region-bar { padding: 6px 12px; gap: 6px; }
       .sido-select, .sigungu-select { min-width: 70px; font-size: 11px; padding: 6px 8px; }
       .region-input { font-size: 12px; padding: 6px 10px; }
-      .region-btn { padding: 6px 10px; font-size: 11px; }
+      .region-btn { padding: 6px 10px; font-size: 11px; display: inline-flex; align-items: center; flex-shrink: 0; }
 
       .main { position: relative; flex: 1; overflow: hidden; }
       .map-area { position: absolute; inset: 0; height: 100%; }
@@ -274,6 +274,9 @@ function initMap() {
   });
   kakao.maps.event.addListener(kakaoMap, 'dragend', () => scheduleSearch());
   kakao.maps.event.addListener(kakaoMap, 'zoom_changed', () => scheduleSearch());
+  kakao.maps.event.addListener(kakaoMap, 'click', () => {
+    if (document.getElementById('detailPanel').classList.contains('show')) closeDetail();
+  });
   loadStores();
 }
 
@@ -400,25 +403,31 @@ function selectStore(index) {
   document.getElementById('btnKakao').href =
     store.kakaoUrl || `https://map.kakao.com/link/search/${encodeURIComponent(store.name)}`;
 
-  // 상세 패널 표시
-  document.getElementById('detailPanel').classList.add('show');
+  // 모바일: 바텀시트 닫고 상세 패널 열기
+  if (window.innerWidth <= 768) {
+    document.getElementById('sidebar').classList.remove('open');
+  }
+
+  // 상세 패널 표시 (약간 딜레이로 바텀시트 닫힌 후 표시)
+  setTimeout(() => {
+    document.getElementById('detailPanel').classList.add('show');
+  }, 50);
 }
 
 function closeDetail() {
   document.getElementById('detailPanel').classList.remove('show');
   document.querySelectorAll('.store-item').forEach(el => el.classList.remove('selected'));
+  // 모바일: 바텀시트 원위치 (130px)
+  if (window.innerWidth <= 768) {
+    const sidebar = document.getElementById('sidebar');
+    sidebar.classList.remove('open');
+    sidebar.style.transform = 'translateY(calc(100% - 130px))';
+  }
 }
 
 function toggleBottomSheet() {
   if (window.innerWidth > 768) return;
-  const sidebar = document.getElementById('sidebar');
-  if (sidebar.classList.contains('open')) {
-    sidebar.classList.remove('open');
-    sidebar.style.transform = 'translateY(calc(100% - 130px))';
-  } else {
-    sidebar.style.transform = '';
-    sidebar.classList.add('open');
-  }
+  document.getElementById('sidebar').classList.toggle('open');
 }
 
 function switchCategory(tabEl) {
