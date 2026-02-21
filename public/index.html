@@ -549,10 +549,9 @@
     ══════════════════════════════════════ */
     @media (max-width: 768px) {
       body {
-        overflow: auto;
+        overflow: hidden;
       }
 
-      /* 헤더 로고 작게 */
       .logo {
         font-size: 17px;
       }
@@ -562,7 +561,6 @@
         gap: 6px;
       }
 
-      /* 지역바 두 줄로 */
       .region-bar {
         padding: 6px 12px;
         gap: 6px;
@@ -585,37 +583,69 @@
         font-size: 11px;
       }
 
-      /* 메인을 세로로 전환 */
       .main {
-        flex-direction: column;
-        overflow: auto;
-        height: auto;
+        position: relative;
+        flex: 1;
+        overflow: hidden;
       }
 
-      /* 지도: 상단 고정 높이 */
       .map-area {
-        height: 55vw;
-        min-height: 220px;
-        max-height: 360px;
+        position: absolute;
+        inset: 0;
+        height: 100%;
+      }
+
+      .sidebar {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        width: 100%;
+        border-right: none;
+        background: var(--surface);
+        border-radius: 16px 16px 0 0;
+        border-top: 1.5px solid var(--border);
+        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.12);
+        transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+        transform: translateY(calc(100% - 80px));
+        z-index: 200;
+        max-height: 80vh;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .sidebar.open {
+        transform: translateY(0);
+      }
+
+      .bottom-handle {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 10px 18px 0;
+        cursor: pointer;
         flex-shrink: 0;
       }
 
-      /* 사이드바: 지도 아래에 전체 너비 */
-      .sidebar {
-        width: 100%;
-        border-right: none;
-        border-top: 1.5px solid var(--border);
-        height: auto;
-        max-height: none;
-        overflow: visible;
+      .handle-bar {
+        width: 36px;
+        height: 4px;
+        background: var(--border);
+        border-radius: 2px;
+        margin-bottom: 8px;
+      }
+
+      .sidebar-header {
+        padding: 0 18px 10px;
+        border-bottom: 1.5px solid var(--border);
+        cursor: pointer;
       }
 
       .store-list {
-        overflow-y: visible;
-        max-height: none;
+        overflow-y: auto;
+        flex: 1;
       }
 
-      /* 상세 패널: 하단 고정 */
       .detail-panel {
         position: fixed;
         bottom: 0;
@@ -623,7 +653,8 @@
         left: 0;
         width: 100%;
         border-radius: 14px 14px 0 0;
-        max-height: 60vh;
+        max-height: 70vh;
+        z-index: 300;
       }
     }
 
@@ -636,10 +667,6 @@
       .suggest-btn {
         font-size: 11px;
         padding: 5px 9px;
-      }
-
-      .map-area {
-        height: 50vw;
       }
     }
   </style>
@@ -726,8 +753,11 @@
     </div>
 
     <!-- 모바일: 목록이 아래에 -->
-    <div class="sidebar">
-      <div class="sidebar-header">
+    <div class="sidebar" id="sidebar">
+      <div class="bottom-handle" onclick="toggleBottomSheet()">
+        <div class="handle-bar"></div>
+      </div>
+      <div class="sidebar-header" onclick="toggleBottomSheet()">
         <h2 id="sidebar-title">🍪 두바이 쫀득쿠키</h2>
         <p id="sidebar-count">지도를 움직이면 해당 지역 매장이 표시됩니다</p>
       </div>
@@ -977,6 +1007,11 @@
         kakaoMap.setLevel(7);
         loadStores();
       } catch { alert('지역 검색 중 오류가 발생했습니다.'); }
+    }
+
+    function toggleBottomSheet() {
+      if (window.innerWidth > 768) return;
+      document.getElementById('sidebar').classList.toggle('open');
     }
 
     window.onload = () => {
