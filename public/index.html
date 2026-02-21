@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="ko" style="height: -webkit-fill-available; height: 100dvh;">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -18,7 +18,7 @@
       --tag-bg: #f0f0ee; --open: #22a85a; --closed: #e03434;
     }
 
-    body { font-family: 'Noto Sans KR', sans-serif; background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+    body { font-family: 'Noto Sans KR', sans-serif; background: var(--bg); color: var(--text); height: 100vh; height: 100dvh; overflow: hidden; display: flex; flex-direction: column; }
 
     /* 헤더 */
     header { display: flex; align-items: center; gap: 10px; padding: 10px 16px; background: var(--surface); border-bottom: 1.5px solid var(--border); z-index: 100; flex-shrink: 0; }
@@ -79,9 +79,9 @@
     /* 상세 패널 */
     .detail-panel { position: absolute; bottom: 20px; right: 20px; width: 300px; background: var(--surface); border: 1.5px solid var(--border); border-radius: 14px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.12); transform: translateY(16px); opacity: 0; pointer-events: none; transition: all 0.25s ease; z-index: 50; max-height: calc(100vh - 160px); overflow-y: auto; }
     .detail-panel.show { transform: translateY(0); opacity: 1; pointer-events: all; }
-    .detail-top { padding: 12px 18px 10px; border-bottom: 1.5px solid var(--border); }
-    .detail-name { font-family: 'Black Han Sans', sans-serif; font-size: 17px; margin-bottom: 4px; padding-right: 26px; line-height: 1.3; color: var(--text); }
-    .open-status { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; margin-bottom: 0; min-height: 0; }
+    .detail-top { padding: 18px 18px 14px; border-bottom: 1.5px solid var(--border); }
+    .detail-name { font-family: 'Black Han Sans', sans-serif; font-size: 17px; margin-bottom: 6px; padding-right: 26px; line-height: 1.3; color: var(--text); }
+    .open-status { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; margin-bottom: 12px; }
     .open-dot { width: 7px; height: 7px; border-radius: 50%; }
     .open-dot.on { background: var(--open); box-shadow: 0 0 5px var(--open); }
     .open-dot.off { background: var(--closed); }
@@ -102,7 +102,7 @@
 
     /* 모바일 바텀시트 */
     @media (max-width: 768px) {
-      body { overflow: hidden; }
+      body { overflow: hidden; height: 100vh; height: -webkit-fill-available; height: 100dvh; }
       .logo { font-size: 17px; }
       header { padding: 8px 12px; gap: 6px; }
       .region-bar { padding: 6px 12px; gap: 6px; }
@@ -120,9 +120,8 @@
         border-top: 1.5px solid var(--border);
         box-shadow: 0 -4px 20px rgba(0,0,0,0.12);
         transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
-        height: 55vh;
-        transform: translateY(calc(100% - 130px));
-        z-index: 200;
+        transform: translateY(calc(100% - 200px));
+        z-index: 200; max-height: 80vh;
         display: flex; flex-direction: column;
       }
       .sidebar.open { transform: translateY(0); }
@@ -378,17 +377,11 @@ function selectStore(index) {
   // 영업 상태
   const statusEl = document.getElementById('detailOpenStatus');
   if (store.isOpen === true) {
-    statusEl.style.display = 'inline-flex';
-    statusEl.style.marginBottom = '10px';
     statusEl.innerHTML = '<span class="open-dot on"></span><span style="color:#22a85a">영업중</span>';
   } else if (store.isOpen === false) {
-    statusEl.style.display = 'inline-flex';
-    statusEl.style.marginBottom = '10px';
     statusEl.innerHTML = '<span class="open-dot off"></span><span style="color:#e03434">영업종료</span>';
   } else {
     statusEl.innerHTML = '';
-    statusEl.style.display = 'none';
-    statusEl.style.marginBottom = '0';
   }
 
   document.getElementById('detailName').textContent = store.name;
