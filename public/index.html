@@ -607,7 +607,7 @@
         border-top: 1.5px solid var(--border);
         box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.12);
         transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
-        transform: translateY(calc(100% - 80px));
+        transform: translateY(calc(100% - 200px));
         z-index: 200;
         max-height: 80vh;
         display: flex;
@@ -845,6 +845,9 @@
         window._stores = data.stores;
         renderStoreList(data.stores);
         renderMarkers(data.stores);
+        if (window.innerWidth <= 768) {
+          document.getElementByID('sidebar')?.classList.remove('open')
+        }
       } catch (err) {
         document.getElementById('storeList').innerHTML = `
       <div class="error-msg"><strong>⚠️ 검색 실패</strong>API 키를 확인해주세요.<br>${err.message}</div>`;
