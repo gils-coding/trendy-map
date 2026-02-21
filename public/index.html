@@ -839,11 +839,7 @@
       document.getElementById('sidebar-count').textContent = '검색 중...';
 
       try {
-        const res = await fetch(`https://trendmap.up.railway.app/api/stores?query=${encodeURIComponent(currentQuery)}&lat=${lat}&lng=${lng}&radius=${radius}`, {
-          method: 'GET',
-          cache: 'no-store',
-          headers: { 'Accept': 'application/json' },
-        });
+        const res = await fetch(`https://trendmap.up.railway.app/api/stores?query=${encodeURIComponent(currentQuery)}&lat=${lat}&lng=${lng}&radius=${radius}`);
         const data = await res.json();
         if (data.error) throw new Error(data.error);
         window._stores = data.stores;
@@ -1007,11 +1003,7 @@
 
     async function moveToRegion(regionName) {
       try {
-        const res = await fetch(`https://trendmap.up.railway.app/api/geocode?query=${encodeURIComponent(regionName)}`, {
-          method: 'GET',
-          cache: 'no-store',
-          headers: { 'Accept': 'application/json' },
-        });
+        const res = await fetch(`https://trendmap.up.railway.app/api/geocode?query=${encodeURIComponent(regionName)}`);
         const data = await res.json();
         if (data.error) { alert(`"${regionName}"을 찾을 수 없습니다.`); return; }
         kakaoMap.setCenter(new kakao.maps.LatLng(data.lat, data.lng));
