@@ -120,9 +120,8 @@
         border-top: 1.5px solid var(--border);
         box-shadow: 0 -4px 20px rgba(0,0,0,0.12);
         transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
-        transform: translateY(calc(100% - 130px));
-        z-index: 200;
-        height: 55vh;
+        transform: translateY(calc(100% - 200px));
+        z-index: 200; max-height: 80vh;
         display: flex; flex-direction: column;
       }
       .sidebar.open { transform: translateY(0); }
@@ -401,15 +400,8 @@ function selectStore(index) {
   document.getElementById('btnKakao').href =
     store.kakaoUrl || `https://map.kakao.com/link/search/${encodeURIComponent(store.name)}`;
 
-  // 모바일: 바텀시트 닫고 상세 패널 열기
-  if (window.innerWidth <= 768) {
-    document.getElementById('sidebar').classList.remove('open');
-  }
-
-  // 상세 패널 표시 (약간 딜레이로 바텀시트 닫힌 후 표시)
-  setTimeout(() => {
-    document.getElementById('detailPanel').classList.add('show');
-  }, 50);
+  // 상세 패널 표시
+  document.getElementById('detailPanel').classList.add('show');
 }
 
 function closeDetail() {
@@ -419,7 +411,14 @@ function closeDetail() {
 
 function toggleBottomSheet() {
   if (window.innerWidth > 768) return;
-  document.getElementById('sidebar').classList.toggle('open');
+  const sidebar = document.getElementById('sidebar');
+  if (sidebar.classList.contains('open')) {
+    sidebar.classList.remove('open');
+    sidebar.style.transform = 'translateY(calc(100% - 130px))';
+  } else {
+    sidebar.style.transform = '';
+    sidebar.classList.add('open');
+  }
 }
 
 function switchCategory(tabEl) {
