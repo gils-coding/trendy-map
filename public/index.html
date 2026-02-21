@@ -839,7 +839,7 @@
       document.getElementById('sidebar-count').textContent = '검색 중...';
 
       try {
-        const res = await fetch(`/api/stores?query=${encodeURIComponent(currentQuery)}&lat=${lat}&lng=${lng}&radius=${radius}`, {
+        const res = await fetch(`https://trendmap.up.railway.app/api/stores?query=${encodeURIComponent(currentQuery)}&lat=${lat}&lng=${lng}&radius=${radius}`, {
           method: 'GET',
           cache: 'no-store',
           headers: { 'Accept': 'application/json' },
@@ -1007,7 +1007,7 @@
 
     async function moveToRegion(regionName) {
       try {
-        const res = await fetch(`/api/geocode?query=${encodeURIComponent(regionName)}`, {
+        const res = await fetch(`https://trendmap.up.railway.app/api/geocode?query=${encodeURIComponent(regionName)}`, {
           method: 'GET',
           cache: 'no-store',
           headers: { 'Accept': 'application/json' },
