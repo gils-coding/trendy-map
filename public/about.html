@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>서비스 소개 — 트렌디맵</title>
+  <meta name="description" content="트렌디맵은 두바이 쫀득쿠키, 소금빵, 탕후루 등 SNS에서 유행 중인 맛집을 지도에서 쉽게 찾을 수 있는 서비스입니다.">
+  <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #f7f7f5; --surface: #ffffff; --card: #f2f2f0;
+      --accent: #ff6b35; --accent2: #ff9500;
+      --text: #1a1a1a; --muted: #888888; --border: #e0e0e0;
+    }
+    body { font-family: 'Noto Sans KR', sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; }
+
+    header {
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 20px; background: var(--surface);
+      border-bottom: 1.5px solid var(--border);
+      position: sticky; top: 0; z-index: 100;
+    }
+    .logo { font-family: 'Black Han Sans', sans-serif; font-size: 20px; color: var(--accent); text-decoration: none; }
+    .logo span { color: var(--accent2); }
+
+    .container { max-width: 780px; margin: 0 auto; padding: 40px 20px 80px; }
+
+    .back-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 10px 20px; background: var(--accent); color: #fff;
+      border-radius: 20px; text-decoration: none;
+      font-size: 13px; font-weight: 700; margin-bottom: 36px;
+      transition: opacity 0.2s;
+    }
+    .back-btn:hover { opacity: 0.85; }
+
+    .hero {
+      text-align: center;
+      padding: 40px 20px;
+      background: var(--surface);
+      border-radius: 16px;
+      border: 1.5px solid var(--border);
+      margin-bottom: 40px;
+    }
+    .hero-logo { font-family: 'Black Han Sans', sans-serif; font-size: 36px; color: var(--accent); margin-bottom: 10px; }
+    .hero-logo span { color: var(--accent2); }
+    .hero-desc { font-size: 15px; color: var(--muted); line-height: 1.8; }
+
+    .section { margin-bottom: 40px; }
+    .section-title {
+      font-family: 'Black Han Sans', sans-serif;
+      font-size: 20px; color: var(--text);
+      margin-bottom: 16px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid var(--accent);
+      display: inline-block;
+    }
+
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 14px;
+    }
+    .feature-card {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      padding: 18px 16px;
+    }
+    .feature-icon { font-size: 26px; margin-bottom: 8px; }
+    .feature-title { font-weight: 700; font-size: 14px; margin-bottom: 4px; }
+    .feature-desc { font-size: 12px; color: var(--muted); line-height: 1.6; }
+
+    .category-list {
+      display: flex; flex-wrap: wrap; gap: 10px;
+      margin-top: 10px;
+    }
+    .category-tag {
+      padding: 8px 16px;
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 20px;
+      font-size: 13px; font-weight: 500;
+    }
+
+    .faq-list { display: flex; flex-direction: column; gap: 12px; }
+    .faq-item {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .faq-q {
+      padding: 14px 18px;
+      font-weight: 700; font-size: 14px;
+      cursor: pointer;
+      display: flex; justify-content: space-between; align-items: center;
+      user-select: none;
+    }
+    .faq-q::after { content: '▾'; color: var(--accent); font-size: 16px; transition: transform 0.2s; }
+    .faq-item.open .faq-q::after { transform: rotate(180deg); }
+    .faq-a {
+      padding: 0 18px;
+      max-height: 0; overflow: hidden;
+      transition: max-height 0.3s ease, padding 0.3s;
+      font-size: 13.5px; color: #444; line-height: 1.7;
+    }
+    .faq-item.open .faq-a { max-height: 200px; padding: 0 18px 14px; }
+
+    .how-to { counter-reset: step; display: flex; flex-direction: column; gap: 12px; }
+    .how-item {
+      display: flex; gap: 14px; align-items: flex-start;
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 18px;
+    }
+    .how-num {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: var(--accent); color: #fff;
+      font-size: 13px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; margin-top: 2px;
+    }
+    .how-text { font-size: 14px; line-height: 1.6; }
+    .how-text strong { color: var(--accent); }
+
+    footer {
+      text-align: center; padding: 24px;
+      font-size: 11px; color: var(--muted);
+      border-top: 1.5px solid var(--border);
+      margin-top: 40px;
+    }
+
+    @media (max-width: 600px) {
+      .container { padding: 24px 16px 60px; }
+      .hero-logo { font-size: 28px; }
+      .feature-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <a href="/" class="logo">트렌디<span>맵</span></a>
+</header>
+
+<div class="container">
+  <a href="/" class="back-btn">← 지도로 돌아가기</a>
+
+  <div class="hero">
+    <div class="hero-logo">트렌디<span>맵</span></div>
+    <p class="hero-desc">
+      SNS에서 요즘 뜨는 음식 매장을 지도로 한눈에!<br>
+      두바이 쫀득쿠키, 소금빵, 탕후루, 크로플, 마라탕…<br>
+      유행 맛집을 빠르게 찾아보세요.
+    </p>
+  </div>
+
+  <!-- 주요 기능 -->
+  <div class="section">
+    <div class="section-title">주요 기능</div>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="feature-icon">🗺️</div>
+        <div class="feature-title">실시간 지도 검색</div>
+        <div class="feature-desc">지도를 움직이면 해당 지역의 유행 맛집이 자동으로 표시됩니다.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📍</div>
+        <div class="feature-title">지역별 검색</div>
+        <div class="feature-desc">시/도, 시/군/구 선택 또는 직접 검색으로 원하는 지역을 찾아보세요.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📞</div>
+        <div class="feature-title">매장 정보 제공</div>
+        <div class="feature-desc">매장 주소, 전화번호, 카카오맵·네이버지도 바로가기를 제공합니다.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📱</div>
+        <div class="feature-title">모바일 최적화</div>
+        <div class="feature-desc">PC와 모바일 모두 편리하게 이용할 수 있습니다.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 검색 카테고리 -->
+  <div class="section">
+    <div class="section-title">검색 카테고리</div>
+    <p style="font-size:14px; color:var(--muted); margin-bottom:12px;">현재 아래 유행 음식 카테고리를 지원합니다. 새로운 트렌드가 생기면 계속 추가됩니다.</p>
+    <div class="category-list">
+      <div class="category-tag">🍪 두바이 쫀득쿠키</div>
+      <div class="category-tag">🥐 소금빵</div>
+      <div class="category-tag">🍡 탕후루</div>
+      <div class="category-tag">🧇 크로플</div>
+      <div class="category-tag">🌶️ 마라탕</div>
+    </div>
+  </div>
+
+  <!-- 이용 방법 -->
+  <div class="section">
+    <div class="section-title">이용 방법</div>
+    <div class="how-to">
+      <div class="how-item">
+        <div class="how-num">1</div>
+        <div class="how-text">상단 탭에서 <strong>찾고 싶은 음식 카테고리</strong>를 선택하세요.</div>
+      </div>
+      <div class="how-item">
+        <div class="how-num">2</div>
+        <div class="how-text">지도를 <strong>드래그하거나 지역을 검색</strong>해서 원하는 동네로 이동하세요.</div>
+      </div>
+      <div class="how-item">
+        <div class="how-num">3</div>
+        <div class="how-text">지도의 <strong>매장 아이콘</strong>을 클릭하면 상세 정보와 지도 앱 바로가기가 나타납니다.</div>
+      </div>
+      <div class="how-item">
+        <div class="how-num">4</div>
+        <div class="how-text"><strong>카카오맵 또는 네이버지도</strong> 버튼으로 바로 길 안내를 시작하세요.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FAQ -->
+  <div class="section">
+    <div class="section-title">자주 묻는 질문</div>
+    <div class="faq-list">
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">트렌디맵은 무료인가요?</div>
+        <div class="faq-a">네, 트렌디맵은 누구나 무료로 이용할 수 있습니다. 별도의 회원가입도 필요 없습니다.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">매장 정보가 실제와 다를 수 있나요?</div>
+        <div class="faq-a">매장 정보는 카카오 로컬 API 기반으로 제공되며, 실제 영업 여부나 메뉴는 변경될 수 있습니다. 방문 전 해당 매장에 직접 확인하시기 바랍니다.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">새로운 유행 음식은 어떻게 추가 요청하나요?</div>
+        <div class="faq-a">상단의 '✨ 상품 제안' 버튼을 통해 추가를 원하는 음식 카테고리를 제안해 주세요. 검토 후 반영하겠습니다.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">내 주변 매장을 찾으려면 어떻게 하나요?</div>
+        <div class="faq-a">지역 검색창에 동네 이름(예: 강남구, 홍대)을 입력하고 이동 버튼을 누르면 해당 지역의 매장을 확인할 수 있습니다. 또는 시/도, 시/군/구 드롭다운으로 선택하셔도 됩니다.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">PC와 모바일 모두 사용할 수 있나요?</div>
+        <div class="faq-a">네, 트렌디맵은 PC, 태블릿, 스마트폰 모두에서 최적화된 화면으로 이용하실 수 있습니다.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  <a href="/legal.html" style="color: var(--muted); text-decoration: none;">이용약관 · 개인정보처리방침</a><br><br>
+  © 2025 트렌디맵. All rights reserved.
+</footer>
+
+<script>
+function toggleFaq(el) {
+  el.parentElement.classList.toggle('open');
+}
+</script>
+</body>
+</html>
