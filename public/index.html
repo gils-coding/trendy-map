@@ -737,11 +737,12 @@
         </div>
       </div>
       <div id="coupangBanner"
-        style="display:none; padding: 10px 14px; border-top: 1px solid var(--border); flex-shrink: 0; background: var(--surface);">
-        <div style="font-size: 11px; color: var(--muted); margin-bottom: 8px; font-weight: 500;">🛒 쿠팡에서 구매하기</div>
+        style="display:none; padding: 8px 14px; border-top: 1px solid var(--border); flex-shrink: 0; background: var(--surface);">
+        <div style="font-size: 11px; color: var(--muted); margin-bottom: 6px; font-weight: 500;">🛒 쿠팡에서 구매하기</div>
         <div id="coupangItems"
-          style="display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding-bottom: 4px;"></div>
-        <div style="font-size: 10px; color: var(--muted); margin-top: 6px; line-height: 1.4;">이 포스팅은 쿠팡 파트너스 활동의 일환으로,
+          style="display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; padding-bottom: 4px;">
+        </div>
+        <div style="font-size: 10px; color: var(--muted); margin-top: 5px; line-height: 1.4;">이 포스팅은 쿠팡 파트너스 활동의 일환으로,
           이에 따른 일정액의 수수료를 제공받습니다.</div>
       </div>
       <div style="text-align:center; padding: 10px; border-top: 1px solid var(--border); flex-shrink: 0;">
@@ -971,7 +972,7 @@
       const links = COUPANG_ITEMS[query];
       if (links) {
         items.innerHTML = links.map(src =>
-          `<div style="flex-shrink:0"><iframe src="${src}" width="120" height="240" frameborder="0" scrolling="no" referrerpolicy="unsafe-url" browsingtopics></iframe></div>`
+          `<div style="flex-shrink:0; transform: scale(0.72); transform-origin: top left; width: 87px; height: 173px; overflow: hidden;"><iframe src="${src}" width="120" height="240" frameborder="0" scrolling="no" referrerpolicy="unsafe-url" browsingtopics></iframe></div>`
         ).join('');
         banner.style.display = 'block';
       } else {
