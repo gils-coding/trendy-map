@@ -738,10 +738,7 @@
       </div>
       <div id="coupangBanner"
         style="display:none; padding: 8px 14px; border-top: 1px solid var(--border); flex-shrink: 0; background: var(--surface);">
-        <div style="font-size: 11px; color: var(--muted); margin-bottom: 6px; font-weight: 500;">🛒 쿠팡에서 구매하기</div>
-        <div id="coupangItems"
-          style="display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; padding-bottom: 4px;">
-        </div>
+        <div id="coupangItems"></div>
         <div style="font-size: 10px; color: var(--muted); margin-top: 5px; line-height: 1.4;">이 포스팅은 쿠팡 파트너스 활동의 일환으로,
           이에 따른 일정액의 수수료를 제공받습니다.</div>
       </div>
@@ -950,34 +947,25 @@
       // 고정 레이아웃 - 바텀시트 없음
     }
 
-    const COUPANG_ITEMS = {
-      '두바이 쫀득쿠키': [
-        'https://coupa.ng/clHbkk', 'https://coupa.ng/clHblG',
-        'https://coupa.ng/clHbmg', 'https://coupa.ng/clHbm9'
-      ],
-      '소금빵': [
-        'https://coupa.ng/clHbDu', 'https://coupa.ng/clHbD1',
-        'https://coupa.ng/clHbEE', 'https://coupa.ng/clHbFr'
-      ],
-      '탕후루': [
-        'https://coupa.ng/clHbHP', 'https://coupa.ng/clHbJa',
-        'https://coupa.ng/clHbJ3', 'https://coupa.ng/clHbKI'
-      ],
-    };
+    let coupangScriptLoaded = false;
 
     function updateCoupangBanner(query) {
+      // 모든 탭에서 동일한 배너 표시
       const banner = document.getElementById('coupangBanner');
-      const items = document.getElementById('coupangItems');
-      if (!banner || !items) return;
-      const links = COUPANG_ITEMS[query];
-      if (links) {
-        items.innerHTML = links.map(src =>
-          `<div style="flex-shrink:0; transform: scale(0.72); transform-origin: top left; width: 87px; height: 173px; overflow: hidden;"><iframe src="${src}" width="120" height="240" frameborder="0" scrolling="no" referrerpolicy="unsafe-url" browsingtopics></iframe></div>`
-        ).join('');
-        banner.style.display = 'block';
-      } else {
-        banner.style.display = 'none';
-      }
+      if (banner) banner.style.display = 'block';
+    }
+
+    function renderCoupang() {
+      const bannerEl = document.getElementById('coupangBanner');
+      const w = bannerEl ? bannerEl.offsetWidth - 28 : 680;
+      new PartnersCoupang.G({
+        "id": 967240,
+        "template": "carousel",
+        "trackingCode": "AF6001579",
+        "width": String(Math.min(w, 680)),
+        "height": "100",
+        "tsource": ""
+      });
     }
 
     function switchCategory(tabEl) {
@@ -1024,8 +1012,12 @@
     }
 
     window.onload = () => {
-      // 초기 쿠팡 배너 표시
-      updateCoupangBanner('두바이 쫀득쿠키');
+      // 쿠팡 배너 초기 로드
+      const cpScript = document.createElement('script');
+      cpScript.src = 'https://ads-partners.coupang.com/g.js';
+      cpScript.onload = () => renderCoupang();
+      document.head.appendChild(cpScript);
+      document.getElementById('coupangBanner').style.display = 'block';
 
       if (typeof kakao !== 'undefined' && kakao.maps) {
         initMap();
