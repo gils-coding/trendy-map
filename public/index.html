@@ -737,10 +737,10 @@
         </div>
       </div>
       <div id="coupangBanner"
-        style="display:none; padding: 8px 14px; border-top: 1px solid var(--border); flex-shrink: 0; background: var(--surface);">
-        <div id="coupangItems"></div>
-        <div style="font-size: 10px; color: var(--muted); margin-top: 5px; line-height: 1.4;">이 포스팅은 쿠팡 파트너스 활동의 일환으로,
-          이에 따른 일정액의 수수료를 제공받습니다.</div>
+        style="display:none; border-top: 1px solid var(--border); flex-shrink: 0; background: var(--surface); overflow: hidden;">
+        <div id="coupangItems" style="width: 100%;"></div>
+        <div style="font-size: 10px; color: var(--muted); padding: 4px 14px 6px; line-height: 1.4;">이 포스팅은 쿠팡 파트너스 활동의
+          일환으로, 이에 따른 일정액의 수수료를 제공받습니다.</div>
       </div>
       <div style="text-align:center; padding: 10px; border-top: 1px solid var(--border); flex-shrink: 0;">
         <a href="/legal.html"
@@ -957,12 +957,16 @@
 
     function renderCoupang() {
       const bannerEl = document.getElementById('coupangBanner');
-      const w = bannerEl ? bannerEl.offsetWidth - 28 : 680;
+      const sidebarEl = document.getElementById('sidebar');
+      // 실제 사이드바 너비 기준으로 계산 (padding 28px 제외)
+      const availableW = sidebarEl ? sidebarEl.offsetWidth - 28 : 300;
+      const w = Math.max(50, Math.min(availableW, 680));
+      document.getElementById('coupangItems').innerHTML = '';
       new PartnersCoupang.G({
         "id": 967241,
         "template": "carousel",
         "trackingCode": "AF6001579",
-        "width": String(Math.min(w, 680)),
+        "width": String(w),
         "height": "60",
         "tsource": ""
       });
