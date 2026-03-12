@@ -560,16 +560,16 @@
         font-size: 12px;
       }
 
-      /* 메인: 지도가 전체 화면 채움 */
+      /* 메인: 지도 고정 + 목록 나머지 */
       .main {
         flex-direction: column;
         flex: 1;
         overflow: hidden;
-        position: relative;
       }
 
       .map-area {
-        flex: 1;
+        height: 290px;
+        flex-shrink: 0;
         position: relative;
       }
 
@@ -578,18 +578,46 @@
         height: 100%;
       }
 
-      /* 사이드바: 숨기고 바텀시트로 대체 */
+      /* 사이드바: 나머지 공간 전부 */
       .sidebar {
-        display: none !important;
+        width: 100%;
+        flex: 1;
+        border-right: none;
+        border-top: 1.5px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        min-height: 0;
       }
 
-      /* FAB + 바텀시트 활성화 */
-      .mobile-fab {
-        display: flex !important;
+      /* 손잡이 숨김 */
+      .bottom-handle {
+        display: none;
       }
 
-      .mobile-sheet {
-        display: flex !important;
+      /* 헤더: 카운트 인라인 */
+      .sidebar-header {
+        padding: 7px 14px;
+        cursor: default;
+        display: flex;
+        align-items: baseline;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+
+      .sidebar-header h2 {
+        font-size: 14px;
+      }
+
+      .sidebar-header p {
+        font-size: 11px;
+        color: var(--muted);
+      }
+
+      .store-list {
+        overflow-y: auto;
+        flex: 1;
+        -webkit-overflow-scrolling: touch;
       }
 
       /* 상세 패널 */
@@ -616,89 +644,6 @@
         padding: 5px 9px;
       }
     }
-
-    /* ==================
-       MOBILE FAB + SHEET
-    ================== */
-    .mobile-fab {
-      display: none;
-      position: fixed;
-      bottom: 24px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: var(--accent);
-      color: #fff;
-      border: none;
-      border-radius: 24px;
-      padding: 11px 22px;
-      font-size: 13px;
-      font-weight: 700;
-      font-family: inherit;
-      cursor: pointer;
-      z-index: 100;
-      align-items: center;
-      gap: 7px;
-      box-shadow: 0 4px 20px rgba(255, 107, 53, 0.45);
-      white-space: nowrap;
-      transition: background 0.15s;
-    }
-
-    .mobile-fab:hover {
-      background: var(--accent2);
-    }
-
-    .mobile-sheet {
-      display: none;
-      position: fixed;
-      bottom: -100%;
-      left: 0;
-      right: 0;
-      height: 62%;
-      background: var(--surface);
-      border-top: 3px solid var(--accent);
-      border-radius: 16px 16px 0 0;
-      z-index: 90;
-      flex-direction: column;
-      transition: bottom 0.32s cubic-bezier(.4, 0, .2, 1);
-      box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.18);
-    }
-
-    .mobile-sheet.show {
-      bottom: 0;
-    }
-
-    .sheet-drag {
-      width: 40px;
-      height: 4px;
-      background: var(--border);
-      border-radius: 2px;
-      margin: 10px auto 6px;
-      cursor: pointer;
-      flex-shrink: 0;
-    }
-
-    .sheet-header {
-      padding: 4px 16px 10px;
-      border-bottom: 1.5px solid var(--border);
-      flex-shrink: 0;
-    }
-
-    .sheet-header h2 {
-      font-size: 14px;
-      font-family: 'Black Han Sans', sans-serif;
-    }
-
-    .sheet-header p {
-      font-size: 11px;
-      color: var(--muted);
-      margin-top: 2px;
-    }
-
-    .sheet-body {
-      flex: 1;
-      overflow-y: auto;
-      -webkit-overflow-scrolling: touch;
-    }
   </style>
 </head>
 
@@ -712,6 +657,7 @@
       <div class="tab" data-query="탕후루" data-emoji="🍡" onclick="switchCategory(this)">🍡 탕후루</div>
       <div class="tab" data-query="크로플" data-emoji="🧇" onclick="switchCategory(this)">🧇 크로플</div>
       <div class="tab" data-query="마라탕" data-emoji="🌶️" onclick="switchCategory(this)">🌶️ 마라탕</div>
+      <div class="tab" data-query="버터떡" data-emoji="🍡" onclick="switchCategory(this)">🍡 버터떡</div>
     </div>
     <a href="https://forms.gle/ecy5DprNYSAgPesc7" target="_blank" class="suggest-btn">✨ 상품 제안</a>
   </header>
@@ -805,25 +751,10 @@
     </div>
   </div>
 
-
-  <!-- ========== MOBILE FAB + BOTTOM SHEET ========== -->
-  <button class="mobile-fab" id="mobileFab" onclick="toggleSheet()">
-    📋 <span id="fabLabel">목록 보기</span>
-  </button>
-
-  <div class="mobile-sheet" id="mobileSheet">
-    <div class="sheet-drag" onclick="toggleSheet()"></div>
-    <div class="sheet-header">
-      <h2 id="sheetTitle">🍪 두바이 쫀득쿠키</h2>
-      <p id="sheetCount">지도를 움직이면 매장이 표시됩니다</p>
-    </div>
-    <div class="sheet-body" id="mobileList"></div>
-  </div>
-
   <!-- 구글 크롤러용 정적 콘텐츠 (SEO) -->
   <div style="position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;overflow:hidden;" aria-hidden="true">
     <h1>트렌디맵 - 유행 맛집 지도</h1>
-    <p>트렌디맵은 두바이 쫀득쿠키, 소금빵, 탕후루, 크로플, 마라탕 등 현재 유행 중인 음식 매장을 지도에서 쉽게 찾을 수 있는 서비스입니다.</p>
+    <p>트렌디맵은 두바이 쫀득쿠키, 소금빵, 탕후루, 크로플, 마라탕, 버터떡 등 현재 유행 중인 음식 매장을 지도에서 쉽게 찾을 수 있는 서비스입니다.</p>
     <h2>트렌디맵 주요 기능</h2>
     <ul>
       <li>두바이 쫀득쿠키 매장 지도 검색</li>
@@ -831,6 +762,7 @@
       <li>탕후루 판매점 지도</li>
       <li>크로플 카페 찾기</li>
       <li>마라탕 식당 검색</li>
+      <li>버터떡 판매점 지도</li>
       <li>시/도, 시/군/구별 지역 검색</li>
       <li>카카오맵, 네이버지도 바로가기</li>
     </ul>
@@ -840,7 +772,7 @@
     <h3>매장 정보는 얼마나 정확한가요?</h3>
     <p>매장 정보는 카카오 로컬 API 기반으로 제공되며, 실제 영업 여부는 방문 전 매장에 직접 확인하시기 바랍니다.</p>
     <h3>어떤 음식을 검색할 수 있나요?</h3>
-    <p>두바이 쫀득쿠키, 소금빵, 탕후루, 크로플, 마라탕 등 현재 SNS에서 유행 중인 음식 카테고리를 제공합니다.</p>
+    <p>두바이 쫀득쿠키, 소금빵, 탕후루, 크로플, 마라탕, 버터떡 등 현재 SNS에서 유행 중인 음식 카테고리를 제공합니다.</p>
     <h3>내 주변 매장을 찾을 수 있나요?</h3>
     <p>지도를 원하는 지역으로 이동하거나 지역 검색창에 동네 이름을 입력하면 해당 지역의 매장을 확인할 수 있습니다.</p>
     <h3>새로운 유행 음식은 추가되나요?</h3>
@@ -874,6 +806,7 @@
       '탕후루': '#FFE8E8',
       '크로플': '#FEFFDE',
       '마라탕': '#FFE8E8',
+      '버터떡': '#FFF3CD',
     };
 
     let kakaoMap = null;
@@ -946,14 +879,7 @@
         return;
       }
 
-      // 모바일 시트 헤더 동기화
-      const sheetTitle = document.getElementById('sheetTitle');
-      const sheetCount = document.getElementById('sheetCount');
-      if (sheetTitle) sheetTitle.textContent = `${currentEmoji} ${currentQuery}`;
-      if (sheetCount) sheetCount.innerHTML = stores.length > 0
-        ? `검색 결과 <strong>${stores.length}곳</strong>` : '이 지역에 매장이 없습니다';
-
-      const listHTML = stores.map((s, i) => {
+      document.getElementById('storeList').innerHTML = stores.map((s, i) => {
         return `
       <div class="store-item" id="store-${i}" onclick="selectStore(${i})">
         <div class="store-name">${s.name}</div>
@@ -964,9 +890,6 @@
         </div>
       </div>`;
       }).join('');
-      document.getElementById('storeList').innerHTML = listHTML;
-      const mobileList = document.getElementById('mobileList');
-      if (mobileList) mobileList.innerHTML = listHTML;
     }
 
     function clearMarkers() {
@@ -1024,16 +947,9 @@
     }
 
     function toggleBottomSheet() {
-      toggleSheet();
+      // 고정 레이아웃 - 바텀시트 없음
     }
 
-    function toggleSheet() {
-      sheetOpen = !sheetOpen;
-      document.getElementById('mobileSheet').classList.toggle('show', sheetOpen);
-      document.getElementById('fabLabel').textContent = sheetOpen ? '닫기' : '목록 보기';
-    }
-
-    let sheetOpen = false;
     let coupangScriptLoaded = false;
 
     function updateCoupangBanner(query) {
