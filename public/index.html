@@ -560,16 +560,16 @@
         font-size: 12px;
       }
 
-      /* 메인: 지도 고정 + 목록 나머지 */
+      /* 메인: 지도 전체 화면 */
       .main {
         flex-direction: column;
         flex: 1;
         overflow: hidden;
+        position: relative;
       }
 
       .map-area {
-        height: 290px;
-        flex-shrink: 0;
+        flex: 1;
         position: relative;
       }
 
@@ -578,46 +578,17 @@
         height: 100%;
       }
 
-      /* 사이드바: 나머지 공간 전부 */
+      /* 사이드바: 숨김 → 바텀시트로 대체 */
       .sidebar {
-        width: 100%;
-        flex: 1;
-        border-right: none;
-        border-top: 1.5px solid var(--border);
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-        min-height: 0;
+        display: none !important;
       }
 
-      /* 손잡이 숨김 */
-      .bottom-handle {
-        display: none;
+      .mobile-fab {
+        display: flex !important;
       }
 
-      /* 헤더: 카운트 인라인 */
-      .sidebar-header {
-        padding: 7px 14px;
-        cursor: default;
-        display: flex;
-        align-items: baseline;
-        gap: 6px;
-        flex-wrap: wrap;
-      }
-
-      .sidebar-header h2 {
-        font-size: 14px;
-      }
-
-      .sidebar-header p {
-        font-size: 11px;
-        color: var(--muted);
-      }
-
-      .store-list {
-        overflow-y: auto;
-        flex: 1;
-        -webkit-overflow-scrolling: touch;
+      .mobile-sheet {
+        display: flex !important;
       }
 
       /* 상세 패널 */
@@ -644,6 +615,86 @@
         padding: 5px 9px;
       }
     }
+
+    /* ── MOBILE FAB + BOTTOM SHEET ── */
+    .mobile-fab {
+      display: none;
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 24px;
+      padding: 11px 22px;
+      font-size: 13px;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      z-index: 100;
+      align-items: center;
+      gap: 7px;
+      box-shadow: 0 4px 20px rgba(255, 107, 53, 0.45);
+      white-space: nowrap;
+    }
+
+    .mobile-fab:hover {
+      background: var(--accent2);
+    }
+
+    .mobile-sheet {
+      display: none;
+      position: fixed;
+      bottom: -100%;
+      left: 0;
+      right: 0;
+      height: 62%;
+      background: var(--surface);
+      border-top: 3px solid var(--accent);
+      border-radius: 16px 16px 0 0;
+      z-index: 90;
+      flex-direction: column;
+      transition: bottom 0.32s cubic-bezier(.4, 0, .2, 1);
+      box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.18);
+    }
+
+    .mobile-sheet.show {
+      bottom: 0;
+    }
+
+    .sheet-drag {
+      width: 40px;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      margin: 10px auto 6px;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .sheet-header {
+      padding: 4px 16px 10px;
+      border-bottom: 1.5px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .sheet-header h2 {
+      font-size: 14px;
+      font-family: 'Black Han Sans', sans-serif;
+    }
+
+    .sheet-header p {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .sheet-body {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
   </style>
 </head>
 
@@ -652,12 +703,12 @@
   <header>
     <div class="logo">트렌디<span>맵</span></div>
     <div class="tabs">
-      <div class="tab active" data-query="두바이 쫀득쿠키" data-emoji="🍪" onclick="switchCategory(this)">🍪 두바이 쫀득쿠키</div>
+      <div class="tab active" data-query="버터떡" data-emoji="🥮" onclick="switchCategory(this)">🥮 버터떡</div>
+      <div class="tab" data-query="두바이 쫀득쿠키" data-emoji="🍪" onclick="switchCategory(this)">🍪 두바이 쫀득쿠키</div>
       <div class="tab" data-query="소금빵" data-emoji="🥐" onclick="switchCategory(this)">🥐 소금빵</div>
       <div class="tab" data-query="탕후루" data-emoji="🍡" onclick="switchCategory(this)">🍡 탕후루</div>
       <div class="tab" data-query="크로플" data-emoji="🧇" onclick="switchCategory(this)">🧇 크로플</div>
       <div class="tab" data-query="마라탕" data-emoji="🌶️" onclick="switchCategory(this)">🌶️ 마라탕</div>
-      <div class="tab" data-query="버터떡" data-emoji="🍡" onclick="switchCategory(this)">🍡 버터떡</div>
     </div>
     <a href="https://forms.gle/ecy5DprNYSAgPesc7" target="_blank" class="suggest-btn">✨ 상품 제안</a>
   </header>
@@ -729,7 +780,7 @@
         <div class="handle-bar"></div>
       </div>
       <div class="sidebar-header" onclick="toggleBottomSheet()">
-        <h2 id="sidebar-title">🍪 두바이 쫀득쿠키</h2>
+        <h2 id="sidebar-title">🥮 버터떡</h2>
         <p id="sidebar-count">지도를 움직이면 해당 지역 매장이 표시됩니다</p>
       </div>
       <div class="store-list" id="storeList">
@@ -749,6 +800,20 @@
         <span style="font-size: 9px; color: var(--muted);">쿠팡 파트너스 수수료 제공</span>
       </div>
     </div>
+  </div>
+
+
+  <!-- MOBILE FAB + BOTTOM SHEET -->
+  <button class="mobile-fab" id="mobileFab" onclick="toggleSheet()">
+    📋 <span id="fabLabel">목록 보기</span>
+  </button>
+  <div class="mobile-sheet" id="mobileSheet">
+    <div class="sheet-drag" onclick="toggleSheet()"></div>
+    <div class="sheet-header">
+      <h2 id="sheetTitle">🥮 버터떡</h2>
+      <p id="sheetCount">지도를 움직이면 매장이 표시됩니다</p>
+    </div>
+    <div class="sheet-body" id="mobileList"></div>
   </div>
 
   <!-- 구글 크롤러용 정적 콘텐츠 (SEO) -->
@@ -811,8 +876,8 @@
 
     let kakaoMap = null;
     let markers = [];
-    let currentQuery = '두바이 쫀득쿠키';
-    let currentEmoji = '🍪';
+    let currentQuery = '버터떡';
+    let currentEmoji = '🥮';
     let searchTimer = null;
     let isSearching = false;
 
@@ -879,8 +944,13 @@
         return;
       }
 
-      document.getElementById('storeList').innerHTML = stores.map((s, i) => {
-        return `
+      const sheetTitle = document.getElementById('sheetTitle');
+      const sheetCount = document.getElementById('sheetCount');
+      if (sheetTitle) sheetTitle.textContent = `${currentEmoji} ${currentQuery}`;
+      if (sheetCount) sheetCount.innerHTML = stores.length > 0
+        ? `검색 결과 <strong>${stores.length}곳</strong>` : '이 지역에 매장이 없습니다';
+
+      const listHTML = stores.map((s, i) => `
       <div class="store-item" id="store-${i}" onclick="selectStore(${i})">
         <div class="store-name">${s.name}</div>
         <div class="store-addr">📍 ${s.addr}</div>
@@ -888,8 +958,10 @@
           ${s.category ? `<span class="badge">${s.category.split('>').pop()}</span>` : ''}
           ${s.phone ? `<span class="badge">📞 ${s.phone}</span>` : ''}
         </div>
-      </div>`;
-      }).join('');
+      </div>`).join('');
+      document.getElementById('storeList').innerHTML = listHTML;
+      const mobileList = document.getElementById('mobileList');
+      if (mobileList) mobileList.innerHTML = listHTML;
     }
 
     function clearMarkers() {
@@ -946,10 +1018,15 @@
       document.querySelectorAll('.store-item').forEach(el => el.classList.remove('selected'));
     }
 
-    function toggleBottomSheet() {
-      // 고정 레이아웃 - 바텀시트 없음
+    function toggleBottomSheet() { toggleSheet(); }
+
+    function toggleSheet() {
+      sheetOpen = !sheetOpen;
+      document.getElementById('mobileSheet').classList.toggle('show', sheetOpen);
+      document.getElementById('fabLabel').textContent = sheetOpen ? '닫기' : '목록 보기';
     }
 
+    let sheetOpen = false;
     let coupangScriptLoaded = false;
 
     function updateCoupangBanner(query) {
