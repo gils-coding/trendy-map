@@ -40,7 +40,7 @@
       background: var(--bg);
       color: var(--text);
       height: 100vh;
-      height: 100dvh;
+      height: 100vh;
       overflow: hidden;
       display: flex;
       flex-direction: column;
@@ -507,7 +507,7 @@
     @media (max-width: 768px) {
       body {
         overflow: hidden;
-        height: 100dvh;
+        height: 100vh;
       }
 
       .logo {
@@ -695,6 +695,40 @@
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
     }
+
+    /* ── 내 위치 버튼 ── */
+    .locate-btn {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      font-family: inherit;
+      color: var(--text);
+      cursor: pointer;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+      transition: background 0.15s, border-color 0.15s;
+      white-space: nowrap;
+    }
+
+    .locate-btn:hover {
+      background: var(--card);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .locate-btn.loading {
+      color: var(--muted);
+      pointer-events: none;
+    }
   </style>
 </head>
 
@@ -703,18 +737,18 @@
   <header>
     <div class="logo">트렌디<span>맵</span></div>
     <div class="tabs">
-      <div class="tab active" data-query="버터떡" data-emoji="🥮" onclick="switchCategory(this)">🥮 버터떡</div>
-      <div class="tab" data-query="두바이 쫀득쿠키" data-emoji="🍪" onclick="switchCategory(this)">🍪 두바이 쫀득쿠키</div>
-      <div class="tab" data-query="소금빵" data-emoji="🥐" onclick="switchCategory(this)">🥐 소금빵</div>
-      <div class="tab" data-query="탕후루" data-emoji="🍡" onclick="switchCategory(this)">🍡 탕후루</div>
-      <div class="tab" data-query="크로플" data-emoji="🧇" onclick="switchCategory(this)">🧇 크로플</div>
-      <div class="tab" data-query="마라탕" data-emoji="🌶️" onclick="switchCategory(this)">🌶️ 마라탕</div>
+      <div class="tab active" data-query="버터떡" data-emoji="🥮">🥮 버터떡</div>
+      <div class="tab" data-query="두바이 쫀득쿠키" data-emoji="🍪">🍪 두바이 쫀득쿠키</div>
+      <div class="tab" data-query="소금빵" data-emoji="🥐">🥐 소금빵</div>
+      <div class="tab" data-query="탕후루" data-emoji="🍡">🍡 탕후루</div>
+      <div class="tab" data-query="크로플" data-emoji="🧇">🧇 크로플</div>
+      <div class="tab" data-query="마라탕" data-emoji="🌶️">🌶️ 마라탕</div>
     </div>
     <a href="https://forms.gle/ecy5DprNYSAgPesc7" target="_blank" class="suggest-btn">✨ 상품 제안</a>
   </header>
 
   <div class="region-bar">
-    <select class="sido-select" id="sidoSelect" onchange="onSidoChange()">
+    <select class="sido-select" id="sidoSelect">
       <option value="">시/도 선택</option>
       <option value="서울">서울</option>
       <option value="경기">경기</option>
@@ -734,26 +768,26 @@
       <option value="경남">경남</option>
       <option value="제주">제주</option>
     </select>
-    <select class="sigungu-select" id="sigunguSelect" onchange="onSigunguChange()" disabled>
+    <select class="sigungu-select" id="sigunguSelect" disabled>
       <option value="">시/군/구 선택</option>
     </select>
     <div class="region-search">
-      <input class="region-input" id="regionInput" type="text" placeholder="지역 직접 검색 (예: 마포구)"
-        onkeydown="if(event.key==='Enter') searchRegion()" />
-      <button class="region-btn" onclick="searchRegion()">이동</button>
+      <input class="region-input" id="regionInput" type="text" placeholder="지역 직접 검색 (예: 마포구)" />
+      <button class="region-btn">이동</button>
     </div>
   </div>
 
   <div class="main">
     <div class="map-area">
       <div id="map"></div>
+      <button class="locate-btn" id="locateBtn">📍 내 위치 찾기</button>
       <div class="map-loading" id="mapLoading">
         <div class="mini-spinner"></div>
         <span>이 지역 매장 검색 중...</span>
       </div>
       <!-- 상세 패널 -->
       <div class="detail-panel" id="detailPanel">
-        <button class="close-btn" onclick="closeDetail()">✕</button>
+        <button class="close-btn">✕</button>
         <div class="detail-top">
           <div class="detail-name" id="detailName"></div>
           <div class="info-list">
@@ -768,18 +802,18 @@
           </div>
         </div>
         <div class="detail-bottom">
-          <a class="btn btn-naver" id="btnNaver" href="#" target="_blank">네이버지도</a>
-          <a class="btn btn-kakao" id="btnKakao" href="#" target="_blank">카카오맵</a>
+          <button class="btn btn-naver" id="btnNaver">네이버지도</button>
+          <button class="btn btn-kakao" id="btnKakao">카카오맵</button>
         </div>
       </div>
     </div>
 
     <!-- 사이드바 / 모바일 바텀시트 -->
     <div class="sidebar" id="sidebar">
-      <div class="bottom-handle" onclick="toggleBottomSheet()">
+      <div class="bottom-handle">
         <div class="handle-bar"></div>
       </div>
-      <div class="sidebar-header" onclick="toggleBottomSheet()">
+      <div class="sidebar-header">
         <h2 id="sidebar-title">🥮 버터떡</h2>
         <p id="sidebar-count">지도를 움직이면 해당 지역 매장이 표시됩니다</p>
       </div>
@@ -804,11 +838,11 @@
 
 
   <!-- MOBILE FAB + BOTTOM SHEET -->
-  <button class="mobile-fab" id="mobileFab" onclick="toggleSheet()">
+  <button class="mobile-fab" id="mobileFab">
     📋 <span id="fabLabel">목록 보기</span>
   </button>
   <div class="mobile-sheet" id="mobileSheet">
-    <div class="sheet-drag" onclick="toggleSheet()"></div>
+    <div class="sheet-drag"></div>
     <div class="sheet-header">
       <h2 id="sheetTitle">🥮 버터떡</h2>
       <p id="sheetCount">지도를 움직이면 매장이 표시됩니다</p>
@@ -921,7 +955,15 @@
         renderStoreList(data.stores);
         renderMarkers(data.stores);
       } catch (err) {
-        document.getElementById('storeList').innerHTML = `<div class="error-msg"><strong>⚠️ 검색 실패</strong>${err.message}</div>`;
+        var errDiv = document.createElement('div');
+        errDiv.className = 'error-msg';
+        var errStrong = document.createElement('strong');
+        errStrong.textContent = '⚠️ 검색 실패';
+        var errText = document.createTextNode(err.message);
+        errDiv.appendChild(errStrong);
+        errDiv.appendChild(errText);
+        document.getElementById('storeList').innerHTML = '';
+        document.getElementById('storeList').appendChild(errDiv);
         document.getElementById('sidebar-count').textContent = '오류 발생';
       } finally {
         showMapLoading(false);
@@ -984,7 +1026,7 @@
     }
 
     function selectStore(index) {
-      const store = window._stores?.[index];
+      const store = window._stores && window._stores[index];
       if (!store) return;
 
       document.querySelectorAll('.store-item').forEach(el => el.classList.remove('selected'));
@@ -1004,10 +1046,10 @@
         phoneRow.style.display = 'none';
       }
 
-      document.getElementById('btnNaver').href =
-        `https://map.naver.com/v5/search/${encodeURIComponent(store.name + ' ' + store.addr)}`;
-      document.getElementById('btnKakao').href =
-        store.kakaoUrl || `https://map.kakao.com/link/search/${encodeURIComponent(store.name)}`;
+      document.getElementById('btnNaver').dataset.url =
+        'https://map.naver.com/v5/search/' + encodeURIComponent(store.name + ' ' + store.addr);
+      document.getElementById('btnKakao').dataset.url =
+        store.kakaoUrl || 'https://map.kakao.com/link/search/' + encodeURIComponent(store.name);
 
       // 상세 패널 표시
       document.getElementById('detailPanel').classList.add('show');
@@ -1016,6 +1058,35 @@
     function closeDetail() {
       document.getElementById('detailPanel').classList.remove('show');
       document.querySelectorAll('.store-item').forEach(el => el.classList.remove('selected'));
+    }
+
+    function goToMyLocation() {
+      if (!navigator.geolocation) {
+        alert('이 브라우저는 위치 서비스를 지원하지 않습니다.');
+        return;
+      }
+      var btn = document.getElementById('locateBtn');
+      btn.textContent = '⏳ 위치 확인 중...';
+      btn.classList.add('loading');
+      navigator.geolocation.getCurrentPosition(
+        function (pos) {
+          kakaoMap.setCenter(new kakao.maps.LatLng(pos.coords.latitude, pos.coords.longitude));
+          kakaoMap.setLevel(5);
+          btn.textContent = '📍 내 위치 찾기';
+          btn.classList.remove('loading');
+          loadStores();
+        },
+        function (err) {
+          btn.textContent = '📍 내 위치 찾기';
+          btn.classList.remove('loading');
+          if (err.code === 1) {
+            alert('위치 권한을 허용해주세요.\n브라우저 주소창 왼쪽 자물쇠 아이콘을 눌러 위치를 허용할 수 있어요.');
+          } else {
+            alert('위치를 가져올 수 없습니다. 다시 시도해주세요.');
+          }
+        },
+        { timeout: 10000, maximumAge: 60000 }
+      );
     }
 
     function toggleBottomSheet() { toggleSheet(); }
@@ -1092,21 +1163,71 @@
       } catch { alert('지역 검색 중 오류가 발생했습니다.'); }
     }
 
-    window.onload = () => {
-      // 쿠팡 배너 초기 로드
-      const cpScript = document.createElement('script');
+    window.addEventListener('load', function () {
+      // ── 탭 이벤트 등록 ──
+      var tabs = document.querySelectorAll('.tab');
+      tabs.forEach(function (tab) {
+        tab.addEventListener('click', function () { switchCategory(tab); });
+      });
+
+      // ── 지역 검색 이벤트 ──
+      document.getElementById('regionInput').addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') searchRegion();
+      });
+      document.querySelector('.region-btn').addEventListener('click', function () { searchRegion(); });
+
+      // ── 상세패널 닫기 ──
+      document.querySelector('.close-btn').addEventListener('click', function () { closeDetail(); });
+
+      // ── 사이드바 바텀핸들 / 헤더 ──
+      var bh = document.querySelector('.bottom-handle');
+      var sh = document.querySelector('.sidebar-header');
+      if (bh) bh.addEventListener('click', function () { toggleBottomSheet(); });
+      if (sh) sh.addEventListener('click', function () { toggleBottomSheet(); });
+
+      // ── 모바일 FAB + 시트 손잡이 ──
+      var fab = document.getElementById('mobileFab');
+      var drag = document.querySelector('.sheet-drag');
+      if (fab) fab.addEventListener('click', function () { toggleSheet(); });
+      if (drag) drag.addEventListener('click', function () { toggleSheet(); });
+
+      // ── 내 위치 버튼 ──
+      var locateBtn = document.getElementById('locateBtn');
+      if (locateBtn) locateBtn.addEventListener('click', function () { goToMyLocation(); });
+
+      // ── 시도/시군구 셀렉트 ──
+      document.getElementById('sidoSelect').addEventListener('change', function () { onSidoChange(); });
+      document.getElementById('sigunguSelect').addEventListener('change', function () { onSigunguChange(); });
+
+      // ── 네이버/카카오 버튼 ──
+      document.getElementById('btnNaver').addEventListener('click', function () {
+        var url = document.getElementById('btnNaver').dataset.url;
+        if (url) window.open(url, '_blank');
+      });
+      document.getElementById('btnKakao').addEventListener('click', function () {
+        var url = document.getElementById('btnKakao').dataset.url;
+        if (url) window.open(url, '_blank');
+      });
+
+      // ── 쿠팡 배너 ──
+      var cpScript = document.createElement('script');
       cpScript.src = 'https://ads-partners.coupang.com/g.js';
-      cpScript.onload = () => renderCoupang();
+      cpScript.onload = function () { renderCoupang(); };
       document.head.appendChild(cpScript);
       document.getElementById('coupangBanner').style.display = 'block';
 
+      // ── 지도 초기화 ──
       if (typeof kakao !== 'undefined' && kakao.maps) {
         initMap();
       } else {
-        document.getElementById('map').innerHTML =
-          '<div style="padding:60px;text-align:center;color:#888">카카오 지도 API 키를 HTML 상단에 입력해주세요.</div>';
+        var mapEl = document.getElementById('map');
+        mapEl.innerHTML = '';
+        var msg = document.createElement('div');
+        msg.style.cssText = 'padding:60px;text-align:center;color:#888';
+        msg.textContent = '카카오 지도 API 키를 HTML 상단에 입력해주세요.';
+        mapEl.appendChild(msg);
       }
-    };
+    });
   </script>
 </body>
 
