@@ -1193,8 +1193,10 @@
         phoneRow.style.display = 'none';
       }
 
+      // 주소에서 시/구까지만 추출 (층수, 호수 제거)
+      var addrShort = (store.addr || '').split(' ').slice(0, 2).join(' ');
       document.getElementById('btnNaver').dataset.url =
-        'https://map.naver.com/v5/search/' + encodeURIComponent(store.name + ' ' + store.addr);
+        'https://map.naver.com/v5/search/' + encodeURIComponent(store.name + ' ' + addrShort);
       document.getElementById('btnKakao').dataset.url =
         store.kakaoUrl || 'https://map.kakao.com/link/search/' + encodeURIComponent(store.name);
 
