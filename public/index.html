@@ -729,10 +729,129 @@
       color: var(--muted);
       pointer-events: none;
     }
+
+    /* ── 인앱 브라우저 안내 배너 ── */
+    .inapp-banner {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: #f5a623;
+      color: #fff;
+      padding: 12px 16px;
+      z-index: 9999;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 700;
+      line-height: 1.5;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    .inapp-banner.show {
+      display: block;
+    }
+
+    .inapp-banner-btn {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 7px 18px;
+      background: #fff;
+      color: #f5a623;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      border: none;
+      font-family: inherit;
+    }
+
+    /* ── 위치 권한 안내 모달 ── */
+    .location-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 9000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .location-modal.show {
+      display: flex;
+    }
+
+    .location-modal-box {
+      background: #fff;
+      border-radius: 14px;
+      padding: 24px 20px;
+      max-width: 300px;
+      width: 90%;
+      text-align: center;
+    }
+
+    .location-modal-icon {
+      font-size: 36px;
+      margin-bottom: 10px;
+    }
+
+    .location-modal-title {
+      font-family: 'Black Han Sans', sans-serif;
+      font-size: 16px;
+      margin-bottom: 8px;
+      color: var(--text);
+    }
+
+    .location-modal-desc {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.7;
+      margin-bottom: 16px;
+    }
+
+    .location-modal-desc strong {
+      color: var(--text);
+    }
+
+    .location-modal-close {
+      width: 100%;
+      padding: 10px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+    }
   </style>
 </head>
 
 <body>
+
+  <!-- 인앱 브라우저 안내 배너 -->
+  <div class="inapp-banner" id="inappBanner">
+    카카오톡 내에서는 일부 기능이 제한됩니다.<br>
+    원활한 이용을 위해 외부 브라우저로 열어주세요.
+    <br>
+    <button class="inapp-banner-btn" id="inappOpenBtn">크롬으로 열기</button>
+  </div>
+
+  <!-- 위치 권한 안내 모달 -->
+  <div class="location-modal" id="locationModal">
+    <div class="location-modal-box">
+      <div class="location-modal-icon">📍</div>
+      <div class="location-modal-title">위치 권한이 필요해요</div>
+      <div class="location-modal-desc" id="locationModalDesc">
+        브라우저에서 위치 권한을 허용해주세요.
+      </div>
+      <button class="location-modal-close" id="locationModalClose">확인</button>
+    </div>
+  </div>
 
   <header>
     <div class="logo">트렌디<span>맵</span></div>
@@ -910,6 +1029,11 @@
 
     let kakaoMap = null;
     let markers = [];
+    // 카테고리별 다중 키워드 (병렬 검색용)
+    var MULTI_KEYWORDS = {
+      '버터떡': ['버터떡', '버터 떡', '버터떡 카페', '버터떡 빵집']
+    };
+
     let currentQuery = '버터떡';
     let currentEmoji = '🥮';
     let searchTimer = null;
@@ -934,11 +1058,11 @@
       if (isSearching) return;
       isSearching = true;
 
-      const center = kakaoMap.getCenter();
-      const lat = center.getLat();
-      const lng = center.getLng();
-      const level = kakaoMap.getLevel();
-      const radius = Math.min(level * 700, 20000);
+      var center = kakaoMap.getCenter();
+      var lat = center.getLat();
+      var lng = center.getLng();
+      var level = kakaoMap.getLevel();
+      var radius = Math.min(level * 700, 20000);
 
       showMapLoading(true);
       closeDetail();
@@ -947,13 +1071,36 @@
       document.getElementById('sidebar-count').textContent = '검색 중...';
 
       try {
-        const url = `/api/stores?query=${encodeURIComponent(currentQuery)}&lat=${lat}&lng=${lng}&radius=${radius}`;
-        const res = await fetch(url);
-        const data = await res.json();
-        if (data.error) throw new Error(data.error);
-        window._stores = data.stores;
-        renderStoreList(data.stores);
-        renderMarkers(data.stores);
+        // 다중 키워드가 설정된 카테고리면 병렬 검색 후 중복 제거
+        var keywords = MULTI_KEYWORDS[currentQuery] || [currentQuery];
+        var fetchPromises = keywords.map(function (kw) {
+          var url = '/api/stores?query=' + encodeURIComponent(kw) + '&lat=' + lat + '&lng=' + lng + '&radius=' + radius;
+          return fetch(url).then(function (res) { return res.json(); }).catch(function () { return { stores: [] }; });
+        });
+
+        var results = await Promise.all(fetchPromises);
+
+        // 중복 제거: place_url 또는 이름+주소 조합으로 판별
+        var seen = {};
+        var merged = [];
+        results.forEach(function (data) {
+          if (!data.stores) return;
+          data.stores.forEach(function (store) {
+            var key = store.place_url || (store.name + '|' + store.addr);
+            if (!seen[key]) {
+              seen[key] = true;
+              merged.push(store);
+            }
+          });
+        });
+
+        if (merged.length === 0 && results[0] && results[0].error) {
+          throw new Error(results[0].error);
+        }
+
+        window._stores = merged;
+        renderStoreList(merged);
+        renderMarkers(merged);
       } catch (err) {
         var errDiv = document.createElement('div');
         errDiv.className = 'error-msg';
@@ -1060,9 +1207,48 @@
       document.querySelectorAll('.store-item').forEach(el => el.classList.remove('selected'));
     }
 
+    function showLocationModal(msg) {
+      document.getElementById('locationModalDesc').innerHTML = msg;
+      document.getElementById('locationModal').classList.add('show');
+    }
+
+    function isInAppBrowser() {
+      var ua = navigator.userAgent || '';
+      return /KAKAOTALK|NAVER|Instagram|FB_IAB|FBAN|FBAV|Line\/|Twitter|Snapchat/i.test(ua);
+    }
+
+    function initInAppBanner() {
+      if (!isInAppBrowser()) return;
+      var banner = document.getElementById('inappBanner');
+      banner.classList.add('show');
+
+      // 크롬으로 열기 버튼
+      document.getElementById('inappOpenBtn').addEventListener('click', function () {
+        var url = location.href;
+        // 안드로이드: intent scheme으로 크롬 강제 실행
+        var intentUrl = 'intent://' + url.replace(/https?:\/\//, '') +
+          '#Intent;scheme=https;package=com.android.chrome;end';
+        location.href = intentUrl;
+        // intent 실패 시 fallback: 그냥 새 탭
+        setTimeout(function () { window.open(url, '_blank'); }, 1500);
+      });
+    }
+
     function goToMyLocation() {
+      // 인앱 브라우저에서는 위치 기능 안내
+      if (isInAppBrowser()) {
+        showLocationModal(
+          '카카오톡 내에서는 위치 기능을 사용할 수 없어요.<br><strong>크롬 브라우저</strong>로 열어서 이용해주세요.'
+        );
+        return;
+      }
+      // HTTPS 아닌 경우 안내
+      if (location.protocol !== 'https:') {
+        showLocationModal('위치 기능은 <strong>보안 연결(https)</strong> 환경에서만 사용 가능해요.');
+        return;
+      }
       if (!navigator.geolocation) {
-        alert('이 브라우저는 위치 서비스를 지원하지 않습니다.');
+        showLocationModal('이 브라우저는 위치 서비스를 지원하지 않아요.<br>크롬 브라우저를 이용해주세요.');
         return;
       }
       var btn = document.getElementById('locateBtn');
@@ -1080,9 +1266,15 @@
           btn.textContent = '📍 내 위치 찾기';
           btn.classList.remove('loading');
           if (err.code === 1) {
-            alert('위치 권한을 허용해주세요.\n브라우저 주소창 왼쪽 자물쇠 아이콘을 눌러 위치를 허용할 수 있어요.');
+            showLocationModal(
+              '위치 권한이 차단되어 있어요.<br>' +
+              '브라우저 주소창 왼쪽 <strong>🔒 자물쇠 아이콘</strong>을 눌러<br>' +
+              '위치 권한을 <strong>허용</strong>으로 바꿔주세요.'
+            );
+          } else if (err.code === 2) {
+            showLocationModal('위치 정보를 가져올 수 없어요.<br>GPS가 켜져 있는지 확인해주세요.');
           } else {
-            alert('위치를 가져올 수 없습니다. 다시 시도해주세요.');
+            showLocationModal('위치 요청 시간이 초과됐어요.<br>다시 시도해주세요.');
           }
         },
         { timeout: 10000, maximumAge: 60000 }
@@ -1164,6 +1356,17 @@
     }
 
     window.addEventListener('load', function () {
+      // ── 인앱 브라우저 배너 ──
+      initInAppBanner();
+
+      // ── 위치 모달 닫기 ──
+      document.getElementById('locationModalClose').addEventListener('click', function () {
+        document.getElementById('locationModal').classList.remove('show');
+      });
+      document.getElementById('locationModal').addEventListener('click', function (e) {
+        if (e.target === this) this.classList.remove('show');
+      });
+
       // ── 탭 이벤트 등록 ──
       var tabs = document.querySelectorAll('.tab');
       tabs.forEach(function (tab) {
