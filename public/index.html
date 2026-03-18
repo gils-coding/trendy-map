@@ -1362,15 +1362,22 @@
       if (banner) banner.style.display = 'block';
     }
 
-    let _coupangRendered = false;
+    let _coupangResizeTimer = null;
 
     function renderCoupang() {
-      // 딱 한 번만 렌더링 — 중첩 완전 방지
-      if (_coupangRendered) return;
-      const container = document.getElementById('coupangItems');
-      if (!container) return;
-      _coupangRendered = true;
+      const banner = document.getElementById('coupangBanner');
+      if (!banner) return;
       const w = Math.floor(window.innerWidth);
+
+      // 컨테이너를 완전히 새 div로 교체해야 iframe 고정 너비 초기화됨
+      const oldContainer = document.getElementById('coupangItems');
+      if (oldContainer) {
+        const newContainer = document.createElement('div');
+        newContainer.id = 'coupangItems';
+        newContainer.style.width = '100%';
+        oldContainer.parentNode.replaceChild(newContainer, oldContainer);
+      }
+
       new PartnersCoupang.G({
         "id": 967242,
         "template": "carousel",
@@ -1379,19 +1386,11 @@
         "height": "50",
         "tsource": ""
       });
-      // 이후 resize는 CSS로만 너비 조정 (재렌더링 없음)
-      const banner = document.getElementById('coupangBanner');
-      if (banner) {
-        const iframe = banner.querySelector('iframe');
-        if (iframe) iframe.style.width = '100%';
-      }
     }
 
     window.addEventListener('resize', function () {
-      const banner = document.getElementById('coupangBanner');
-      if (!banner) return;
-      const iframe = banner.querySelector('iframe');
-      if (iframe) iframe.style.width = '100%';
+      clearTimeout(_coupangResizeTimer);
+      _coupangResizeTimer = setTimeout(renderCoupang, 400);
     });
 
     function switchCategory(tabEl) {
