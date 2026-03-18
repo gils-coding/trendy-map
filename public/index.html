@@ -942,10 +942,7 @@
           <div class="spinner"></div>매장 검색 중...
         </div>
       </div>
-      <div id="coupangBanner"
-        style="display:none; border-top: 1px solid var(--border); flex-shrink: 0; background: var(--surface); overflow: hidden; width: 100%;">
-        <div id="coupangItems" style="width: 100%;"></div>
-      </div>
+
       <div style="text-align:center; padding: 0px; border-top: 0px solid var(--border); flex-shrink: 0;">
         <a href="/legal.html"
           style="font-size: 9px; color: var(--muted); text-decoration: none; margin-right: 6px;">이용약관·개인정보처리방침</a>
@@ -956,6 +953,12 @@
     </div>
   </div>
 
+
+  <!-- 쿠팡 배너 (전체 너비) -->
+  <div id="coupangBanner"
+    style="display:none; border-top: 1px solid var(--border); background: var(--surface); overflow: hidden; width: 100%; flex-shrink: 0;">
+    <div id="coupangItems" style="width: 100%;"></div>
+  </div>
 
   <!-- MOBILE FAB + BOTTOM SHEET -->
   <button class="mobile-fab" id="mobileFab">
@@ -1364,13 +1367,13 @@
     function renderCoupang() {
       const container = document.getElementById('coupangItems');
       if (!container) return;
-      const w = container.parentElement ? container.parentElement.offsetWidth : window.innerWidth;
+      const w = Math.floor(window.innerWidth); // 전체 화면 너비 사용
       container.innerHTML = '';
       new PartnersCoupang.G({
         "id": 967242,
         "template": "carousel",
         "trackingCode": "AF6001579",
-        "width": String(Math.floor(w)),
+        "width": String(w),
         "height": "50",
         "tsource": ""
       });
