@@ -292,7 +292,7 @@
     }
 
     .store-name {
-      font-weight: 700;
+      font-weight: 400;
       font-size: 13px;
       margin-bottom: 3px;
       color: var(--text);
@@ -714,29 +714,18 @@
       font-family: inherit;
       color: var(--text);
       cursor: pointer;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+      box-shadow: 0 2px 10px rgba(0,0,0,0.12);
       transition: background 0.15s, border-color 0.15s;
       white-space: nowrap;
     }
-
-    .locate-btn:hover {
-      background: var(--card);
-      border-color: var(--accent);
-      color: var(--accent);
-    }
-
-    .locate-btn.loading {
-      color: var(--muted);
-      pointer-events: none;
-    }
+    .locate-btn:hover { background: var(--card); border-color: var(--accent); color: var(--accent); }
+    .locate-btn.loading { color: var(--muted); pointer-events: none; }
 
     /* ── 인앱 브라우저 안내 배너 ── */
     .inapp-banner {
       display: none;
       position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
+      top: 0; left: 0; right: 0;
       background: #f5a623;
       color: #fff;
       padding: 12px 16px;
@@ -745,13 +734,9 @@
       font-size: 13px;
       font-weight: 700;
       line-height: 1.5;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
     }
-
-    .inapp-banner.show {
-      display: block;
-    }
-
+    .inapp-banner.show { display: block; }
     .inapp-banner-btn {
       display: inline-block;
       margin-top: 8px;
@@ -770,20 +755,13 @@
     .location-modal {
       display: none;
       position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0, 0, 0, 0.5);
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
       z-index: 9000;
       align-items: center;
       justify-content: center;
     }
-
-    .location-modal.show {
-      display: flex;
-    }
-
+    .location-modal.show { display: flex; }
     .location-modal-box {
       background: #fff;
       border-radius: 14px;
@@ -792,30 +770,20 @@
       width: 90%;
       text-align: center;
     }
-
-    .location-modal-icon {
-      font-size: 36px;
-      margin-bottom: 10px;
-    }
-
+    .location-modal-icon { font-size: 36px; margin-bottom: 10px; }
     .location-modal-title {
       font-family: 'Black Han Sans', sans-serif;
       font-size: 16px;
       margin-bottom: 8px;
       color: var(--text);
     }
-
     .location-modal-desc {
       font-size: 12px;
       color: var(--muted);
       line-height: 1.7;
       margin-bottom: 16px;
     }
-
-    .location-modal-desc strong {
-      color: var(--text);
-    }
-
+    .location-modal-desc strong { color: var(--text); }
     .location-modal-close {
       width: 100%;
       padding: 10px;
@@ -891,7 +859,8 @@
       <option value="">시/군/구 선택</option>
     </select>
     <div class="region-search">
-      <input class="region-input" id="regionInput" type="text" placeholder="지역 직접 검색 (예: 마포구)" />
+      <input class="region-input" id="regionInput" type="text" placeholder="지역 직접 검색 (예: 마포구)"
+        />
       <button class="region-btn">이동</button>
     </div>
   </div>
@@ -1073,9 +1042,9 @@
       try {
         // 다중 키워드가 설정된 카테고리면 병렬 검색 후 중복 제거
         var keywords = MULTI_KEYWORDS[currentQuery] || [currentQuery];
-        var fetchPromises = keywords.map(function (kw) {
+        var fetchPromises = keywords.map(function(kw) {
           var url = '/api/stores?query=' + encodeURIComponent(kw) + '&lat=' + lat + '&lng=' + lng + '&radius=' + radius;
-          return fetch(url).then(function (res) { return res.json(); }).catch(function () { return { stores: [] }; });
+          return fetch(url).then(function(res) { return res.json(); }).catch(function() { return { stores: [] }; });
         });
 
         var results = await Promise.all(fetchPromises);
@@ -1083,9 +1052,9 @@
         // 중복 제거: place_url 또는 이름+주소 조합으로 판별
         var seen = {};
         var merged = [];
-        results.forEach(function (data) {
+        results.forEach(function(data) {
           if (!data.stores) return;
-          data.stores.forEach(function (store) {
+          data.stores.forEach(function(store) {
             var key = store.place_url || (store.name + '|' + store.addr);
             if (!seen[key]) {
               seen[key] = true;
@@ -1180,6 +1149,12 @@
       const item = document.getElementById(`store-${index}`);
       if (item) { item.classList.add('selected'); item.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
 
+      // 해당 매장 위치로 지도 중심 이동
+      if (store.lat && store.lng) {
+        kakaoMap.setCenter(new kakao.maps.LatLng(store.lat, store.lng));
+        kakaoMap.setLevel(4);
+      }
+
 
 
       document.getElementById('detailName').textContent = store.name;
@@ -1225,26 +1200,45 @@
       banner.classList.add('show');
 
       // 크롬으로 열기 버튼
-      document.getElementById('inappOpenBtn').addEventListener('click', function () {
+      document.getElementById('inappOpenBtn').addEventListener('click', function() {
         var url = location.href;
         // 안드로이드: intent scheme으로 크롬 강제 실행
         var intentUrl = 'intent://' + url.replace(/https?:\/\//, '') +
           '#Intent;scheme=https;package=com.android.chrome;end';
         location.href = intentUrl;
         // intent 실패 시 fallback: 그냥 새 탭
-        setTimeout(function () { window.open(url, '_blank'); }, 1500);
+        setTimeout(function() { window.open(url, '_blank'); }, 1500);
       });
     }
 
+    function getPermissionGuide() {
+      var ua = navigator.userAgent || '';
+      var isIOS = /iPhone|iPad/i.test(ua);
+      var isSafari = /Safari/i.test(ua) && !/Chrome/i.test(ua);
+      var isAndroid = /Android/i.test(ua);
+      var isChrome = /Chrome/i.test(ua);
+
+      if (isIOS && isSafari) {
+        return '아이폰 Safari 위치 허용 방법:<br><br>' +
+          '① 주소창 왼쪽 <strong>AA</strong> 버튼 탭<br>' +
+          '② <strong>웹 사이트 설정</strong> 선택<br>' +
+          '③ <strong>위치</strong> → <strong>허용</strong>으로 변경<br><br>' +
+          '또는 설정 앱 → Safari → 위치 → 허용';
+      } else if (isAndroid && isChrome) {
+        return '안드로이드 Chrome 위치 허용 방법:<br><br>' +
+          '① 주소창 왼쪽 <strong>🔒 자물쇠</strong> 탭<br>' +
+          '② <strong>권한</strong> → <strong>위치</strong> → <strong>허용</strong>';
+      } else {
+        return '브라우저 주소창 왼쪽 아이콘을 탭하여<br>' +
+          '<strong>위치 권한을 허용</strong>으로 바꿔주세요.';
+      }
+    }
+
     function goToMyLocation() {
-      // 인앱 브라우저에서는 위치 기능 안내
       if (isInAppBrowser()) {
-        showLocationModal(
-          '카카오톡 내에서는 위치 기능을 사용할 수 없어요.<br><strong>크롬 브라우저</strong>로 열어서 이용해주세요.'
-        );
+        showLocationModal('카카오톡 내에서는 위치 기능을 사용할 수 없어요.<br><strong>크롬 브라우저</strong>로 열어서 이용해주세요.');
         return;
       }
-      // HTTPS 아닌 경우 안내
       if (location.protocol !== 'https:') {
         showLocationModal('위치 기능은 <strong>보안 연결(https)</strong> 환경에서만 사용 가능해요.');
         return;
@@ -1257,22 +1251,18 @@
       btn.textContent = '⏳ 위치 확인 중...';
       btn.classList.add('loading');
       navigator.geolocation.getCurrentPosition(
-        function (pos) {
+        function(pos) {
           kakaoMap.setCenter(new kakao.maps.LatLng(pos.coords.latitude, pos.coords.longitude));
           kakaoMap.setLevel(5);
           btn.textContent = '📍 내 위치 찾기';
           btn.classList.remove('loading');
           loadStores();
         },
-        function (err) {
+        function(err) {
           btn.textContent = '📍 내 위치 찾기';
           btn.classList.remove('loading');
           if (err.code === 1) {
-            showLocationModal(
-              '위치 권한이 차단되어 있어요.<br>' +
-              '브라우저 주소창 왼쪽 <strong>🔒 자물쇠 아이콘</strong>을 눌러<br>' +
-              '위치 권한을 <strong>허용</strong>으로 바꿔주세요.'
-            );
+            showLocationModal(getPermissionGuide());
           } else if (err.code === 2) {
             showLocationModal('위치 정보를 가져올 수 없어요.<br>GPS가 켜져 있는지 확인해주세요.');
           } else {
@@ -1357,59 +1347,59 @@
       } catch { alert('지역 검색 중 오류가 발생했습니다.'); }
     }
 
-    window.addEventListener('load', function () {
+    window.addEventListener('load', function() {
       // ── 인앱 브라우저 배너 ──
       initInAppBanner();
 
       // ── 위치 모달 닫기 ──
-      document.getElementById('locationModalClose').addEventListener('click', function () {
+      document.getElementById('locationModalClose').addEventListener('click', function() {
         document.getElementById('locationModal').classList.remove('show');
       });
-      document.getElementById('locationModal').addEventListener('click', function (e) {
+      document.getElementById('locationModal').addEventListener('click', function(e) {
         if (e.target === this) this.classList.remove('show');
       });
 
       // ── 탭 이벤트 등록 ──
       var tabs = document.querySelectorAll('.tab');
-      tabs.forEach(function (tab) {
-        tab.addEventListener('click', function () { switchCategory(tab); });
+      tabs.forEach(function(tab) {
+        tab.addEventListener('click', function() { switchCategory(tab); });
       });
 
       // ── 지역 검색 이벤트 ──
-      document.getElementById('regionInput').addEventListener('keydown', function (e) {
+      document.getElementById('regionInput').addEventListener('keydown', function(e) {
         if (e.key === 'Enter') searchRegion();
       });
-      document.querySelector('.region-btn').addEventListener('click', function () { searchRegion(); });
+      document.querySelector('.region-btn').addEventListener('click', function() { searchRegion(); });
 
       // ── 상세패널 닫기 ──
-      document.querySelector('.close-btn').addEventListener('click', function () { closeDetail(); });
+      document.querySelector('.close-btn').addEventListener('click', function() { closeDetail(); });
 
       // ── 사이드바 바텀핸들 / 헤더 ──
       var bh = document.querySelector('.bottom-handle');
       var sh = document.querySelector('.sidebar-header');
-      if (bh) bh.addEventListener('click', function () { toggleBottomSheet(); });
-      if (sh) sh.addEventListener('click', function () { toggleBottomSheet(); });
+      if (bh) bh.addEventListener('click', function() { toggleBottomSheet(); });
+      if (sh) sh.addEventListener('click', function() { toggleBottomSheet(); });
 
       // ── 모바일 FAB + 시트 손잡이 ──
       var fab = document.getElementById('mobileFab');
       var drag = document.querySelector('.sheet-drag');
-      if (fab) fab.addEventListener('click', function () { toggleSheet(); });
-      if (drag) drag.addEventListener('click', function () { toggleSheet(); });
+      if (fab) fab.addEventListener('click', function() { toggleSheet(); });
+      if (drag) drag.addEventListener('click', function() { toggleSheet(); });
 
       // ── 내 위치 버튼 ──
       var locateBtn = document.getElementById('locateBtn');
-      if (locateBtn) locateBtn.addEventListener('click', function () { goToMyLocation(); });
+      if (locateBtn) locateBtn.addEventListener('click', function() { goToMyLocation(); });
 
       // ── 시도/시군구 셀렉트 ──
-      document.getElementById('sidoSelect').addEventListener('change', function () { onSidoChange(); });
-      document.getElementById('sigunguSelect').addEventListener('change', function () { onSigunguChange(); });
+      document.getElementById('sidoSelect').addEventListener('change', function() { onSidoChange(); });
+      document.getElementById('sigunguSelect').addEventListener('change', function() { onSigunguChange(); });
 
       // ── 네이버/카카오 버튼 ──
-      document.getElementById('btnNaver').addEventListener('click', function () {
+      document.getElementById('btnNaver').addEventListener('click', function() {
         var url = document.getElementById('btnNaver').dataset.url;
         if (url) window.open(url, '_blank');
       });
-      document.getElementById('btnKakao').addEventListener('click', function () {
+      document.getElementById('btnKakao').addEventListener('click', function() {
         var url = document.getElementById('btnKakao').dataset.url;
         if (url) window.open(url, '_blank');
       });
@@ -1417,7 +1407,7 @@
       // ── 쿠팡 배너 ──
       var cpScript = document.createElement('script');
       cpScript.src = 'https://ads-partners.coupang.com/g.js';
-      cpScript.onload = function () { renderCoupang(); };
+      cpScript.onload = function() { renderCoupang(); };
       document.head.appendChild(cpScript);
       document.getElementById('coupangBanner').style.display = 'block';
 
