@@ -1422,10 +1422,7 @@
       // ── 위치 모달 닫기 ──
       document.getElementById('locationModalClose').addEventListener('click', function () {
         document.getElementById('locationModal').classList.remove('show');
-        if (_locationRetry) {
-          _locationRetry = false;
-          setTimeout(goToMyLocation, 300); // 브라우저 설정 반영 후 재시도
-        }
+        _locationRetry = false;
       });
       document.getElementById('locationModal').addEventListener('click', function (e) {
         if (e.target === this) this.classList.remove('show');
