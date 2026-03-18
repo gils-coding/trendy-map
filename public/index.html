@@ -1362,19 +1362,15 @@
       if (banner) banner.style.display = 'block';
     }
 
-    let _coupangResizeTimer = null;
     let _coupangRendered = false;
-    let _lastCoupangWidth = 0;
 
     function renderCoupang() {
+      // 딱 한 번만 렌더링 — 중첩 완전 방지
+      if (_coupangRendered) return;
       const container = document.getElementById('coupangItems');
       if (!container) return;
-      const w = Math.floor(window.innerWidth);
-      // 너비가 바뀌지 않았으면 재렌더링 안 함 (중첩 방지)
-      if (_coupangRendered && Math.abs(w - _lastCoupangWidth) < 10) return;
       _coupangRendered = true;
-      _lastCoupangWidth = w;
-      container.innerHTML = '';
+      const w = Math.floor(window.innerWidth);
       new PartnersCoupang.G({
         "id": 967242,
         "template": "carousel",
@@ -1383,11 +1379,19 @@
         "height": "50",
         "tsource": ""
       });
+      // 이후 resize는 CSS로만 너비 조정 (재렌더링 없음)
+      const banner = document.getElementById('coupangBanner');
+      if (banner) {
+        const iframe = banner.querySelector('iframe');
+        if (iframe) iframe.style.width = '100%';
+      }
     }
 
     window.addEventListener('resize', function () {
-      clearTimeout(_coupangResizeTimer);
-      _coupangResizeTimer = setTimeout(renderCoupang, 400);
+      const banner = document.getElementById('coupangBanner');
+      if (!banner) return;
+      const iframe = banner.querySelector('iframe');
+      if (iframe) iframe.style.width = '100%';
     });
 
     function switchCategory(tabEl) {
