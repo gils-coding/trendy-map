@@ -1359,19 +1359,27 @@
       if (banner) banner.style.display = 'block';
     }
 
+    let _coupangResizeTimer = null;
+
     function renderCoupang() {
-      const sidebarEl = document.getElementById('sidebar');
-      const w = sidebarEl ? sidebarEl.offsetWidth : 2000;
-      document.getElementById('coupangItems').innerHTML = '';
+      const container = document.getElementById('coupangItems');
+      if (!container) return;
+      const w = container.parentElement ? container.parentElement.offsetWidth : window.innerWidth;
+      container.innerHTML = '';
       new PartnersCoupang.G({
         "id": 967242,
         "template": "carousel",
         "trackingCode": "AF6001579",
-        "width": "2000",
+        "width": String(Math.floor(w)),
         "height": "50",
         "tsource": ""
       });
     }
+
+    window.addEventListener('resize', function () {
+      clearTimeout(_coupangResizeTimer);
+      _coupangResizeTimer = setTimeout(renderCoupang, 300);
+    });
 
     function switchCategory(tabEl) {
       document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
