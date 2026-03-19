@@ -956,7 +956,7 @@
 
   <!-- 쿠팡 배너 (전체 너비) -->
   <div id="coupangBanner"
-    style="display:none; border-top: 1px solid var(--border); background: var(--surface); overflow: hidden; width: 100%; flex-shrink: 0;">
+    style="display:none; border-top: 1px solid var(--border); background: var(--surface); overflow: hidden; width: 100%; flex-shrink: 0; direction: rtl;">
     <div id="coupangItems" style="width: 100%;"></div>
   </div>
 
@@ -1363,7 +1363,7 @@
     }
 
     // 최초 1회만 렌더링, resize는 scaleX로 처리 → 절대 쌓이지 않음
-    // A안: 최초 1회만 렌더링, resize 재호출 없음 → 쌓임 원천 차단
+    // 3000px로 넉넉히 렌더링 → 컨테이너가 width:100%+overflow:hidden으로 창 크기만큼만 노출
     let _coupangDone = false;
 
     function renderCoupang() {
@@ -1373,7 +1373,7 @@
         "id": 967242,
         "template": "carousel",
         "trackingCode": "AF6001579",
-        "width": String(Math.floor(window.innerWidth)),
+        "width": "3000",
         "height": "50",
         "tsource": ""
       });
