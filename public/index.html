@@ -1381,9 +1381,14 @@
 
     function renderCoupang() {
       if (!_coupangScriptReady) return;
-      // 컨테이너 초기화 후 재렌더링 (이전 배너 제거)
-      var container = document.getElementById('coupangItems');
-      container.innerHTML = '';
+
+      // 기존 컨테이너를 완전히 새 엘리먼트로 교체 — innerHTML 초기화만으로는
+      // 쿠팡 스크립트 내부 참조가 남아 배너가 쌓이는 문제 방지
+      var oldContainer = document.getElementById('coupangItems');
+      var newContainer = document.createElement('div');
+      newContainer.id = 'coupangItems';
+      oldContainer.parentNode.replaceChild(newContainer, oldContainer);
+
       new PartnersCoupang.G({
         "id": 967242,
         "template": "carousel",
