@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>트렌디맵 관리자 — 가게 등록</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --accent: #ff6b35;
+      --accent2: #ff9500;
+      --bg: #f7f7f5;
+      --surface: #ffffff;
+      --border: #e0e0e0;
+      --text: #1a1a1a;
+      --muted: #888;
+      --card: #f2f2f0;
+      --green: #22a85a;
+      --red: #e03434;
+    }
+
+    body {
+      font-family: 'Noto Sans KR', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    header {
+      background: var(--surface);
+      border-bottom: 2px solid var(--accent);
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    header h1 {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    header span {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    /* 로그인 화면 */
+    .login-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: calc(100vh - 57px);
+    }
+
+    .login-box {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 14px;
+      padding: 36px 32px;
+      width: 320px;
+      text-align: center;
+    }
+
+    .login-box h2 { font-size: 16px; margin-bottom: 20px; }
+
+    /* 메인 레이아웃 */
+    .wrap {
+      display: none;
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 24px 16px;
+      gap: 24px;
+      flex-direction: column;
+    }
+
+    .wrap.show { display: flex; }
+
+    .card {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .card-header {
+      padding: 14px 20px;
+      border-bottom: 1.5px solid var(--border);
+      font-weight: 700;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-body { padding: 20px; }
+
+    /* 폼 */
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .form-group.full { grid-column: 1 / -1; }
+
+    label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+    }
+
+    label .req { color: var(--accent); }
+
+    input, textarea, select {
+      background: var(--card);
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 13px;
+      font-family: inherit;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.15s;
+      width: 100%;
+    }
+
+    input:focus, textarea:focus, select:focus { border-color: var(--accent); }
+    textarea { resize: vertical; min-height: 60px; }
+
+    .addr-row {
+      display: flex;
+      gap: 8px;
+      align-items: flex-end;
+    }
+
+    .addr-row input { flex: 1; }
+
+    .btn {
+      padding: 9px 18px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      border: none;
+      transition: opacity 0.15s;
+      white-space: nowrap;
+    }
+
+    .btn:hover { opacity: 0.85; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-secondary { background: var(--card); color: var(--text); border: 1.5px solid var(--border); }
+    .btn-green { background: var(--green); color: #fff; }
+    .btn-red { background: var(--red); color: #fff; }
+    .btn-sm { padding: 5px 12px; font-size: 11px; }
+
+    .coord-display {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-top: 6px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .coord-display span {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 3px 8px;
+      font-size: 11px;
+    }
+
+    /* 태그 힌트 */
+    .tag-hints {
+      display: flex;
+      gap: 5px;
+      flex-wrap: wrap;
+      margin-top: 6px;
+    }
+
+    .tag-hint {
+      font-size: 11px;
+      padding: 3px 9px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .tag-hint:hover {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
+    /* 폼 액션 */
+    .form-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 20px;
+      padding-top: 16px;
+      border-top: 1.5px solid var(--border);
+    }
+
+    /* 알림 */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--text);
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.25s;
+      z-index: 9999;
+      white-space: nowrap;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .toast.ok { background: var(--green); }
+    .toast.err { background: var(--red); }
+
+    /* 목록 테이블 */
+    .store-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    .store-table th {
+      background: var(--card);
+      padding: 8px 12px;
+      text-align: left;
+      font-weight: 600;
+      border-bottom: 1.5px solid var(--border);
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .store-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+
+    .store-table tr:hover td { background: var(--card); }
+
+    .source-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 8px;
+      font-size: 10px;
+      font-weight: 700;
+      background: #e8f5e9;
+      color: var(--green);
+    }
+
+    .empty-msg {
+      text-align: center;
+      color: var(--muted);
+      padding: 40px;
+      font-size: 13px;
+    }
+
+    @media (max-width: 600px) {
+      .form-grid { grid-template-columns: 1fr; }
+      .form-group.full { grid-column: 1; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🗺️ 트렌디맵 관리자</h1>
+  <span>직접 등록 DB 관리</span>
+</header>
+
+<!-- 로그인 -->
+<div class="login-wrap" id="loginWrap">
+  <div class="login-box">
+    <h2>🔒 관리자 로그인</h2>
+    <div class="form-group" style="margin-bottom:14px;">
+      <label>비밀번호</label>
+      <input type="password" id="pwInput" placeholder="비밀번호 입력" />
+    </div>
+    <button class="btn btn-primary" style="width:100%;" onclick="doLogin()">로그인</button>
+  </div>
+</div>
+
+<!-- 메인 -->
+<div class="wrap" id="mainWrap">
+
+  <!-- 등록 / 수정 폼 -->
+  <div class="card">
+    <div class="card-header">
+      <span id="formTitle">➕ 가게 등록</span>
+    </div>
+    <div class="card-body">
+      <div class="form-grid">
+
+        <!-- 가게 이름 -->
+        <div class="form-group">
+          <label>가게 이름 <span class="req">*</span></label>
+          <input id="f_name" type="text" placeholder="예: 버터떡 마포점" />
+        </div>
+
+        <!-- 카테고리 -->
+        <div class="form-group">
+          <label>카테고리</label>
+          <input id="f_category" type="text" placeholder="예: 떡집, 카페, 디저트" />
+        </div>
+
+        <!-- 주소 -->
+        <div class="form-group full">
+          <label>주소 <span class="req">*</span></label>
+          <div class="addr-row">
+            <input id="f_addr" type="text" placeholder="예: 서울 마포구 연남동 123-4" />
+            <button class="btn btn-secondary" onclick="autoGeocode()">📍 좌표 자동입력</button>
+          </div>
+          <div class="coord-display">
+            위도 <span id="c_lat">—</span> 경도 <span id="c_lng">—</span>
+            <span id="coord_status" style="color:var(--muted)"></span>
+          </div>
+        </div>
+
+        <!-- 숨김 좌표 -->
+        <input type="hidden" id="f_lat" />
+        <input type="hidden" id="f_lng" />
+
+        <!-- 전화번호 -->
+        <div class="form-group">
+          <label>전화번호</label>
+          <input id="f_phone" type="text" placeholder="예: 02-1234-5678" />
+        </div>
+
+        <!-- 검색 키워드 태그 -->
+        <div class="form-group">
+          <label>검색 키워드 <span class="req">*</span> <span style="font-weight:400;color:var(--muted)">(콤마로 구분)</span></label>
+          <input id="f_tags" type="text" placeholder="예: 버터떡,버터 떡" />
+          <div class="tag-hints">
+            <div class="tag-hint" onclick="addTag('버터떡')">🥮 버터떡</div>
+            <div class="tag-hint" onclick="addTag('두바이 쫀득쿠키')">🍪 두바이 쫀득쿠키</div>
+            <div class="tag-hint" onclick="addTag('소금빵')">🥐 소금빵</div>
+            <div class="tag-hint" onclick="addTag('탕후루')">🍡 탕후루</div>
+            <div class="tag-hint" onclick="addTag('크로플')">🧇 크로플</div>
+            <div class="tag-hint" onclick="addTag('마라탕')">🌶️ 마라탕</div>
+          </div>
+        </div>
+
+        <!-- 카카오맵 URL -->
+        <div class="form-group">
+          <label>카카오맵 URL</label>
+          <input id="f_kakao_url" type="text" placeholder="https://place.map.kakao.com/..." />
+        </div>
+
+        <!-- 네이버지도 URL -->
+        <div class="form-group">
+          <label>네이버지도 URL</label>
+          <input id="f_naver_url" type="text" placeholder="https://naver.me/..." />
+        </div>
+
+        <!-- 메모 -->
+        <div class="form-group full">
+          <label>메모 (내부용)</label>
+          <textarea id="f_memo" placeholder="등록 사유, 특이사항 등 자유롭게 기입"></textarea>
+        </div>
+
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-secondary" onclick="resetForm()">초기화</button>
+        <button class="btn btn-primary" id="submitBtn" onclick="submitForm()">등록하기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 등록된 가게 목록 -->
+  <div class="card">
+    <div class="card-header">
+      📋 등록된 가게 목록
+      <button class="btn btn-secondary btn-sm" style="margin-left:auto;" onclick="loadList()">🔄 새로고침</button>
+    </div>
+    <div class="card-body" style="padding:0; overflow-x:auto;">
+      <div id="listArea"><div class="empty-msg">로딩 중...</div></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  let adminPw = '';
+  let editingId = null;
+
+  // ── 로그인 ──
+  document.getElementById('pwInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') doLogin();
+  });
+
+  async function doLogin() {
+    const pw = document.getElementById('pwInput').value.trim();
+    if (!pw) return showToast('비밀번호를 입력해주세요.', 'err');
+
+    const res = await fetch(`/api/admin/stores?pw=${encodeURIComponent(pw)}`);
+    if (res.status === 401) return showToast('비밀번호가 틀렸습니다.', 'err');
+
+    adminPw = pw;
+    document.getElementById('loginWrap').style.display = 'none';
+    document.getElementById('mainWrap').classList.add('show');
+    loadList();
+  }
+
+  // ── 주소 → 좌표 자동입력 ──
+  async function autoGeocode() {
+    const addr = document.getElementById('f_addr').value.trim();
+    if (!addr) return showToast('주소를 먼저 입력해주세요.', 'err');
+
+    document.getElementById('coord_status').textContent = '검색 중...';
+    const res = await fetch(`/api/admin/geocode?pw=${encodeURIComponent(adminPw)}&query=${encodeURIComponent(addr)}`);
+    const data = await res.json();
+
+    if (data.error) {
+      document.getElementById('coord_status').textContent = '❌ 찾을 수 없음';
+      return showToast('좌표를 찾을 수 없습니다. 주소를 확인해주세요.', 'err');
+    }
+
+    document.getElementById('f_lat').value = data.lat;
+    document.getElementById('f_lng').value = data.lng;
+    document.getElementById('c_lat').textContent = data.lat.toFixed(6);
+    document.getElementById('c_lng').textContent = data.lng.toFixed(6);
+    document.getElementById('coord_status').textContent = '✅ 완료';
+    showToast('좌표가 자동 입력됐습니다.', 'ok');
+  }
+
+  // ── 태그 추가 ──
+  function addTag(tag) {
+    const el = document.getElementById('f_tags');
+    const cur = el.value.trim();
+    const tags = cur ? cur.split(',').map(t => t.trim()) : [];
+    if (!tags.includes(tag)) {
+      el.value = [...tags, tag].join(',');
+    }
+  }
+
+  // ── 폼 제출 ──
+  async function submitForm() {
+    const name     = document.getElementById('f_name').value.trim();
+    const addr     = document.getElementById('f_addr').value.trim();
+    const lat      = parseFloat(document.getElementById('f_lat').value);
+    const lng      = parseFloat(document.getElementById('f_lng').value);
+    const tags     = document.getElementById('f_tags').value.trim();
+
+    if (!name) return showToast('가게 이름을 입력해주세요.', 'err');
+    if (!addr) return showToast('주소를 입력해주세요.', 'err');
+    if (!lat || !lng) return showToast('📍 좌표 자동입력 버튼을 눌러 좌표를 확인해주세요.', 'err');
+    if (!tags) return showToast('검색 키워드를 하나 이상 입력해주세요.', 'err');
+
+    const body = {
+      pw: adminPw,
+      name, addr, lat, lng,
+      phone:      document.getElementById('f_phone').value.trim()     || null,
+      category:   document.getElementById('f_category').value.trim()  || null,
+      kakao_url:  document.getElementById('f_kakao_url').value.trim() || null,
+      naver_url:  document.getElementById('f_naver_url').value.trim() || null,
+      query_tags: tags,
+      memo:       document.getElementById('f_memo').value.trim()      || null,
+    };
+
+    const url    = editingId ? `/api/admin/stores/${editingId}` : '/api/admin/stores';
+    const method = editingId ? 'PUT' : 'POST';
+
+    const res  = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+
+    if (data.ok) {
+      showToast(editingId ? '수정됐습니다.' : '등록됐습니다.', 'ok');
+      resetForm();
+      loadList();
+    } else {
+      showToast(data.error || '오류가 발생했습니다.', 'err');
+    }
+  }
+
+  // ── 수정 모드 진입 ──
+  function startEdit(store) {
+    editingId = store.id;
+    document.getElementById('formTitle').textContent = '✏️ 가게 수정';
+    document.getElementById('submitBtn').textContent = '수정 저장';
+
+    document.getElementById('f_name').value      = store.name      || '';
+    document.getElementById('f_addr').value      = store.addr      || '';
+    document.getElementById('f_phone').value     = store.phone     || '';
+    document.getElementById('f_category').value  = store.category  || '';
+    document.getElementById('f_tags').value      = store.query_tags|| '';
+    document.getElementById('f_kakao_url').value = store.kakao_url || '';
+    document.getElementById('f_naver_url').value = store.naver_url || '';
+    document.getElementById('f_memo').value      = store.memo      || '';
+    document.getElementById('f_lat').value       = store.lat;
+    document.getElementById('f_lng').value       = store.lng;
+    document.getElementById('c_lat').textContent = Number(store.lat).toFixed(6);
+    document.getElementById('c_lng').textContent = Number(store.lng).toFixed(6);
+    document.getElementById('coord_status').textContent = '✅';
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // ── 삭제 ──
+  async function deleteStore(id, name) {
+    if (!confirm(`"${name}"을 삭제할까요?`)) return;
+    const res  = await fetch(`/api/admin/stores/${id}?pw=${encodeURIComponent(adminPw)}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (data.ok) { showToast('삭제됐습니다.', 'ok'); loadList(); }
+    else showToast(data.error || '오류', 'err');
+  }
+
+  // ── 폼 초기화 ──
+  function resetForm() {
+    editingId = null;
+    document.getElementById('formTitle').textContent  = '➕ 가게 등록';
+    document.getElementById('submitBtn').textContent  = '등록하기';
+    ['f_name','f_addr','f_phone','f_category','f_tags',
+     'f_kakao_url','f_naver_url','f_memo','f_lat','f_lng'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+    document.getElementById('c_lat').textContent = '—';
+    document.getElementById('c_lng').textContent = '—';
+    document.getElementById('coord_status').textContent = '';
+  }
+
+  // ── 목록 로드 ──
+  async function loadList() {
+    document.getElementById('listArea').innerHTML = '<div class="empty-msg">로딩 중...</div>';
+    const res  = await fetch(`/api/admin/stores?pw=${encodeURIComponent(adminPw)}`);
+    const data = await res.json();
+
+    if (!data.stores || data.stores.length === 0) {
+      document.getElementById('listArea').innerHTML = '<div class="empty-msg">등록된 가게가 없습니다.</div>';
+      return;
+    }
+
+    const rows = data.stores.map(s => `
+      <tr>
+        <td>${s.id}</td>
+        <td><strong>${s.name}</strong></td>
+        <td style="color:var(--muted); max-width:200px;">${s.addr}</td>
+        <td>${s.phone || '—'}</td>
+        <td>${s.query_tags}</td>
+        <td style="color:var(--muted); font-size:11px;">${s.created_at || ''}</td>
+        <td>
+          <div style="display:flex;gap:5px;">
+            <button class="btn btn-secondary btn-sm" onclick='startEdit(${JSON.stringify(s)})'>수정</button>
+            <button class="btn btn-red btn-sm" onclick="deleteStore(${s.id}, '${s.name.replace(/'/g,"\\'")}')">삭제</button>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+
+    document.getElementById('listArea').innerHTML = `
+      <table class="store-table">
+        <thead>
+          <tr>
+            <th>ID</th><th>가게명</th><th>주소</th><th>전화</th><th>키워드</th><th>등록일</th><th>관리</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `;
+  }
+
+  // ── 토스트 ──
+  let toastTimer;
+  function showToast(msg, type = '') {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = 'toast show' + (type ? ' ' + type : '');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.className = 'toast', 2800);
+  }
+</script>
+</body>
+</html>
