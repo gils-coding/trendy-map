@@ -830,7 +830,7 @@
       font-family: inherit;
     }
 
-    /* ── 쿠팡 배너: 여백 완전 제거 ── */
+    /* ── 쿠팡 배너: scaleX 반응형 ── */
     #coupangBanner {
       display: none;
       border-top: 1px solid var(--border);
@@ -838,18 +838,19 @@
       width: 100%;
       overflow: hidden;
       flex-shrink: 0;
-      /* 인라인 요소(iframe) 아래 생기는 baseline 여백 제거 */
       line-height: 0;
       font-size: 0;
     }
 
+    /* 실제 배너 래퍼 — JS가 고정 width로 렌더링 후 scaleX로 맞춤 */
     #coupangItems {
       display: block;
       line-height: 0;
       font-size: 0;
+      transform-origin: left top;
     }
 
-    /* 쿠팡 내부 iframe 여백 강제 제거 */
+    /* iframe 등 내부 요소 여백 제거 */
     #coupangItems iframe,
     #coupangItems>* {
       display: block !important;
@@ -1375,46 +1376,25 @@
       if (banner) banner.style.display = 'block';
     }
 
-    // ── 쿠팡 배너: resize 시 재렌더링 ──
-    let _coupangResizeTimer = null;
-    let _coupangScriptReady = false;
+    // ── 쿠팡 배너: 고정 width 렌더링 후 scaleX로 반응형 맞춤 ──
+    // 재렌더링 없이 스크립트 1회 실행 → 쌓임 문제 원천 차단
+    var _COUPANG_RENDER_W = 1600; // 충분히 넓게 고정 렌더링
 
-    function renderCoupang() {
-      if (!_coupangScriptReady) return;
-
-      // 1) 쿠팡 전역 객체 초기화 — 내부 캐시/참조 완전 제거
-      try { delete window.PartnersCoupang; } catch (e) { window.PartnersCoupang = undefined; }
-
-      // 2) 기존 쿠팡 스크립트 태그 제거
-      var oldScript = document.querySelector('script[src="https://ads-partners.coupang.com/g.js"]');
-      if (oldScript) oldScript.parentNode.removeChild(oldScript);
-
-      // 3) 배너 래퍼 전체를 새 엘리먼트로 교체 (DOM 참조 완전 단절)
-      var oldBanner = document.getElementById('coupangBanner');
-      var newBanner = document.createElement('div');
-      newBanner.id = 'coupangBanner';
-      newBanner.style.cssText = 'display:block; border-top:1px solid var(--border); background:var(--surface); width:100%; overflow:hidden; flex-shrink:0; line-height:0; font-size:0;';
-      var newItems = document.createElement('div');
-      newItems.id = 'coupangItems';
-      newItems.style.cssText = 'display:block; line-height:0; font-size:0;';
-      newBanner.appendChild(newItems);
-      oldBanner.parentNode.replaceChild(newBanner, oldBanner);
-
-      // 4) 스크립트 재로드 후 렌더링 — 전역 객체가 완전히 새로 주입된 상태에서 실행
-      var newScript = document.createElement('script');
-      newScript.src = 'https://ads-partners.coupang.com/g.js';
-      newScript.onload = function () {
-        new PartnersCoupang.G({
-          "id": 967242,
-          "template": "carousel",
-          "trackingCode": "AF6001579",
-          "width": String(Math.floor(window.innerWidth)),
-          "height": "50",
-          "tsource": ""
-        });
-      };
-      document.head.appendChild(newScript);
+    function scaleCoupang() {
+      var items = document.getElementById('coupangItems');
+      if (!items) return;
+      var ratio = window.innerWidth / _COUPANG_RENDER_W;
+      items.style.transform = 'scaleX(' + ratio + ')';
+      // scaleX는 시각적 크기만 줄이고 실제 높이는 그대로라
+      // 부모 높이를 스케일된 값으로 강제 지정
+      var inner = items.querySelector('iframe') || items.firstElementChild;
+      if (inner) {
+        var h = parseFloat(inner.style.height || inner.getAttribute('height') || 50);
+        document.getElementById('coupangBanner').style.height = (h * ratio) + 'px';
+      }
     }
+
+    var _coupangResizeTimer = null;
 
     function switchCategory(tabEl) {
       document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -1517,22 +1497,29 @@
         if (url) window.open(url, '_blank');
       });
 
-      // ── 쿠팡 배너 로드 및 resize 반응형 처리 ──
+      // ── 쿠팡 배너: 1회만 렌더링, resize는 scaleX로 처리 ──
       document.getElementById('coupangBanner').style.display = 'block';
       var cpScript = document.createElement('script');
       cpScript.src = 'https://ads-partners.coupang.com/g.js';
       cpScript.onload = function () {
-        _coupangScriptReady = true;
-        renderCoupang(); // 최초 렌더링
+        // 고정 넓이(_COUPANG_RENDER_W)로 딱 한 번만 렌더링
+        new PartnersCoupang.G({
+          "id": 967242,
+          "template": "carousel",
+          "trackingCode": "AF6001579",
+          "width": String(_COUPANG_RENDER_W),
+          "height": "50",
+          "tsource": ""
+        });
+        // 렌더링 직후 + DOM 반영 뒤 scaleX 적용
+        setTimeout(scaleCoupang, 300);
       };
       document.head.appendChild(cpScript);
 
-      // 창 크기 변경 시 디바운스 후 재렌더링
+      // 창 크기 변경 시 scaleX만 재계산 (재렌더링 없음)
       window.addEventListener('resize', function () {
         clearTimeout(_coupangResizeTimer);
-        _coupangResizeTimer = setTimeout(function () {
-          renderCoupang();
-        }, 300);
+        _coupangResizeTimer = setTimeout(scaleCoupang, 50);
       });
 
       // ── 지도 초기화 ──
