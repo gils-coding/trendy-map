@@ -1382,21 +1382,38 @@
     function renderCoupang() {
       if (!_coupangScriptReady) return;
 
-      // 기존 컨테이너를 완전히 새 엘리먼트로 교체 — innerHTML 초기화만으로는
-      // 쿠팡 스크립트 내부 참조가 남아 배너가 쌓이는 문제 방지
-      var oldContainer = document.getElementById('coupangItems');
-      var newContainer = document.createElement('div');
-      newContainer.id = 'coupangItems';
-      oldContainer.parentNode.replaceChild(newContainer, oldContainer);
+      // 1) 쿠팡 전역 객체 초기화 — 내부 캐시/참조 완전 제거
+      try { delete window.PartnersCoupang; } catch (e) { window.PartnersCoupang = undefined; }
 
-      new PartnersCoupang.G({
-        "id": 967242,
-        "template": "carousel",
-        "trackingCode": "AF6001579",
-        "width": String(Math.floor(window.innerWidth)),
-        "height": "50",
-        "tsource": ""
-      });
+      // 2) 기존 쿠팡 스크립트 태그 제거
+      var oldScript = document.querySelector('script[src="https://ads-partners.coupang.com/g.js"]');
+      if (oldScript) oldScript.parentNode.removeChild(oldScript);
+
+      // 3) 배너 래퍼 전체를 새 엘리먼트로 교체 (DOM 참조 완전 단절)
+      var oldBanner = document.getElementById('coupangBanner');
+      var newBanner = document.createElement('div');
+      newBanner.id = 'coupangBanner';
+      newBanner.style.cssText = 'display:block; border-top:1px solid var(--border); background:var(--surface); width:100%; overflow:hidden; flex-shrink:0; line-height:0; font-size:0;';
+      var newItems = document.createElement('div');
+      newItems.id = 'coupangItems';
+      newItems.style.cssText = 'display:block; line-height:0; font-size:0;';
+      newBanner.appendChild(newItems);
+      oldBanner.parentNode.replaceChild(newBanner, oldBanner);
+
+      // 4) 스크립트 재로드 후 렌더링 — 전역 객체가 완전히 새로 주입된 상태에서 실행
+      var newScript = document.createElement('script');
+      newScript.src = 'https://ads-partners.coupang.com/g.js';
+      newScript.onload = function () {
+        new PartnersCoupang.G({
+          "id": 967242,
+          "template": "carousel",
+          "trackingCode": "AF6001579",
+          "width": String(Math.floor(window.innerWidth)),
+          "height": "50",
+          "tsource": ""
+        });
+      };
+      document.head.appendChild(newScript);
     }
 
     function switchCategory(tabEl) {
