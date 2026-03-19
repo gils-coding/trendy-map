@@ -956,8 +956,10 @@
 
   <!-- 쿠팡 배너 (전체 너비) -->
   <div id="coupangBanner"
-    style="display:none; border-top: 1px solid var(--border); background: var(--surface); overflow: hidden; width: 100%; flex-shrink: 0; direction: rtl;">
-    <div id="coupangItems" style="width: 100%;"></div>
+    style="display:none; border-top: 1px solid var(--border); background: var(--surface); overflow: hidden; width: 100%; flex-shrink: 0;">
+    <div id="coupangWrap" style="display:flex; justify-content:flex-end;">
+      <div id="coupangItems" style="flex-shrink:0;"></div>
+    </div>
   </div>
 
   <!-- MOBILE FAB + BOTTOM SHEET -->
