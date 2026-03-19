@@ -829,6 +829,35 @@
       cursor: pointer;
       font-family: inherit;
     }
+
+    /* ── 쿠팡 배너: 여백 완전 제거 ── */
+    #coupangBanner {
+      display: none;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      width: 100%;
+      overflow: hidden;
+      flex-shrink: 0;
+      /* 인라인 요소(iframe) 아래 생기는 baseline 여백 제거 */
+      line-height: 0;
+      font-size: 0;
+    }
+
+    #coupangItems {
+      display: block;
+      line-height: 0;
+      font-size: 0;
+    }
+
+    /* 쿠팡 내부 iframe 여백 강제 제거 */
+    #coupangItems iframe,
+    #coupangItems>* {
+      display: block !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      vertical-align: top !important;
+      border: none !important;
+    }
   </style>
 </head>
 
@@ -955,8 +984,7 @@
 
 
   <!-- 쿠팡 배너 (전체 너비) -->
-  <div id="coupangBanner"
-    style="display:none; border-top: 1px solid var(--border); background: var(--surface); width: 100%; overflow:hidden; flex-shrink: 0;">
+  <div id="coupangBanner" style="display:none;">
     <div id="coupangItems"></div>
   </div>
 
@@ -1043,7 +1071,6 @@
     let searchTimer = null;
     let isSearching = false;
 
-    // index_usa.html의 map.panTo() 와 동일한 효과 — Kakao Maps용 smooth pan
     function smoothPanTo(lat, lng, onComplete) {
       var startCenter = kakaoMap.getCenter();
       var startLat = startCenter.getLat();
@@ -1053,7 +1080,6 @@
 
       function step(now) {
         var progress = Math.min((now - startTime) / duration, 1);
-        // ease-in-out quad
         var ease = progress < 0.5
           ? 2 * progress * progress
           : 1 - Math.pow(-2 * progress + 2, 2) / 2;
@@ -1083,7 +1109,7 @@
     let _selectingStore = false;
 
     function scheduleSearch() {
-      if (_selectingStore) return; // 매장 선택 중엔 재검색 억제 (detail panel 닫힘 방지)
+      if (_selectingStore) return;
       clearTimeout(searchTimer);
       searchTimer = setTimeout(() => loadStores(), 500);
     }
@@ -1105,7 +1131,6 @@
       document.getElementById('sidebar-count').textContent = '검색 중...';
 
       try {
-        // 다중 키워드가 설정된 카테고리면 병렬 검색 후 중복 제거
         var keywords = MULTI_KEYWORDS[currentQuery] || [currentQuery];
         var fetchPromises = keywords.map(function (kw) {
           var url = '/api/stores?query=' + encodeURIComponent(kw) + '&lat=' + lat + '&lng=' + lng + '&radius=' + radius;
@@ -1114,7 +1139,6 @@
 
         var results = await Promise.all(fetchPromises);
 
-        // 중복 제거: place_url 또는 이름+주소 조합으로 판별
         var seen = {};
         var merged = [];
         results.forEach(function (data) {
@@ -1214,17 +1238,13 @@
       const item = document.getElementById(`store-${index}`);
       if (item) { item.classList.add('selected'); item.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
 
-      // 해당 매장 위치로 지도 중심 매끄럽게 이동
       if (store.lat && store.lng) {
         _selectingStore = true;
         smoothPanTo(store.lat, store.lng, function () {
           if (kakaoMap.getLevel() !== 4) kakaoMap.setLevel(4);
-          // setLevel이 zoom_changed를 발생시킨 후 일정 시간 뒤 플래그 해제
           setTimeout(function () { _selectingStore = false; }, 600);
         });
       }
-
-
 
       document.getElementById('detailName').textContent = store.name;
       document.getElementById('detailAddr').textContent = store.addr || '주소 정보 없음';
@@ -1237,14 +1257,12 @@
         phoneRow.style.display = 'none';
       }
 
-      // 주소에서 시/구까지만 추출 (층수, 호수 제거)
       var addrShort = (store.addr || '').split(' ').slice(0, 2).join(' ');
       document.getElementById('btnNaver').dataset.url =
         'https://map.naver.com/v5/search/' + encodeURIComponent(store.name + ' ' + addrShort);
       document.getElementById('btnKakao').dataset.url =
         store.kakaoUrl || 'https://map.kakao.com/link/search/' + encodeURIComponent(store.name);
 
-      // 상세 패널 표시
       document.getElementById('detailPanel').classList.add('show');
     }
 
@@ -1271,14 +1289,11 @@
       var banner = document.getElementById('inappBanner');
       banner.classList.add('show');
 
-      // 크롬으로 열기 버튼
       document.getElementById('inappOpenBtn').addEventListener('click', function () {
         var url = location.href;
-        // 안드로이드: intent scheme으로 크롬 강제 실행
         var intentUrl = 'intent://' + url.replace(/https?:\/\//, '') +
           '#Intent;scheme=https;package=com.android.chrome;end';
         location.href = intentUrl;
-        // intent 실패 시 fallback: 그냥 새 탭
         setTimeout(function () { window.open(url, '_blank'); }, 1500);
       });
     }
@@ -1354,20 +1369,21 @@
     }
 
     let sheetOpen = false;
-    let coupangScriptLoaded = false;
 
     function updateCoupangBanner(query) {
-      // 모든 탭에서 동일한 배너 표시
       const banner = document.getElementById('coupangBanner');
       if (banner) banner.style.display = 'block';
     }
 
-    // 최초 1회만 렌더링, resize는 scaleX로 처리 → 절대 쌓이지 않음
-    let _coupangDone = false;
+    // ── 쿠팡 배너: resize 시 재렌더링 ──
+    let _coupangResizeTimer = null;
+    let _coupangScriptReady = false;
 
     function renderCoupang() {
-      if (_coupangDone) return;
-      _coupangDone = true;
+      if (!_coupangScriptReady) return;
+      // 컨테이너 초기화 후 재렌더링 (이전 배너 제거)
+      var container = document.getElementById('coupangItems');
+      container.innerHTML = '';
       new PartnersCoupang.G({
         "id": 967242,
         "template": "carousel",
@@ -1479,12 +1495,23 @@
         if (url) window.open(url, '_blank');
       });
 
-      // ── 쿠팡 배너 ──
+      // ── 쿠팡 배너 로드 및 resize 반응형 처리 ──
+      document.getElementById('coupangBanner').style.display = 'block';
       var cpScript = document.createElement('script');
       cpScript.src = 'https://ads-partners.coupang.com/g.js';
-      cpScript.onload = function () { renderCoupang(); };
+      cpScript.onload = function () {
+        _coupangScriptReady = true;
+        renderCoupang(); // 최초 렌더링
+      };
       document.head.appendChild(cpScript);
-      document.getElementById('coupangBanner').style.display = 'block';
+
+      // 창 크기 변경 시 디바운스 후 재렌더링
+      window.addEventListener('resize', function () {
+        clearTimeout(_coupangResizeTimer);
+        _coupangResizeTimer = setTimeout(function () {
+          renderCoupang();
+        }, 300);
+      });
 
       // ── 지도 초기화 ──
       if (typeof kakao !== 'undefined' && kakao.maps) {
