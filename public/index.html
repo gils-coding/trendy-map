@@ -1364,18 +1364,19 @@
 
     // 최초 1회만 렌더링, resize는 scaleX로 처리 → 절대 쌓이지 않음
     let _coupangResizeTimer = null;
+    let _coupangLockedUntil = 0;
 
     function renderCoupang() {
+      const now = Date.now();
+      if (now < _coupangLockedUntil) return; // 잠금 중이면 완전 차단
+      _coupangLockedUntil = now + 2500; // 2.5초 잠금
+
       const banner = document.getElementById('coupangBanner');
       if (!banner) return;
       const w = Math.floor(window.innerWidth);
 
-      // 컨테이너를 새 element로 교체 → 이전 SDK 결과물이 DOM에서 완전히 제거됨
-      const newEl = document.createElement('div');
-      newEl.id = 'coupangItems';
-      newEl.style.width = '100%';
-      const oldEl = document.getElementById('coupangItems');
-      if (oldEl) { oldEl.parentNode.replaceChild(newEl, oldEl); }
+      // 배너 내부를 완전히 비우고 새 컨테이너 생성
+      banner.innerHTML = '<div id="coupangItems" style="width:100%;"></div>';
 
       new PartnersCoupang.G({
         "id": 967242,
@@ -1389,7 +1390,7 @@
 
     window.addEventListener('resize', function () {
       clearTimeout(_coupangResizeTimer);
-      _coupangResizeTimer = setTimeout(renderCoupang, 600);
+      _coupangResizeTimer = setTimeout(renderCoupang, 800);
     });
 
     function switchCategory(tabEl) {
