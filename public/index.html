@@ -703,7 +703,7 @@
       top: 12px;
       right: 12px;
       z-index: 10;
-      display: flex;
+      display: none; /* PC에서는 기본 숨김 */
       align-items: center;
       gap: 6px;
       padding: 8px 14px;
@@ -718,6 +718,13 @@
       box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
       transition: background 0.15s, border-color 0.15s;
       white-space: nowrap;
+    }
+
+    /* 모바일에서만 내 위치 찾기 버튼 표시 */
+    @media (max-width: 768px) {
+      .locate-btn {
+        display: flex !important;
+      }
     }
 
     .locate-btn:hover {
@@ -1306,20 +1313,39 @@
       var isSafari = /Safari/i.test(ua) && !/Chrome/i.test(ua);
       var isAndroid = /Android/i.test(ua);
       var isChrome = /Chrome/i.test(ua);
+      var isMobileChrome = isChrome && /Mobile/i.test(ua);
 
       if (isIOS && isSafari) {
+        // 아이폰 사파리 — 하단 주소창 기준
         return '아이폰 Safari 위치 허용 방법:<br><br>' +
-          '① 주소창 왼쪽 <strong>AA</strong> 버튼 탭<br>' +
-          '② <strong>웹 사이트 설정</strong> 선택<br>' +
-          '③ <strong>위치</strong> → <strong>허용</strong>으로 변경<br><br>' +
-          '또는 설정 앱 → Safari → 위치 → 허용';
-      } else if (isAndroid && isChrome) {
+          '<strong>방법 1 (설정 앱)</strong><br>' +
+          '설정 → Safari → 위치 → <strong>허용</strong><br><br>' +
+          '<strong>방법 2 (주소창)</strong><br>' +
+          '하단 주소창을 한 번 탭 →<br>' +
+          '왼쪽에 나타나는 <strong>⊕</strong> 또는 <strong>AA</strong> 버튼 탭<br>' +
+          '→ 웹 사이트 설정 → 위치 → <strong>허용</strong>';
+      } else if (isIOS && isChrome) {
+        // 아이폰 크롬
+        return '아이폰 Chrome 위치 허용 방법:<br><br>' +
+          '설정 앱 → Chrome →<br>' +
+          '<strong>위치</strong> → <strong>앱 사용 중 허용</strong>';
+      } else if (isAndroid && isMobileChrome) {
+        // 갤럭시/안드로이드 크롬
         return '안드로이드 Chrome 위치 허용 방법:<br><br>' +
-          '① 주소창 왼쪽 <strong>🔒 자물쇠</strong> 탭<br>' +
-          '② <strong>권한</strong> → <strong>위치</strong> → <strong>허용</strong>';
+          '주소창 왼쪽 <strong>🔒</strong> 탭<br>' +
+          '→ <strong>권한</strong> → <strong>위치</strong> → <strong>허용</strong><br><br>' +
+          '또는 설정 → Chrome 앱 →<br>' +
+          '<strong>위치</strong> → <strong>허용</strong>';
+      } else if (isAndroid) {
+        // 안드로이드 기타 브라우저
+        return '위치 허용 방법:<br><br>' +
+          '주소창 왼쪽 아이콘 탭<br>' +
+          '→ <strong>위치</strong> → <strong>허용</strong><br><br>' +
+          '또는 휴대폰 설정 → 앱 → 브라우저<br>' +
+          '→ <strong>위치 권한 허용</strong>';
       } else {
         return '브라우저 주소창 왼쪽 아이콘을 탭하여<br>' +
-          '<strong>위치 권한을 허용</strong>으로 바꿔주세요.';
+          '<strong>위치 권한을 허용</strong>으로 변경해주세요.';
       }
     }
 
@@ -1333,33 +1359,50 @@
         return;
       }
       if (!navigator.geolocation) {
-        showLocationModal('이 브라우저는 위치 서비스를 지원하지 않아요.<br>크롬 브라우저를 이용해주세요.');
+        showLocationModal('이 브라우저는 위치 서비스를 지원하지 않아요.');
         return;
       }
+
       var btn = document.getElementById('locateBtn');
       btn.textContent = '⏳ 위치 확인 중...';
       btn.classList.add('loading');
-      navigator.geolocation.getCurrentPosition(
-        function (pos) {
-          kakaoMap.setCenter(new kakao.maps.LatLng(pos.coords.latitude, pos.coords.longitude));
-          kakaoMap.setLevel(5);
-          btn.textContent = '📍 내 위치 찾기';
-          btn.classList.remove('loading');
-          loadStores();
-        },
-        function (err) {
-          btn.textContent = '📍 내 위치 찾기';
-          btn.classList.remove('loading');
-          if (err.code === 1) {
-            showLocationModal(getPermissionGuide(), true);
-          } else if (err.code === 2) {
-            showLocationModal('위치 정보를 가져올 수 없어요.<br>GPS가 켜져 있는지 확인해주세요.');
-          } else {
-            showLocationModal('위치 요청 시간이 초과됐어요.<br>다시 시도해주세요.');
-          }
-        },
-        { timeout: 10000, maximumAge: 0, enableHighAccuracy: true }
-      );
+
+      // 먼저 빠른 응답(낮은 정확도)으로 시도 → 성공 시 지도 이동
+      // 그 다음 고정밀 위치로 재시도하여 정확도 개선
+      function onSuccess(pos) {
+        kakaoMap.setCenter(new kakao.maps.LatLng(pos.coords.latitude, pos.coords.longitude));
+        kakaoMap.setLevel(5);
+        btn.textContent = '📍 내 위치 찾기';
+        btn.classList.remove('loading');
+        loadStores();
+      }
+
+      function onError(err) {
+        btn.textContent = '📍 내 위치 찾기';
+        btn.classList.remove('loading');
+        if (err.code === 1) {
+          // 권한 거부 → 브라우저/OS별 안내
+          showLocationModal(getPermissionGuide(), true);
+        } else if (err.code === 2) {
+          showLocationModal('위치 정보를 가져올 수 없어요.<br>GPS가 켜져 있는지 확인해주세요.');
+        } else {
+          showLocationModal('위치 요청 시간이 초과됐어요.<br>다시 시도해주세요.');
+        }
+      }
+
+      // 1단계: 빠른 저정밀 위치 (즉시 반응)
+      navigator.geolocation.getCurrentPosition(onSuccess, function(err) {
+        // 저정밀 실패 시 고정밀로 재시도
+        navigator.geolocation.getCurrentPosition(onSuccess, onError, {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 0
+        });
+      }, {
+        enableHighAccuracy: false,
+        timeout: 5000,
+        maximumAge: 30000
+      });
     }
 
     function toggleBottomSheet() { toggleSheet(); }
