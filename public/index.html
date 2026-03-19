@@ -1363,38 +1363,21 @@
     }
 
     // 최초 1회만 렌더링, resize는 scaleX로 처리 → 절대 쌓이지 않음
-    let _coupangResizeTimer = null;
+    // A안: 최초 1회만 렌더링, resize 재호출 없음 → 쌓임 원천 차단
+    let _coupangDone = false;
 
     function renderCoupang() {
-      var w = Math.floor(window.innerWidth);
-
-      // 1. 기존 쿠팡 script 태그 완전 제거 → 이전 SDK 인스턴스 사망
-      document.querySelectorAll('script[src*="coupang"]').forEach(function (s) { s.remove(); });
-
-      // 2. 배너 내부 초기화
-      var banner = document.getElementById('coupangBanner');
-      if (banner) banner.innerHTML = '<div id="coupangItems" style="width:100%;"></div>';
-
-      // 3. script 새로 로드 → 새 인스턴스로 새 너비 렌더링
-      var s = document.createElement('script');
-      s.src = 'https://ads-partners.coupang.com/g.js';
-      s.onload = function () {
-        new PartnersCoupang.G({
-          "id": 967242,
-          "template": "carousel",
-          "trackingCode": "AF6001579",
-          "width": String(w),
-          "height": "50",
-          "tsource": ""
-        });
-      };
-      document.head.appendChild(s);
+      if (_coupangDone) return;
+      _coupangDone = true;
+      new PartnersCoupang.G({
+        "id": 967242,
+        "template": "carousel",
+        "trackingCode": "AF6001579",
+        "width": String(Math.floor(window.innerWidth)),
+        "height": "50",
+        "tsource": ""
+      });
     }
-
-    window.addEventListener('resize', function () {
-      clearTimeout(_coupangResizeTimer);
-      _coupangResizeTimer = setTimeout(renderCoupang, 700);
-    });
 
     function switchCategory(tabEl) {
       document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -1498,8 +1481,11 @@
       });
 
       // ── 쿠팡 배너 ──
+      var cpScript = document.createElement('script');
+      cpScript.src = 'https://ads-partners.coupang.com/g.js';
+      cpScript.onload = function () { renderCoupang(); };
+      document.head.appendChild(cpScript);
       document.getElementById('coupangBanner').style.display = 'block';
-      renderCoupang(); // script 로드 + 렌더링 모두 renderCoupang 내부에서 처리
 
       // ── 지도 초기화 ──
       if (typeof kakao !== 'undefined' && kakao.maps) {
