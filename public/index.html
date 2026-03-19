@@ -830,7 +830,7 @@
       font-family: inherit;
     }
 
-    /* ── 쿠팡 배너: scaleX 반응형 ── */
+    /* ── 쿠팡 배너: iframe width=100% 반응형 ── */
     #coupangBanner {
       display: none;
       border-top: 1px solid var(--border);
@@ -842,22 +842,13 @@
       font-size: 0;
     }
 
-    /* 실제 배너 래퍼 — JS가 고정 width로 렌더링 후 scaleX로 맞춤 */
-    #coupangItems {
+    #coupangBanner iframe {
       display: block;
-      line-height: 0;
-      font-size: 0;
-      transform-origin: left top;
-    }
-
-    /* iframe 등 내부 요소 여백 제거 */
-    #coupangItems iframe,
-    #coupangItems>* {
-      display: block !important;
-      margin: 0 !important;
-      padding: 0 !important;
-      vertical-align: top !important;
-      border: none !important;
+      width: 100%;
+      border: none;
+      margin: 0;
+      padding: 0;
+      vertical-align: top;
     }
   </style>
 </head>
@@ -985,8 +976,12 @@
 
 
   <!-- 쿠팡 배너 (전체 너비) -->
+  <!-- 쿠팡 배너: iframe width=100% → 재렌더링 없이 창 너비 자동 반응 -->
   <div id="coupangBanner" style="display:none;">
-    <div id="coupangItems"></div>
+    <iframe id="coupangIframe"
+      src="https://ads-partners.coupang.com/widgets.html?id=967242&template=carousel&trackingCode=AF6001579&subId=&width=2000&height=50&tsource="
+      width="100%" height="50" frameborder="0" scrolling="no" referrerpolicy="unsafe-url" browsingtopics>
+    </iframe>
   </div>
 
   <!-- MOBILE FAB + BOTTOM SHEET -->
@@ -1376,24 +1371,7 @@
       if (banner) banner.style.display = 'block';
     }
 
-    // ── 쿠팡 배너: 고정 width 렌더링 후 scaleX로 반응형 맞춤 ──
-    // 재렌더링 없이 스크립트 1회 실행 → 쌓임 문제 원천 차단
-    var _COUPANG_RENDER_W = 1600; // 충분히 넓게 고정 렌더링
-
-    function scaleCoupang() {
-      var items = document.getElementById('coupangItems');
-      if (!items) return;
-      var ratio = window.innerWidth / _COUPANG_RENDER_W;
-      items.style.transform = 'scaleX(' + ratio + ')';
-      // scaleX는 시각적 크기만 줄이고 실제 높이는 그대로라
-      // 부모 높이를 스케일된 값으로 강제 지정
-      var inner = items.querySelector('iframe') || items.firstElementChild;
-      if (inner) {
-        var h = parseFloat(inner.style.height || inner.getAttribute('height') || 50);
-        document.getElementById('coupangBanner').style.height = (h * ratio) + 'px';
-      }
-    }
-
+    // ── 쿠팡 배너: iframe width=100% 방식 — JS 렌더링 불필요 ──
     var _coupangResizeTimer = null;
 
     function switchCategory(tabEl) {
@@ -1497,30 +1475,8 @@
         if (url) window.open(url, '_blank');
       });
 
-      // ── 쿠팡 배너: 1회만 렌더링, resize는 scaleX로 처리 ──
+      // ── 쿠팡 배너: iframe 방식 — 그냥 보이게만 하면 됨 ──
       document.getElementById('coupangBanner').style.display = 'block';
-      var cpScript = document.createElement('script');
-      cpScript.src = 'https://ads-partners.coupang.com/g.js';
-      cpScript.onload = function () {
-        // 고정 넓이(_COUPANG_RENDER_W)로 딱 한 번만 렌더링
-        new PartnersCoupang.G({
-          "id": 967242,
-          "template": "carousel",
-          "trackingCode": "AF6001579",
-          "width": String(_COUPANG_RENDER_W),
-          "height": "50",
-          "tsource": ""
-        });
-        // 렌더링 직후 + DOM 반영 뒤 scaleX 적용
-        setTimeout(scaleCoupang, 300);
-      };
-      document.head.appendChild(cpScript);
-
-      // 창 크기 변경 시 scaleX만 재계산 (재렌더링 없음)
-      window.addEventListener('resize', function () {
-        clearTimeout(_coupangResizeTimer);
-        _coupangResizeTimer = setTimeout(scaleCoupang, 50);
-      });
 
       // ── 지도 초기화 ──
       if (typeof kakao !== 'undefined' && kakao.maps) {
