@@ -730,13 +730,39 @@
       /* 상세 패널 */
       .detail-panel {
         position: fixed;
-        bottom: 0;
+        bottom: 50px;
+        /* 쿠팡 배너 높이만큼 위로 */
         left: 0;
         right: 0;
         width: 100%;
         border-radius: 14px 14px 0 0;
         max-height: 55vh;
         z-index: 300;
+      }
+
+      /* 쿠팡 배너: 모바일에서 하단 고정 */
+      #coupangBanner {
+        position: fixed !important;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 80;
+        border-top: 1px solid var(--border);
+      }
+
+      /* FAB 버튼: 배너 위로 */
+      .mobile-fab {
+        bottom: 60px !important;
+      }
+
+      /* 바텀시트: 배너 위에서 열리도록 */
+      .mobile-sheet {
+        bottom: -100%;
+      }
+
+      .mobile-sheet.show {
+        bottom: 50px;
+        /* 배너 높이만큼 띄움 */
       }
     }
 
@@ -785,7 +811,7 @@
       bottom: -100%;
       left: 0;
       right: 0;
-      height: 48%;
+      height: 42%;
       background: var(--surface);
       border-top: 3px solid var(--accent);
       border-radius: 16px 16px 0 0;
