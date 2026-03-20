@@ -267,6 +267,10 @@ app.get('/api/stores', async (req, res) => {
 // GET /api/store-search?query=버터떡+홍대&keyword=홍대
 // =====================================================
 app.get('/api/store-search', async (req, res) => {
+  // 캐시 완전 비활성화
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Surrogate-Control', 'no-store');
   // category: 현재 탭 키워드 (예: "버터떡"), keyword: 사용자 입력 (예: "홍대")
   const { category, keyword } = req.query;
   const kw = (keyword || '').trim();
