@@ -179,6 +179,124 @@
       font-family: inherit;
     }
 
+    /* 매장명 검색 */
+    .store-search {
+      display: flex;
+      gap: 6px;
+      flex: 1;
+      min-width: 160px;
+      position: relative;
+    }
+
+    .store-search-input {
+      flex: 1;
+      background: var(--card);
+      border: 1.5px solid var(--accent2);
+      border-radius: 8px;
+      padding: 7px 12px;
+      color: var(--text);
+      font-size: 13px;
+      font-family: inherit;
+      outline: none;
+    }
+
+    .store-search-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(255, 107, 53, 0.12);
+    }
+
+    .store-search-input::placeholder {
+      color: var(--muted);
+    }
+
+    .store-search-btn {
+      padding: 7px 14px;
+      background: var(--accent2);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      font-family: inherit;
+      transition: opacity 0.15s;
+    }
+
+    .store-search-btn:hover {
+      opacity: 0.85;
+    }
+
+    /* 매장 검색 결과 드롭다운 */
+    .store-search-dropdown {
+      display: none;
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0;
+      right: 0;
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+      z-index: 200;
+      max-height: 280px;
+      overflow-y: auto;
+    }
+
+    .store-search-dropdown.show {
+      display: block;
+    }
+
+    .store-search-item {
+      padding: 10px 14px;
+      cursor: pointer;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.12s;
+    }
+
+    .store-search-item:last-child {
+      border-bottom: none;
+    }
+
+    .store-search-item:hover {
+      background: var(--card);
+    }
+
+    .store-search-item-name {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 2px;
+    }
+
+    .store-search-item-name em {
+      color: var(--accent);
+      font-style: normal;
+    }
+
+    .store-search-item-addr {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .store-search-empty {
+      padding: 16px;
+      text-align: center;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .store-search-loading {
+      padding: 16px;
+      text-align: center;
+      font-size: 12px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
     .sido-select,
     .sigungu-select {
       background: var(--card);
@@ -548,6 +666,21 @@
         gap: 5px;
       }
 
+      .store-search {
+        flex: 0 0 100%;
+        min-width: 0;
+      }
+
+      .store-search-input {
+        font-size: 12px;
+        padding: 5px 8px;
+      }
+
+      .store-search-btn {
+        padding: 5px 14px;
+        font-size: 12px;
+      }
+
       .region-input {
         flex: 1;
         min-width: 0;
@@ -703,7 +836,8 @@
       top: 12px;
       right: 12px;
       z-index: 10;
-      display: none; /* PC에서는 기본 숨김 */
+      display: none;
+      /* PC에서는 기본 숨김 */
       align-items: center;
       gap: 6px;
       padding: 8px 14px;
@@ -923,6 +1057,13 @@
       <input class="region-input" id="regionInput" type="text" placeholder="지역 직접 검색 (예: 마포구)" />
       <button class="region-btn">이동</button>
     </div>
+    <!-- 매장명 검색 -->
+    <div class="store-search" id="storeSearchWrap">
+      <input class="store-search-input" id="storeSearchInput" type="text" placeholder="🔍 매장명 검색 (예: 홍대 버터떡)"
+        autocomplete="off" />
+      <button class="store-search-btn" id="storeSearchBtn">검색</button>
+      <div class="store-search-dropdown" id="storeSearchDropdown"></div>
+    </div>
   </div>
 
   <div class="main">
@@ -985,15 +1126,9 @@
   <!-- 쿠팡 배너 (전체 너비) -->
   <!-- 쿠팡 배너: iframe width=100% → 재렌더링 없이 창 너비 자동 반응 -->
   <div id="coupangBanner" style="display:none;">
-    <iframe
-      id="coupangIframe"
+    <iframe id="coupangIframe"
       src="https://ads-partners.coupang.com/widgets.html?id=967242&template=carousel&trackingCode=AF6001579&subId=&width=2000&height=50&tsource="
-      width="100%"
-      height="50"
-      frameborder="0"
-      scrolling="no"
-      referrerpolicy="unsafe-url"
-      browsingtopics>
+      width="100%" height="50" frameborder="0" scrolling="no" referrerpolicy="unsafe-url" browsingtopics>
     </iframe>
   </div>
 
@@ -1391,7 +1526,7 @@
       }
 
       // 1단계: 빠른 저정밀 위치 (즉시 반응)
-      navigator.geolocation.getCurrentPosition(onSuccess, function(err) {
+      navigator.geolocation.getCurrentPosition(onSuccess, function (err) {
         // 저정밀 실패 시 고정밀로 재시도
         navigator.geolocation.getCurrentPosition(onSuccess, onError, {
           enableHighAccuracy: true,
@@ -1455,6 +1590,78 @@
       if (val) await moveToRegion(val);
     }
 
+    // ── 매장명 전국 검색 ──
+    let _storeSearchTimer = null;
+
+    function highlightKeyword(text, keyword) {
+      if (!keyword) return text;
+      const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      return text.replace(new RegExp(escaped, 'gi'), m => `<em>${m}</em>`);
+    }
+
+    async function searchStoreName() {
+      const keyword = document.getElementById('storeSearchInput').value.trim();
+      const dropdown = document.getElementById('storeSearchDropdown');
+      if (!keyword) { dropdown.classList.remove('show'); return; }
+
+      // 로딩 표시
+      dropdown.innerHTML = '<div class="store-search-loading"><div class="spinner" style="width:16px;height:16px;border-width:2px;"></div>검색 중...</div>';
+      dropdown.classList.add('show');
+
+      try {
+        // 현재 탭 키워드 + 매장명을 함께 검색 (예: "버터떡 홍대")
+        const combinedQuery = `${currentQuery} ${keyword}`;
+        const res = await fetch(`/api/store-search?query=${encodeURIComponent(combinedQuery)}&keyword=${encodeURIComponent(keyword)}`);
+        const data = await res.json();
+
+        if (!data.stores || data.stores.length === 0) {
+          dropdown.innerHTML = '<div class="store-search-empty">검색 결과가 없습니다.</div>';
+          return;
+        }
+
+        dropdown.innerHTML = data.stores.map((s, i) => `
+          <div class="store-search-item" onclick="selectSearchResult(${i})">
+            <div class="store-search-item-name">${highlightKeyword(s.name, keyword)}</div>
+            <div class="store-search-item-addr">📍 ${s.addr || ''}</div>
+          </div>
+        `).join('');
+
+        // 결과를 전역에 저장
+        window._searchResults = data.stores;
+
+      } catch (e) {
+        dropdown.innerHTML = '<div class="store-search-empty">검색 중 오류가 발생했습니다.</div>';
+      }
+    }
+
+    function selectSearchResult(index) {
+      const store = window._searchResults && window._searchResults[index];
+      if (!store) return;
+
+      // 드롭다운 닫기
+      document.getElementById('storeSearchDropdown').classList.remove('show');
+      document.getElementById('storeSearchInput').value = store.name;
+
+      // 지도 이동 후 매장 로드
+      if (store.lat && store.lng) {
+        smoothPanTo(store.lat, store.lng, function () {
+          kakaoMap.setLevel(4);
+          loadStores();
+          // 로드 완료 후 상세 패널 열기
+          setTimeout(function () {
+            if (window._stores) {
+              var matched = window._stores.findIndex(function (s) {
+                return s.name === store.name ||
+                  (s.lat && Math.abs(s.lat - store.lat) < 0.0001 &&
+                    s.lng && Math.abs(s.lng - store.lng) < 0.0001);
+              });
+              if (matched >= 0) selectStore(matched);
+            }
+          }, 1200);
+        });
+      }
+    }
+
     async function moveToRegion(regionName) {
       try {
         const res = await fetch(`/api/geocode?query=${encodeURIComponent(regionName)}`);
@@ -1513,6 +1720,31 @@
       // ── 시도/시군구 셀렉트 ──
       document.getElementById('sidoSelect').addEventListener('change', function () { onSidoChange(); });
       document.getElementById('sigunguSelect').addEventListener('change', function () { onSigunguChange(); });
+
+      // ── 매장명 검색 ──
+      var storeSearchInput = document.getElementById('storeSearchInput');
+      var storeSearchBtn = document.getElementById('storeSearchBtn');
+
+      // 입력 시 디바운스 자동검색
+      storeSearchInput.addEventListener('input', function () {
+        clearTimeout(_storeSearchTimer);
+        _storeSearchTimer = setTimeout(searchStoreName, 350);
+      });
+      storeSearchInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { clearTimeout(_storeSearchTimer); searchStoreName(); }
+        if (e.key === 'Escape') {
+          document.getElementById('storeSearchDropdown').classList.remove('show');
+        }
+      });
+      storeSearchBtn.addEventListener('click', function () { searchStoreName(); });
+
+      // 드롭다운 외부 클릭 시 닫기
+      document.addEventListener('click', function (e) {
+        var wrap = document.getElementById('storeSearchWrap');
+        if (wrap && !wrap.contains(e.target)) {
+          document.getElementById('storeSearchDropdown').classList.remove('show');
+        }
+      });
 
       // ── 네이버/카카오 버튼 ──
       document.getElementById('btnNaver').addEventListener('click', function () {
