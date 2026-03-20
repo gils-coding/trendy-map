@@ -1485,11 +1485,14 @@
       var isMobileChrome = isChrome && (/Mobile/i.test(ua) || /CriOS/i.test(ua));
 
       if (isIOS && isSafari) {
-        return '아이폰 위치 허용 방법:<br><br>' +
-          '📱 <strong>설정 앱</strong> 열기<br>' +
-          '→ 스크롤해서 <strong>Safari</strong> 선택<br>' +
-          '→ <strong>위치</strong> 탭<br>' +
-          '→ <strong>앱을 사용하는 동안 허용</strong> 선택<br><br>' +
+        return '아이폰/아이패드 위치 허용 방법:<br><br>' +
+          '<strong>방법 1</strong><br>' +
+          '설정 → <strong>개인 정보 보호 및 보안</strong><br>' +
+          '→ <strong>위치 서비스</strong> → <strong>Safari 웹사이트</strong><br>' +
+          '→ <strong>한 번 허용</strong> 또는 <strong>앱을 사용하는 동안 허용</strong><br><br>' +
+          '<strong>방법 2</strong><br>' +
+          '설정 → <strong>Safari</strong> → <strong>위치</strong><br>' +
+          '→ <strong>한 번 허용</strong> 또는 <strong>앱을 사용하는 동안 허용</strong><br><br>' +
           '설정 후 버튼을 다시 눌러주세요.';
       } else if (isIOS && isChrome) {
         // 아이폰 크롬
@@ -1557,34 +1560,12 @@
         }
       }
 
-      // ── 디버그 모달 ──
-      var _ua = navigator.userAgent || '';
-      var _isIOS = /iPhone|iPad/i.test(_ua) ||
-        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-      var _isSafari = /Safari/i.test(_ua) && !/Chrome/i.test(_ua) && !/CriOS/i.test(_ua);
-
-      function showDebug(msg) {
-        document.getElementById('locationModalDesc').innerHTML = '🐛 ' + msg;
-        document.getElementById('locationModal').classList.add('show');
-      }
-
-      showDebug('위치 요청 시작<br>isIOS=' + _isIOS + '<br>isSafari=' + _isSafari + '<br>UA=' + _ua.substring(0, 60));
-
-      navigator.geolocation.getCurrentPosition(
-        function (pos) {
-          document.getElementById('locationModal').classList.remove('show');
-          onSuccess(pos);
-        },
-        function (err) {
-          showDebug('❌ code=' + err.code + '<br>msg=' + err.message + '<br>isIOS=' + _isIOS + '<br>isSafari=' + _isSafari);
-          onError(err);
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 15000,
-          maximumAge: 0
-        }
-      );
+      // 고정밀 위치 1회 요청
+      navigator.geolocation.getCurrentPosition(onSuccess, onError, {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 0
+      });
     }
 
     function toggleBottomSheet() { toggleSheet(); }
