@@ -267,38 +267,36 @@ app.get('/api/stores', async (req, res) => {
 // GET /api/store-search?query=버터떡+홍대&keyword=홍대
 // =====================================================
 app.get('/api/store-search', async (req, res) => {
-  const { query, keyword } = req.query;
-  if (!query) return res.status(400).json({ error: 'query 필요' });
+  // category: 현재 탭 키워드 (예: "버터떡"), keyword: 사용자 입력 (예: "홍대")
+  const { category, keyword } = req.query;
+  const kw = (keyword || '').trim();
+  if (!kw) return res.json({ total: 0, stores: [] });
 
   try {
     const headers = { Authorization: `KakaoAK ${KAKAO_REST_KEY}` };
-    const results = [];
 
-    // 카카오 전국 검색 (좌표 없이 → 전국)
+    // ── 1) 카카오 전국 검색 ──
+    // category가 있으면 "버터떡 홍대", 없으면 "홍대" 그대로 검색
+    const searchQuery = category ? `${category} ${kw}` : kw;
+    const kakaoResults = [];
     for (let page = 1; page <= 3; page++) {
       const r = await axios.get('https://dapi.kakao.com/v2/local/search/keyword.json', {
-        params: { query, size: 15, page, sort: 'accuracy' },
+        params: { query: searchQuery, size: 15, page, sort: 'accuracy' },
         headers,
       });
-      results.push(...(r.data.documents || []));
+      kakaoResults.push(...(r.data.documents || []));
       if (r.data.meta.is_end) break;
     }
 
-    // keyword로 이름 필터링 (더 관련성 높은 결과만)
-    const kw = (keyword || '').trim().toLowerCase();
-    const filtered = kw
-      ? results.filter(s => s.place_name.toLowerCase().includes(kw))
-      : results;
-
-    // 중복 제거
-    const seen = new Set();
-    const unique = filtered.filter(s => {
-      if (seen.has(s.id)) return false;
-      seen.add(s.id);
+    // 카카오 중복 제거
+    const seenKakao = new Set();
+    const kakaoUnique = kakaoResults.filter(s => {
+      if (seenKakao.has(s.id)) return false;
+      seenKakao.add(s.id);
       return true;
     });
 
-    const stores = unique.slice(0, 20).map(s => ({
+    const kakaoStores = kakaoUnique.map(s => ({
       name: s.place_name,
       addr: s.road_address_name || s.address_name,
       phone: s.phone || null,
@@ -306,9 +304,42 @@ app.get('/api/store-search', async (req, res) => {
       lat: parseFloat(s.y),
       lng: parseFloat(s.x),
       kakaoUrl: s.place_url || null,
+      source: 'kakao',
     }));
 
+    // ── 2) DB 전국 검색 (keyword가 이름/주소에 포함된 것) ──
+    const kwLower = kw.toLowerCase();
+    let dbStores = [];
+    try {
+      const dbResult = await pool.query(
+        `SELECT * FROM custom_stores
+         WHERE (LOWER(name) LIKE $1 OR LOWER(addr) LIKE $1)
+           AND ($2 = '' OR ',' || query_tags || ',' LIKE $3)
+         LIMIT 30`,
+        [`%${kwLower}%`, category || '', `%,${category},%`]
+      );
+      dbStores = dbResult.rows.map(row => ({
+        name: row.name,
+        addr: row.addr,
+        phone: row.phone || null,
+        category: row.category || null,
+        lat: parseFloat(row.lat),
+        lng: parseFloat(row.lng),
+        kakaoUrl: row.kakao_url || null,
+        naverUrl: row.naver_url || null,
+        source: 'custom',
+      }));
+    } catch (dbErr) {
+      console.error('DB 검색 오류:', dbErr.message);
+    }
+
+    // ── 3) DB 결과 중 카카오와 중복 제거 후 합치기 ──
+    const dbUnique = dbStores.filter(d => !isDuplicate(d, kakaoStores));
+    const stores = [...kakaoStores, ...dbUnique].slice(0, 30);
+
+    console.log(`🔍 매장명검색 [${searchQuery}] 카카오 ${kakaoStores.length} + DB ${dbUnique.length}`);
     res.json({ total: stores.length, stores });
+
   } catch (err) {
     console.error('매장명 검색 오류:', err.message);
     res.status(500).json({ error: '검색 중 오류 발생' });

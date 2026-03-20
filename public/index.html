@@ -1612,8 +1612,8 @@
 
       try {
         // 현재 탭 키워드 + 매장명을 함께 검색 (예: "버터떡 홍대")
-        const combinedQuery = `${currentQuery} ${keyword}`;
-        const res = await fetch(`/api/store-search?query=${encodeURIComponent(combinedQuery)}&keyword=${encodeURIComponent(keyword)}`);
+        // category = 현재 탭 키워드, keyword = 사용자 입력 (분리 전달)
+        const res = await fetch(`/api/store-search?category=${encodeURIComponent(currentQuery)}&keyword=${encodeURIComponent(keyword)}`);
         const data = await res.json();
 
         if (!data.stores || data.stores.length === 0) {
