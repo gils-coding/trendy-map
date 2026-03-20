@@ -1557,13 +1557,18 @@
         }
       }
 
-      // ── 디버그 모달 (확인 후 제거 예정) ──
+      // ── 디버그 모달 ──
+      var _ua = navigator.userAgent || '';
+      var _isIOS = /iPhone|iPad/i.test(_ua) ||
+        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      var _isSafari = /Safari/i.test(_ua) && !/Chrome/i.test(_ua) && !/CriOS/i.test(_ua);
+
       function showDebug(msg) {
         document.getElementById('locationModalDesc').innerHTML = '🐛 ' + msg;
         document.getElementById('locationModal').classList.add('show');
       }
 
-      showDebug('위치 요청 시작...<br>isIOS=' + isIOS + '<br>isSafari=' + isSafari);
+      showDebug('위치 요청 시작<br>isIOS=' + _isIOS + '<br>isSafari=' + _isSafari + '<br>UA=' + _ua.substring(0, 60));
 
       navigator.geolocation.getCurrentPosition(
         function (pos) {
@@ -1571,7 +1576,7 @@
           onSuccess(pos);
         },
         function (err) {
-          showDebug('❌ 오류 code=' + err.code + '<br>msg=' + err.message);
+          showDebug('❌ code=' + err.code + '<br>msg=' + err.message + '<br>isIOS=' + _isIOS + '<br>isSafari=' + _isSafari);
           onError(err);
         },
         {
