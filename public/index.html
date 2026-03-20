@@ -143,7 +143,7 @@
       display: flex;
       gap: 6px;
       flex: 1;
-      min-width: 160px;
+      min-width: 140px;
     }
 
     .region-input {
@@ -184,7 +184,7 @@
       display: flex;
       gap: 6px;
       flex: 1;
-      min-width: 160px;
+      min-width: 140px;
       position: relative;
     }
 
@@ -660,38 +660,40 @@
         padding: 5px 4px;
       }
 
+      /* 지역검색 + 매장검색 한 줄에 나란히 */
       .region-search {
-        flex: 0 0 100%;
+        flex: 1;
+        min-width: 0;
         display: flex;
         gap: 5px;
       }
 
       .store-search {
-        flex: 0 0 100%;
+        flex: 1;
         min-width: 0;
       }
 
       .store-search-input {
-        font-size: 12px;
-        padding: 5px 8px;
+        font-size: 11px;
+        padding: 5px 6px;
       }
 
       .store-search-btn {
-        padding: 5px 14px;
-        font-size: 12px;
+        padding: 5px 8px;
+        font-size: 11px;
       }
 
       .region-input {
         flex: 1;
         min-width: 0;
-        font-size: 12px;
-        padding: 5px 8px;
+        font-size: 11px;
+        padding: 5px 6px;
       }
 
       .region-btn {
         flex-shrink: 0;
-        padding: 5px 14px;
-        font-size: 12px;
+        padding: 5px 8px;
+        font-size: 11px;
       }
 
       /* 메인: 지도 전체 화면 */
