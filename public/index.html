@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>트렌디맵 — 유행 맛집 지도</title>
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5362877670530574"
     crossorigin="anonymous"></script>
@@ -630,12 +630,12 @@
       }
 
       .logo {
-        font-size: 17px;
+        font-size: 15px;
       }
 
       header {
-        padding: 8px 12px;
-        gap: 6px;
+        padding: 6px 10px;
+        gap: 5px;
       }
 
       /* 지역 검색바: 두 줄 레이아웃 */
@@ -660,40 +660,40 @@
         padding: 5px 4px;
       }
 
-      /* 지역검색 + 매장검색 한 줄에 나란히 */
+      /* 지역검색: 두 번째 줄 전체 */
       .region-search {
-        flex: 1;
-        min-width: 0;
+        flex: 0 0 100%;
         display: flex;
         gap: 5px;
       }
 
+      /* 매장검색: 세 번째 줄 전체 */
       .store-search {
-        flex: 1;
+        flex: 0 0 100%;
         min-width: 0;
       }
 
       .store-search-input {
-        font-size: 11px;
-        padding: 5px 6px;
+        font-size: 12px;
+        padding: 5px 8px;
       }
 
       .store-search-btn {
-        padding: 5px 8px;
-        font-size: 11px;
+        padding: 5px 10px;
+        font-size: 12px;
       }
 
       .region-input {
         flex: 1;
         min-width: 0;
-        font-size: 11px;
-        padding: 5px 6px;
+        font-size: 12px;
+        padding: 5px 8px;
       }
 
       .region-btn {
         flex-shrink: 0;
-        padding: 5px 8px;
-        font-size: 11px;
+        padding: 5px 10px;
+        font-size: 12px;
       }
 
       /* 메인: 지도 전체 화면 */
@@ -785,7 +785,7 @@
       bottom: -100%;
       left: 0;
       right: 0;
-      height: 62%;
+      height: 48%;
       background: var(--surface);
       border-top: 3px solid var(--accent);
       border-radius: 16px 16px 0 0;
