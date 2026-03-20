@@ -280,8 +280,14 @@ app.get('/api/store-search', async (req, res) => {
     const headers = { Authorization: `KakaoAK ${KAKAO_REST_KEY}` };
 
     // ── 1) 카카오 전국 검색 ──
-    // category가 있으면 "버터떡 홍대", 없으면 "홍대" 그대로 검색
-    const searchQuery = category ? `${category} ${kw}` : kw;
+    // keyword에서 category와 겹치는 단어 제거 후 합치기
+    // 예: category="버터떡", keyword="홍대 버터떡" → searchQuery="버터떡 홍대"
+    const kwClean = category
+      ? kw.split(/\s+/).filter(w => !category.includes(w) && !w.includes(category)).join(' ').trim()
+      : kw;
+    const searchQuery = category
+      ? (kwClean ? `${category} ${kwClean}` : category)
+      : kw;
     const kakaoResults = [];
     for (let page = 1; page <= 3; page++) {
       const r = await axios.get('https://dapi.kakao.com/v2/local/search/keyword.json', {
