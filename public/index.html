@@ -1482,14 +1482,12 @@
       var isMobileChrome = isChrome && /Mobile/i.test(ua);
 
       if (isIOS && isSafari) {
-        // 아이폰 사파리 — 하단 주소창 기준
-        return '아이폰 Safari 위치 허용 방법:<br><br>' +
-          '<strong>방법 1 (설정 앱)</strong><br>' +
-          '설정 → Safari → 위치 → <strong>허용</strong><br><br>' +
-          '<strong>방법 2 (주소창)</strong><br>' +
-          '하단 주소창을 한 번 탭 →<br>' +
-          '왼쪽에 나타나는 <strong>⊕</strong> 또는 <strong>AA</strong> 버튼 탭<br>' +
-          '→ 웹 사이트 설정 → 위치 → <strong>허용</strong>';
+        return '아이폰 위치 허용 방법:<br><br>' +
+          '📱 <strong>설정 앱</strong> 열기<br>' +
+          '→ 스크롤해서 <strong>Safari</strong> 선택<br>' +
+          '→ <strong>위치</strong> 탭<br>' +
+          '→ <strong>앱을 사용하는 동안 허용</strong> 선택<br><br>' +
+          '설정 후 버튼을 다시 눌러주세요.';
       } else if (isIOS && isChrome) {
         // 아이폰 크롬
         return '아이폰 Chrome 위치 허용 방법:<br><br>' +
