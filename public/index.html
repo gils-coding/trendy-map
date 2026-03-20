@@ -1040,7 +1040,8 @@
       <div class="location-modal-desc" id="locationModalDesc">
         브라우저에서 위치 권한을 허용해주세요.
       </div>
-      <button class="location-modal-close" id="locationModalClose">확인</button>
+      <button class="location-modal-close" id="locationModalClose"
+        onclick="document.getElementById('locationModal').classList.remove('show')">확인</button>
     </div>
   </div>
 
@@ -1475,11 +1476,13 @@
 
     function getPermissionGuide() {
       var ua = navigator.userAgent || '';
-      var isIOS = /iPhone|iPad/i.test(ua);
-      var isSafari = /Safari/i.test(ua) && !/Chrome/i.test(ua);
+      // iPad OS 13+는 UA에 iPad가 없고 Mac처럼 보임 → maxTouchPoints로 감지
+      var isIOS = /iPhone|iPad/i.test(ua) ||
+        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      var isSafari = /Safari/i.test(ua) && !/Chrome/i.test(ua) && !/CriOS/i.test(ua);
       var isAndroid = /Android/i.test(ua);
-      var isChrome = /Chrome/i.test(ua);
-      var isMobileChrome = isChrome && /Mobile/i.test(ua);
+      var isChrome = /Chrome/i.test(ua) || /CriOS/i.test(ua);
+      var isMobileChrome = isChrome && (/Mobile/i.test(ua) || /CriOS/i.test(ua));
 
       if (isIOS && isSafari) {
         return '아이폰 위치 허용 방법:<br><br>' +
@@ -1554,18 +1557,11 @@
         }
       }
 
-      // 1단계: 빠른 저정밀 위치 (즉시 반응)
-      navigator.geolocation.getCurrentPosition(onSuccess, function (err) {
-        // 저정밀 실패 시 고정밀로 재시도
-        navigator.geolocation.getCurrentPosition(onSuccess, onError, {
-          enableHighAccuracy: true,
-          timeout: 15000,
-          maximumAge: 0
-        });
-      }, {
-        enableHighAccuracy: false,
-        timeout: 5000,
-        maximumAge: 30000
+      // 고정밀 위치 단순 1회 요청
+      navigator.geolocation.getCurrentPosition(onSuccess, onError, {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 0
       });
     }
 
