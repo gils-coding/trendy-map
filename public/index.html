@@ -1557,12 +1557,29 @@
         }
       }
 
-      // 고정밀 위치 단순 1회 요청
-      navigator.geolocation.getCurrentPosition(onSuccess, onError, {
-        enableHighAccuracy: true,
-        timeout: 15000,
-        maximumAge: 0
-      });
+      // ── 디버그 모달 (확인 후 제거 예정) ──
+      function showDebug(msg) {
+        document.getElementById('locationModalDesc').innerHTML = '🐛 ' + msg;
+        document.getElementById('locationModal').classList.add('show');
+      }
+
+      showDebug('위치 요청 시작...<br>isIOS=' + isIOS + '<br>isSafari=' + isSafari);
+
+      navigator.geolocation.getCurrentPosition(
+        function (pos) {
+          document.getElementById('locationModal').classList.remove('show');
+          onSuccess(pos);
+        },
+        function (err) {
+          showDebug('❌ 오류 code=' + err.code + '<br>msg=' + err.message);
+          onError(err);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 0
+        }
+      );
     }
 
     function toggleBottomSheet() { toggleSheet(); }
