@@ -787,16 +787,23 @@
 
     .donate-btn:hover { opacity: 0.85; }
 
-    /* 모바일 FAB 래퍼 */
+    /* 모바일 FAB 래퍼: 전체 너비 */
     .mobile-fab-wrap {
       display: none;
       position: fixed;
       bottom: 66px;
-      left: 50%;
-      transform: translateX(-50%);
+      left: 0;
+      right: 0;
       z-index: 100;
       align-items: center;
-      gap: 8px;
+      padding: 0 20px;
+    }
+
+    /* 목록 보기: 중앙 */
+    .mobile-fab-wrap .mobile-fab {
+      position: absolute !important;
+      left: 50%;
+      transform: translateX(-50%);
     }
 
     /* 모바일 후원 버튼 */
@@ -804,7 +811,7 @@
       display: flex;
       align-items: center;
       padding: 11px 14px;
-      background: #fee500;
+      background: #fff9c4;
       color: #3c1e1e;
       border-radius: 24px;
       font-size: 12px;
