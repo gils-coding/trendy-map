@@ -1621,6 +1621,9 @@
       sheetOpen = !sheetOpen;
       document.getElementById('mobileSheet').classList.toggle('show', sheetOpen);
       document.getElementById('fabLabel').textContent = sheetOpen ? '닫기' : '목록 보기';
+      // 바텀시트 열릴 때 응원 버튼 숨김, 닫힐 때 다시 표시
+      var donateBtn = document.querySelector('.mobile-donate-btn');
+      if (donateBtn) donateBtn.style.visibility = sheetOpen ? 'hidden' : 'visible';
     }
 
     let sheetOpen = false;
