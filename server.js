@@ -6,10 +6,10 @@
 // =====================================================
 
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
-const express = require('express');
-const axios = require('axios');
-const cors = require('cors');
-const path = require('path');
+const express  = require('express');
+const axios    = require('axios');
+const cors     = require('cors');
+const path     = require('path');
 const { Pool } = require('pg');
 
 const app = express();
@@ -49,10 +49,10 @@ async function initDB() {
 // =====================================================
 // API 키
 // =====================================================
-const KAKAO_REST_KEY = process.env.KAKAO_REST_KEY || '';
-const NAVER_CLIENT_ID = process.env.NAVER_CLIENT_ID || '';
+const KAKAO_REST_KEY      = process.env.KAKAO_REST_KEY      || '';
+const NAVER_CLIENT_ID     = process.env.NAVER_CLIENT_ID     || '';
 const NAVER_CLIENT_SECRET = process.env.NAVER_CLIENT_SECRET || '';
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'trendymap2024';
+const ADMIN_PASSWORD      = process.env.ADMIN_PASSWORD      || 'trendymap2024';
 
 // =====================================================
 // 유틸: Haversine 거리(m)
@@ -104,23 +104,23 @@ async function searchNaver(query, lat, lng) {
     const res = await axios.get('https://openapi.naver.com/v1/search/local.json', {
       params: { query, display: 5, start: 1, sort: 'comment' },
       headers: {
-        'X-Naver-Client-Id': NAVER_CLIENT_ID,
+        'X-Naver-Client-Id':     NAVER_CLIENT_ID,
         'X-Naver-Client-Secret': NAVER_CLIENT_SECRET,
       },
       timeout: 5000,
     });
     return (res.data.items || []).map(item => ({
-      name: item.title.replace(/<[^>]+>/g, ''),
-      addr: item.roadAddress || item.address,
-      phone: item.telephone || null,
-      category: item.category || null,
-      lat: katecToWgs84(parseInt(item.mapy), parseInt(item.mapx)).lat,
-      lng: katecToWgs84(parseInt(item.mapy), parseInt(item.mapx)).lng,
+      name:     item.title.replace(/<[^>]+>/g, ''),
+      addr:     item.roadAddress || item.address,
+      phone:    item.telephone || null,
+      category: item.category  || null,
+      lat:      katecToWgs84(parseInt(item.mapy), parseInt(item.mapx)).lat,
+      lng:      katecToWgs84(parseInt(item.mapy), parseInt(item.mapx)).lng,
       naverUrl: item.link || null,
       kakaoUrl: null,
-      hours: null,
-      isOpen: null,
-      source: 'naver',
+      hours:    null,
+      isOpen:   null,
+      source:   'naver',
     }));
   } catch (err) {
     console.error('네이버 검색 오류:', err.response?.data || err.message);
@@ -143,18 +143,18 @@ async function searchCustomDB(query, lat, lng, radius) {
   return result.rows
     .filter(row => haversineM(lat, lng, row.lat, row.lng) <= radius)
     .map(row => ({
-      name: row.name,
-      addr: row.addr,
-      phone: row.phone || null,
-      category: row.category || null,
-      lat: parseFloat(row.lat),
-      lng: parseFloat(row.lng),
+      name:     row.name,
+      addr:     row.addr,
+      phone:    row.phone     || null,
+      category: row.category  || null,
+      lat:      parseFloat(row.lat),
+      lng:      parseFloat(row.lng),
       kakaoUrl: row.kakao_url || null,
       naverUrl: row.naver_url || null,
-      hours: null,
-      isOpen: null,
-      source: 'custom',
-      memo: row.memo || null,
+      hours:    null,
+      isOpen:   null,
+      source:   'custom',
+      memo:     row.memo || null,
     }));
 }
 
@@ -211,8 +211,8 @@ app.get('/api/stores', async (req, res) => {
   const { query, lat, lng, radius = 5000 } = req.query;
   if (!query) return res.status(400).json({ error: 'query 파라미터가 필요합니다.' });
 
-  const x = parseFloat(lng) || 126.9784;
-  const y = parseFloat(lat) || 37.5665;
+  const x   = parseFloat(lng) || 126.9784;
+  const y   = parseFloat(lat) || 37.5665;
   const rad = parseInt(radius);
 
   try {
@@ -228,19 +228,19 @@ app.get('/api/stores', async (req, res) => {
       kakaoRaw.map(async (item, index) => {
         const detail = await getPlaceDetail(item.id);
         return {
-          id: index + 1,
-          placeId: item.id,
-          name: item.place_name,
-          addr: item.road_address_name || item.address_name,
-          phone: item.phone,
+          id:       index + 1,
+          placeId:  item.id,
+          name:     item.place_name,
+          addr:     item.road_address_name || item.address_name,
+          phone:    item.phone,
           category: item.category_name,
           kakaoUrl: item.place_url,
           naverUrl: null,
-          lat: parseFloat(item.y),
-          lng: parseFloat(item.x),
-          hours: detail.hours || null,
-          isOpen: detail.isOpen !== null ? detail.isOpen : null,
-          source: 'kakao',
+          lat:      parseFloat(item.y),
+          lng:      parseFloat(item.x),
+          hours:    detail.hours || null,
+          isOpen:   detail.isOpen !== null ? detail.isOpen : null,
+          source:   'kakao',
         };
       })
     );
@@ -248,7 +248,7 @@ app.get('/api/stores', async (req, res) => {
     const naverUnique = naverRaw.filter(s => !isDuplicate(s, kakaoStores));
     const naverStores = naverUnique.map((s, i) => ({ ...s, id: kakaoStores.length + i + 1 }));
 
-    const allSoFar = [...kakaoStores, ...naverStores];
+    const allSoFar     = [...kakaoStores, ...naverStores];
     const customUnique = customRaw.filter(s => !isDuplicate(s, allSoFar));
     const customStores = customUnique.map((s, i) => ({ ...s, id: allSoFar.length + i + 1 }));
 
@@ -279,24 +279,29 @@ app.get('/api/store-search', async (req, res) => {
   try {
     const headers = { Authorization: `KakaoAK ${KAKAO_REST_KEY}` };
 
-    // ── 1) 카카오 전국 검색 ──
-    // keyword에서 category와 겹치는 단어 제거 후 합치기
-    // 예: category="버터떡", keyword="홍대 버터떡" → searchQuery="버터떡 홍대"
+    // ── 1) 카카오 전국 검색: 매장명으로만 검색 + 카테고리 조합 병렬 검색 ──
     const kwClean = category
       ? kw.split(/\s+/).filter(w => !category.includes(w) && !w.includes(category)).join(' ').trim()
       : kw;
-    const searchQuery = category
-      ? (kwClean ? `${category} ${kwClean}` : category)
-      : kw;
+
+    // 두 가지 쿼리로 병렬 검색:
+    // ① 매장명만 (예: "더블유눅") — 이름 직접 검색에 강함
+    // ② 카테고리+매장명 (예: "두바이 쫀득쿠키 더블유눅") — 일반 검색에 강함
+    const queries = [kw];
+    if (category && kwClean) queries.push(`${category} ${kwClean}`);
+    else if (category) queries.push(category);
+
     const kakaoResults = [];
-    for (let page = 1; page <= 3; page++) {
-      const r = await axios.get('https://dapi.kakao.com/v2/local/search/keyword.json', {
-        params: { query: searchQuery, size: 15, page, sort: 'accuracy' },
-        headers,
-      });
-      kakaoResults.push(...(r.data.documents || []));
-      if (r.data.meta.is_end) break;
-    }
+    await Promise.all(queries.map(async (searchQuery) => {
+      for (let page = 1; page <= 2; page++) {
+        const r = await axios.get('https://dapi.kakao.com/v2/local/search/keyword.json', {
+          params: { query: searchQuery, size: 15, page, sort: 'accuracy' },
+          headers,
+        });
+        kakaoResults.push(...(r.data.documents || []));
+        if (r.data.meta.is_end) break;
+      }
+    }));
 
     // 카카오 중복 제거
     const seenKakao = new Set();
@@ -307,14 +312,14 @@ app.get('/api/store-search', async (req, res) => {
     });
 
     const kakaoStores = kakaoUnique.map(s => ({
-      name: s.place_name,
-      addr: s.road_address_name || s.address_name,
-      phone: s.phone || null,
+      name:     s.place_name,
+      addr:     s.road_address_name || s.address_name,
+      phone:    s.phone || null,
       category: s.category_name || null,
-      lat: parseFloat(s.y),
-      lng: parseFloat(s.x),
+      lat:      parseFloat(s.y),
+      lng:      parseFloat(s.x),
       kakaoUrl: s.place_url || null,
-      source: 'kakao',
+      source:   'kakao',
     }));
 
     // ── 2) DB 전국 검색 (keyword가 이름/주소에 포함된 것) ──
@@ -329,15 +334,15 @@ app.get('/api/store-search', async (req, res) => {
         [`%${kwLower}%`, category || '', `%,${category},%`]
       );
       dbStores = dbResult.rows.map(row => ({
-        name: row.name,
-        addr: row.addr,
-        phone: row.phone || null,
-        category: row.category || null,
-        lat: parseFloat(row.lat),
-        lng: parseFloat(row.lng),
+        name:     row.name,
+        addr:     row.addr,
+        phone:    row.phone     || null,
+        category: row.category  || null,
+        lat:      parseFloat(row.lat),
+        lng:      parseFloat(row.lng),
         kakaoUrl: row.kakao_url || null,
         naverUrl: row.naver_url || null,
-        source: 'custom',
+        source:   'custom',
       }));
     } catch (dbErr) {
       console.error('DB 검색 오류:', dbErr.message);
@@ -404,7 +409,7 @@ app.post('/api/admin/stores', authAdmin, async (req, res) => {
   const result = await pool.query(
     `INSERT INTO custom_stores (name,addr,phone,category,lat,lng,kakao_url,naver_url,query_tags,memo)
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id`,
-    [name, addr, phone || null, category || null, lat, lng, kakao_url || null, naver_url || null, query_tags, memo || null]
+    [name, addr, phone||null, category||null, lat, lng, kakao_url||null, naver_url||null, query_tags, memo||null]
   );
   res.json({ ok: true, id: result.rows[0].id });
 });
@@ -414,7 +419,7 @@ app.put('/api/admin/stores/:id', authAdmin, async (req, res) => {
   await pool.query(
     `UPDATE custom_stores SET name=$1,addr=$2,phone=$3,category=$4,lat=$5,lng=$6,
      kakao_url=$7,naver_url=$8,query_tags=$9,memo=$10 WHERE id=$11`,
-    [name, addr, phone || null, category || null, lat, lng, kakao_url || null, naver_url || null, query_tags, memo || null, req.params.id]
+    [name, addr, phone||null, category||null, lat, lng, kakao_url||null, naver_url||null, query_tags, memo||null, req.params.id]
   );
   res.json({ ok: true });
 });
