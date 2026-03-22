@@ -1065,20 +1065,22 @@
     }
     .store-suggest-btn:hover { opacity: 0.85; }
 
-    /* 모바일 매장 제안 버튼 */
-    .mobile-suggest-btn {
+    /* 모바일 매장 제안 버튼 — PC 헤더와 동일한 스타일 */
+    .mobile-suggest-btn,
+    .mobile-store-suggest-btn {
       display: flex;
       align-items: center;
       padding: 11px 14px;
-      background: #eef6ff;
-      color: #2d7dd2;
-      border: 1.5px solid #b3d4f5;
+      background: var(--surface);
+      color: var(--accent);
+      border: 2px solid var(--accent);
       border-radius: 24px;
-      font-size: 12px;
+      font-size: 13px;
       font-weight: 700;
+      font-family: 'Noto Sans KR', sans-serif;
       text-decoration: none;
       white-space: nowrap;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      box-shadow: 0 4px 20px rgba(255,107,53,0.2);
     }
 
     /* 모바일에서 헤더 매장 제안 버튼 숨김 */
