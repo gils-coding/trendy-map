@@ -358,9 +358,32 @@ app.get('/api/store-search', async (req, res) => {
       console.error('DB 검색 오류:', dbErr.message);
     }
 
-    // ── 3) DB 결과 중 카카오와 중복 제거 후 합치기 ──
+    // ── 3) 합치기 + 관련성 점수로 정렬 ──
     const dbUnique = dbStores.filter(d => !isDuplicate(d, kakaoStores));
-    const stores = [...kakaoStores, ...dbUnique].slice(0, 30);
+    const allStores = [...kakaoStores, ...dbUnique];
+
+    // 관련성 점수: 현재 카테고리 키워드가 이름/카테고리에 포함되면 가산점
+    function relevanceScore(store) {
+      let score = 0;
+      const name = (store.name || '').toLowerCase();
+      const cat  = (store.category || '').toLowerCase();
+      const cat_kw = (category || '').toLowerCase();
+      const kw_lower = kw.toLowerCase();
+
+      // DB 등록 매장은 최고 우선순위
+      if (store.source === 'custom') score += 100;
+
+      // 이름에 검색어가 포함되면 가산
+      if (name.includes(kw_lower)) score += 50;
+
+      // 카테고리 키워드가 이름/카테고리에 포함되면 가산
+      if (cat_kw && (name.includes(cat_kw) || cat.includes(cat_kw))) score += 30;
+
+      return score;
+    }
+
+    allStores.sort((a, b) => relevanceScore(b) - relevanceScore(a));
+    const stores = allStores.slice(0, 30);
 
     console.log(`🔍 매장명검색 [${kw}] 카카오 ${kakaoStores.length} + DB ${dbUnique.length}`);
     res.json({ total: stores.length, stores });
