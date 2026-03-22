@@ -794,7 +794,7 @@
 
     .donate-btn:hover { opacity: 0.85; }
 
-    /* 모바일 FAB 래퍼: 전체 너비 */
+    /* 모바일 FAB 래퍼: 전체 너비, 양 끝 배치 */
     .mobile-fab-wrap {
       display: none;
       position: fixed;
@@ -803,51 +803,15 @@
       right: 0;
       z-index: 100;
       align-items: center;
+      justify-content: space-between;
       padding: 0 20px;
     }
 
-    /* 목록 보기: 중앙 */
+    /* 목록 보기: 중앙 고정 */
     .mobile-fab-wrap .mobile-fab {
       position: absolute !important;
       left: 50%;
       transform: translateX(-50%);
-    }
-
-    /* PC 매장 제안 버튼 */
-    .store-suggest-btn {
-      padding: 6px 12px;
-      background: var(--surface);
-      color: var(--accent);
-      border: 1.5px solid var(--accent);
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 700;
-      text-decoration: none;
-      white-space: nowrap;
-      flex-shrink: 0;
-      transition: all 0.15s;
-    }
-    .store-suggest-btn:hover { background: var(--accent); color: #fff; }
-
-    /* 모바일에서 PC 매장 제안 버튼 숨김 */
-    @media (max-width: 768px) {
-      .store-suggest-btn { display: none !important; }
-    }
-
-    /* 모바일 매장 제안 버튼 */
-    .mobile-store-suggest-btn {
-      display: flex;
-      align-items: center;
-      padding: 11px 14px;
-      background: var(--surface);
-      color: var(--accent);
-      border: 2px solid var(--accent);
-      border-radius: 24px;
-      font-size: 12px;
-      font-weight: 700;
-      text-decoration: none;
-      white-space: nowrap;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
     }
 
     /* 모바일 후원 버튼 */
@@ -1178,7 +1142,6 @@
       <div class="tab" data-query="마라탕" data-emoji="🌶️">🌶️ 마라탕</div>
     </div>
     <a href="/suggest.html" class="store-suggest-btn">🏪 매장 제안</a>
-    <a href="/suggest.html" class="store-suggest-btn">📍 매장 제안</a>
     <a href="https://forms.gle/ecy5DprNYSAgPesc7" target="_blank" class="suggest-btn">✨ 상품 제안</a>
     <a href="https://litt.ly/trendymap" target="_blank" class="donate-btn">💚 개발자 응원</a>
   </header>
@@ -1297,7 +1260,7 @@
     <button class="mobile-fab" id="mobileFab">
       📋 <span id="fabLabel">목록 보기</span>
     </button>
-    <a href="/suggest.html" class="mobile-store-suggest-btn">📍 매장 제안</a>
+    <a href="/suggest.html" class="mobile-store-suggest-btn">🏪 매장 제안</a>
   </div>
   <div class="mobile-sheet" id="mobileSheet">
     <div class="sheet-drag"></div>
