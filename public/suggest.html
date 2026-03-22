@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>매장 제안 — 트렌디맵</title>
+  <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #f7f7f5; --surface: #ffffff;
+      --accent: #ff6b35; --accent2: #ff9500;
+      --text: #1a1a1a; --muted: #888; --border: #e0e0e0; --card: #f2f2f0;
+    }
+    body { font-family: 'Noto Sans KR', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    header {
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 20px; background: var(--surface);
+      border-bottom: 1.5px solid var(--border);
+      position: sticky; top: 0; z-index: 100;
+    }
+    .logo { font-family: 'Black Han Sans', sans-serif; font-size: 20px; color: var(--accent); text-decoration: none; }
+    .logo span { color: var(--accent2); }
+    .container { max-width: 520px; margin: 0 auto; padding: 40px 20px 80px; }
+    .back-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 9px 18px; background: var(--accent); color: #fff;
+      border-radius: 20px; text-decoration: none;
+      font-size: 13px; font-weight: 700; margin-bottom: 32px;
+      transition: opacity 0.2s;
+    }
+    .back-btn:hover { opacity: 0.85; }
+    .card {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 16px;
+      padding: 32px 28px;
+    }
+    .card-title { font-family: 'Black Han Sans', sans-serif; font-size: 22px; color: var(--accent); margin-bottom: 6px; }
+    .card-desc { font-size: 13px; color: var(--muted); margin-bottom: 28px; line-height: 1.7; }
+    .form-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 18px; }
+    label { font-size: 13px; font-weight: 700; color: var(--text); }
+    label .req { color: var(--accent); margin-left: 2px; }
+    label .opt { color: var(--muted); font-weight: 400; font-size: 11px; margin-left: 4px; }
+    input, select, textarea {
+      background: var(--card); border: 1.5px solid var(--border);
+      border-radius: 10px; padding: 10px 14px;
+      font-size: 14px; font-family: inherit; color: var(--text);
+      outline: none; transition: border-color 0.15s; width: 100%;
+    }
+    input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+    input::placeholder, textarea::placeholder { color: var(--muted); }
+    textarea { resize: vertical; min-height: 80px; }
+    .submit-btn {
+      width: 100%; padding: 13px; background: var(--accent); color: #fff;
+      border: none; border-radius: 10px; font-size: 15px; font-weight: 700;
+      font-family: inherit; cursor: pointer; margin-top: 8px; transition: opacity 0.15s;
+    }
+    .submit-btn:hover { opacity: 0.85; }
+    .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .done { display: none; text-align: center; padding: 40px 20px; }
+    .done-icon { font-size: 52px; margin-bottom: 16px; }
+    .done-title { font-family: 'Black Han Sans', sans-serif; font-size: 22px; color: var(--accent); margin-bottom: 10px; }
+    .done-desc { font-size: 14px; color: var(--muted); line-height: 1.7; margin-bottom: 24px; }
+    .done-btn {
+      display: inline-block; padding: 11px 28px; background: var(--accent);
+      color: #fff; border-radius: 20px; text-decoration: none; font-weight: 700; font-size: 14px;
+    }
+    @media (max-width: 480px) {
+      .card { padding: 24px 18px; }
+      .container { padding: 24px 16px 60px; }
+    }
+  </style>
+</head>
+<body>
+<header>
+  <a href="/" class="logo">트렌디<span>맵</span></a>
+</header>
+<div class="container">
+  <a href="/" class="back-btn">← 지도로 돌아가기</a>
+  <div class="card">
+    <div id="formWrap">
+      <div class="card-title">📍 매장 제안</div>
+      <p class="card-desc">지도에 없는 매장을 알고 계신가요?<br>지역과 매장명만 알려주시면 검토 후 추가할게요!</p>
+      <div class="form-group">
+        <label>음식 카테고리 <span class="req">*</span></label>
+        <select id="f_category">
+          <option value="">선택해주세요</option>
+          <option value="버터떡">🥮 버터떡</option>
+          <option value="두바이 쫀득쿠키">🍪 두바이 쫀득쿠키</option>
+          <option value="소금빵">🥐 소금빵</option>
+          <option value="탕후루">🍡 탕후루</option>
+          <option value="크로플">🧇 크로플</option>
+          <option value="마라탕">🌶️ 마라탕</option>
+          <option value="기타">기타</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>매장명 <span class="req">*</span></label>
+        <input id="f_name" type="text" placeholder="예: 홍대 버터떡 본점" />
+      </div>
+      <div class="form-group">
+        <label>지역 <span class="req">*</span></label>
+        <input id="f_region" type="text" placeholder="예: 서울 마포구 홍대" />
+      </div>
+      <div class="form-group">
+        <label>추가 정보 <span class="opt">(선택)</span></label>
+        <textarea id="f_memo" placeholder="주소, 전화번호 등 알고 계신 정보를 자유롭게 적어주세요."></textarea>
+      </div>
+      <button class="submit-btn" id="submitBtn" onclick="submitSuggest()">제안하기</button>
+    </div>
+    <div class="done" id="doneWrap">
+      <div class="done-icon">🎉</div>
+      <div class="done-title">제안해주셔서 감사해요!</div>
+      <p class="done-desc">소중한 제안을 검토 후 지도에 추가할게요.<br>트렌디맵을 이용해주셔서 감사합니다.</p>
+      <a href="/" class="done-btn">지도로 돌아가기</a>
+    </div>
+  </div>
+</div>
+<script>
+  async function submitSuggest() {
+    const category = document.getElementById('f_category').value.trim();
+    const name     = document.getElementById('f_name').value.trim();
+    const region   = document.getElementById('f_region').value.trim();
+    const memo     = document.getElementById('f_memo').value.trim();
+    if (!category) return alert('음식 카테고리를 선택해주세요.');
+    if (!name)     return alert('매장명을 입력해주세요.');
+    if (!region)   return alert('지역을 입력해주세요.');
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.textContent = '제출 중...';
+    try {
+      const res = await fetch('/api/suggest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ store_name: name, region, category, memo }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        document.getElementById('formWrap').style.display = 'none';
+        document.getElementById('doneWrap').style.display = 'block';
+      } else {
+        alert(data.error || '오류가 발생했습니다.');
+        btn.disabled = false;
+        btn.textContent = '제안하기';
+      }
+    } catch (e) {
+      alert('오류가 발생했습니다. 다시 시도해주세요.');
+      btn.disabled = false;
+      btn.textContent = '제안하기';
+    }
+  }
+</script>
+</body>
+</html>

@@ -409,6 +409,19 @@
 
 </div>
 
+  <!-- 매장 제안 목록 -->
+  <div class="card">
+    <div class="card-header">
+      💌 매장 제안 목록
+      <button class="btn btn-secondary btn-sm" style="margin-left:auto;" onclick="loadSuggestions()">🔄 새로고침</button>
+    </div>
+    <div class="card-body" style="padding:0; overflow-x:auto;">
+      <div id="suggestionArea"><div class="empty-msg">로딩 중...</div></div>
+    </div>
+  </div>
+
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -431,6 +444,7 @@
     document.getElementById('loginWrap').style.display = 'none';
     document.getElementById('mainWrap').classList.add('show');
     loadList();
+    loadSuggestions();
   }
 
   // ── 주소 → 좌표 자동입력 ──
@@ -592,6 +606,60 @@
         <tbody>${rows}</tbody>
       </table>
     `;
+  }
+
+  // ── 매장 제안 목록 ──
+  async function loadSuggestions() {
+    document.getElementById('suggestionArea').innerHTML = '<div class="empty-msg">로딩 중...</div>';
+    const res  = await fetch(`/api/admin/suggestions?pw=${encodeURIComponent(adminPw)}`);
+    const data = await res.json();
+    if (!data.suggestions || data.suggestions.length === 0) {
+      document.getElementById('suggestionArea').innerHTML = '<div class="empty-msg">제안된 매장이 없습니다.</div>';
+      return;
+    }
+    const rows = data.suggestions.map(s => `
+      <tr>
+        <td>${s.id}</td>
+        <td><strong>${s.store_name}</strong></td>
+        <td>${s.region}</td>
+        <td>${s.category || '—'}</td>
+        <td style="max-width:160px;color:var(--muted);font-size:11px;">${s.memo || '—'}</td>
+        <td>
+          <span style="font-size:10px;padding:2px 8px;border-radius:8px;background:${s.status==='done'?'#e8f5e9':'#fff3e0'};color:${s.status==='done'?'var(--green)':'var(--accent2)'};">
+            ${s.status === 'done' ? '완료' : '대기'}
+          </span>
+        </td>
+        <td style="font-size:11px;color:var(--muted);">${(s.created_at||'').substring(0,10)}</td>
+        <td>
+          <div style="display:flex;gap:5px;">
+            ${s.status !== 'done' ? `<button class="btn btn-green btn-sm" onclick="doneSuggestion(${s.id})">완료</button>` : ''}
+            <button class="btn btn-red btn-sm" onclick="deleteSuggestion(${s.id})">삭제</button>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+    document.getElementById('suggestionArea').innerHTML = `
+      <table class="store-table">
+        <thead><tr><th>ID</th><th>매장명</th><th>지역</th><th>카테고리</th><th>메모</th><th>상태</th><th>일자</th><th>관리</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+  }
+
+  async function doneSuggestion(id) {
+    await fetch(`/api/admin/suggestions/${id}?pw=${encodeURIComponent(adminPw)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pw: adminPw, status: 'done' })
+    });
+    showToast('완료 처리됐습니다.', 'ok');
+    loadSuggestions();
+  }
+
+  async function deleteSuggestion(id) {
+    if (!confirm('삭제할까요?')) return;
+    await fetch(`/api/admin/suggestions/${id}?pw=${encodeURIComponent(adminPw)}`, { method: 'DELETE' });
+    showToast('삭제됐습니다.', 'ok');
+    loadSuggestions();
   }
 
   // ── 토스트 ──

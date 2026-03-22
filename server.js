@@ -43,6 +43,19 @@ async function initDB() {
       created_at  TIMESTAMP DEFAULT NOW()
     )
   `);
+  // 매장 제안 테이블
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS store_suggestions (
+      id          SERIAL PRIMARY KEY,
+      category    TEXT NOT NULL,
+      name        TEXT NOT NULL,
+      region      TEXT NOT NULL,
+      addr        TEXT,
+      memo        TEXT,
+      status      TEXT DEFAULT 'pending',
+      created_at  TIMESTAMP DEFAULT NOW()
+    )
+  `);
   console.log('✅ PostgreSQL 테이블 준비 완료');
 }
 
@@ -422,6 +435,73 @@ app.get('/api/geocode', async (req, res) => {
 });
 
 // =====================================================
+// API: 매장 제안
+// POST /api/suggest
+// =====================================================
+app.post('/api/suggest', async (req, res) => {
+  const { store_name, region, category, memo } = req.body;
+  if (!store_name || !region)
+    return res.status(400).json({ error: '매장명과 지역은 필수입니다.' });
+  try {
+    await pool.query(
+      `INSERT INTO store_suggestions (store_name, region, category, memo)
+       VALUES ($1, $2, $3, $4)`,
+      [store_name.trim(), region.trim(), category?.trim() || null, memo?.trim() || null]
+    );
+    console.log(`📬 매장 제안: ${store_name} (${region})`);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('제안 저장 오류:', err.message);
+    res.status(500).json({ error: '저장 중 오류가 발생했습니다.' });
+  }
+});
+
+// 제안 목록 조회 (관리자용)
+app.get('/api/admin/suggestions', async (req, res) => {
+  const pw = req.query.pw;
+  if (pw !== ADMIN_PASSWORD) return res.status(401).json({ error: '비밀번호가 틀렸습니다.' });
+  const result = await pool.query('SELECT * FROM store_suggestions ORDER BY created_at DESC');
+  res.json({ total: result.rows.length, suggestions: result.rows });
+});
+
+// 제안 상태 변경 (pending → done)
+app.put('/api/admin/suggestions/:id', async (req, res) => {
+  const pw = req.query.pw || req.body?.pw;
+  if (pw !== ADMIN_PASSWORD) return res.status(401).json({ error: '비밀번호가 틀렸습니다.' });
+  await pool.query('UPDATE store_suggestions SET status=$1 WHERE id=$2', [req.body.status, req.params.id]);
+  res.json({ ok: true });
+});
+
+// 제안 삭제
+app.delete('/api/admin/suggestions/:id', async (req, res) => {
+  const pw = req.query.pw;
+  if (pw !== ADMIN_PASSWORD) return res.status(401).json({ error: '비밀번호가 틀렸습니다.' });
+  await pool.query('DELETE FROM store_suggestions WHERE id=$1', [req.params.id]);
+  res.json({ ok: true });
+});
+
+// =====================================================
+// API: 매장 제안
+// POST /api/suggest
+// =====================================================
+app.post('/api/suggest', async (req, res) => {
+  const { category, name, region, addr, memo } = req.body;
+  if (!category || !name || !region)
+    return res.status(400).json({ error: 'category, name, region 필수' });
+  try {
+    await pool.query(
+      `INSERT INTO store_suggestions (category, name, region, addr, memo) VALUES ($1,$2,$3,$4,$5)`,
+      [category, name, region, addr || null, memo || null]
+    );
+    console.log(`📬 매장 제안: [${category}] ${name} (${region})`);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('매장 제안 오류:', err.message);
+    res.status(500).json({ error: '저장 중 오류 발생' });
+  }
+});
+
+// =====================================================
 // 관리자 API
 // =====================================================
 function authAdmin(req, res, next) {
@@ -460,6 +540,12 @@ app.put('/api/admin/stores/:id', authAdmin, async (req, res) => {
 app.delete('/api/admin/stores/:id', authAdmin, async (req, res) => {
   await pool.query('DELETE FROM custom_stores WHERE id=$1', [req.params.id]);
   res.json({ ok: true });
+});
+
+// 제안 목록 조회
+app.get('/api/admin/suggestions', authAdmin, async (req, res) => {
+  const result = await pool.query('SELECT * FROM store_suggestions ORDER BY created_at DESC');
+  res.json({ total: result.rows.length, suggestions: result.rows });
 });
 
 app.get('/api/admin/geocode', authAdmin, async (req, res) => {
