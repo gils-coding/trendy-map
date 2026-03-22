@@ -240,7 +240,7 @@
       border: 1.5px solid var(--border);
       border-radius: 10px;
       box-shadow: 0 4px 20px rgba(0,0,0,0.12);
-      z-index: 200;
+      z-index: 1000;
       max-height: 280px;
       overflow-y: auto;
     }
@@ -638,7 +638,7 @@
         padding: 5px 10px;
         gap: 5px;
         flex-wrap: wrap;
-        overflow: hidden;
+        overflow: visible; /* 드롭다운이 잘리지 않도록 */
       }
 
       .sido-select {
