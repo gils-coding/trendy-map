@@ -279,29 +279,39 @@ app.get('/api/store-search', async (req, res) => {
   try {
     const headers = { Authorization: `KakaoAK ${KAKAO_REST_KEY}` };
 
-    // ── 1) 카카오 전국 검색: 매장명으로만 검색 + 카테고리 조합 병렬 검색 ──
+    // ── 1) 카카오 전국 검색: 매장명으로 검색 후 카테고리 조합도 추가 검색 ──
     const kwClean = category
       ? kw.split(/\s+/).filter(w => !category.includes(w) && !w.includes(category)).join(' ').trim()
       : kw;
 
-    // 두 가지 쿼리로 병렬 검색:
-    // ① 매장명만 (예: "더블유눅") — 이름 직접 검색에 강함
-    // ② 카테고리+매장명 (예: "두바이 쫀득쿠키 더블유눅") — 일반 검색에 강함
-    const queries = [kw];
-    if (category && kwClean) queries.push(`${category} ${kwClean}`);
-    else if (category) queries.push(category);
-
     const kakaoResults = [];
-    await Promise.all(queries.map(async (searchQuery) => {
-      for (let page = 1; page <= 2; page++) {
+
+    // 1-A) 매장명만으로 검색 (이름 직접 검색)
+    for (let page = 1; page <= 2; page++) {
+      try {
         const r = await axios.get('https://dapi.kakao.com/v2/local/search/keyword.json', {
-          params: { query: searchQuery, size: 15, page, sort: 'accuracy' },
+          params: { query: kw, size: 15, page, sort: 'accuracy' },
           headers,
         });
         kakaoResults.push(...(r.data.documents || []));
         if (r.data.meta.is_end) break;
+      } catch(e) { break; }
+    }
+
+    // 1-B) 카테고리+매장명 조합 검색
+    if (category && kwClean) {
+      const searchQuery2 = `${category} ${kwClean}`;
+      for (let page = 1; page <= 2; page++) {
+        try {
+          const r = await axios.get('https://dapi.kakao.com/v2/local/search/keyword.json', {
+            params: { query: searchQuery2, size: 15, page, sort: 'accuracy' },
+            headers,
+          });
+          kakaoResults.push(...(r.data.documents || []));
+          if (r.data.meta.is_end) break;
+        } catch(e) { break; }
       }
-    }));
+    }
 
     // 카카오 중복 제거
     const seenKakao = new Set();
