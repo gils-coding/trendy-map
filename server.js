@@ -336,12 +336,12 @@ app.get('/api/store-search', async (req, res) => {
     const kwLower = kw.toLowerCase();
     let dbStores = [];
     try {
+      // 이름/주소에 키워드 포함된 매장 검색 (카테고리 필터 없음 — 이름으로만 찾기)
       const dbResult = await pool.query(
         `SELECT * FROM custom_stores
-         WHERE (LOWER(name) LIKE $1 OR LOWER(addr) LIKE $1)
-           AND ($2 = '' OR ',' || query_tags || ',' LIKE $3)
+         WHERE LOWER(name) LIKE $1 OR LOWER(addr) LIKE $1
          LIMIT 30`,
-        [`%${kwLower}%`, category || '', `%,${category},%`]
+        [`%${kwLower}%`]
       );
       dbStores = dbResult.rows.map(row => ({
         name:     row.name,
@@ -362,7 +362,7 @@ app.get('/api/store-search', async (req, res) => {
     const dbUnique = dbStores.filter(d => !isDuplicate(d, kakaoStores));
     const stores = [...kakaoStores, ...dbUnique].slice(0, 30);
 
-    console.log(`🔍 매장명검색 [${searchQuery}] 카카오 ${kakaoStores.length} + DB ${dbUnique.length}`);
+    console.log(`🔍 매장명검색 [${kw}] 카카오 ${kakaoStores.length} + DB ${dbUnique.length}`);
     res.json({ total: stores.length, stores });
 
   } catch (err) {
