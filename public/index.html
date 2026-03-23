@@ -3,8 +3,17 @@
 
 <head>
   <meta charset="UTF-8">
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-W9ZYY9DHJL"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-W9ZYY9DHJL');
+  </script>
   <meta property="og:title" content="트렌디맵 — 유행 맛집 지도">
-  <meta property="og:description" content="트렌디맵은 버터떡, 두바이 쫀득쿠키, 소금빵, 탕후루, 크로플, 마라탕 등 현재 유행 중인 음식 매장을 지도에서 쉽게 찾을 수 있는 서비스입니다.">
+  <meta property="og:description"
+    content="트렌디맵은 버터떡, 두바이 쫀득쿠키, 소금빵, 탕후루, 크로플, 마라탕 등 현재 유행 중인 음식 매장을 지도에서 쉽게 찾을 수 있는 서비스입니다.">
   <meta property="og:image" content="https://trendmap.up.railway.app/og_image.png">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://trendmap.up.railway.app">
@@ -209,10 +218,12 @@
 
     .store-search-input:focus {
       border-color: var(--accent);
-      box-shadow: 0 0 0 2px rgba(255,107,53,0.12);
+      box-shadow: 0 0 0 2px rgba(255, 107, 53, 0.12);
     }
 
-    .store-search-input::placeholder { color: var(--muted); }
+    .store-search-input::placeholder {
+      color: var(--muted);
+    }
 
     .store-search-btn {
       padding: 7px 14px;
@@ -227,7 +238,10 @@
       font-family: inherit;
       transition: opacity 0.15s;
     }
-    .store-search-btn:hover { opacity: 0.85; }
+
+    .store-search-btn:hover {
+      opacity: 0.85;
+    }
 
     /* 매장 검색 결과 드롭다운 */
     .store-search-dropdown {
@@ -239,13 +253,15 @@
       background: var(--surface);
       border: 1.5px solid var(--border);
       border-radius: 10px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
       z-index: 1000;
       max-height: 280px;
       overflow-y: auto;
     }
 
-    .store-search-dropdown.show { display: block; }
+    .store-search-dropdown.show {
+      display: block;
+    }
 
     .store-search-item {
       padding: 10px 14px;
@@ -254,8 +270,13 @@
       transition: background 0.12s;
     }
 
-    .store-search-item:last-child { border-bottom: none; }
-    .store-search-item:hover { background: var(--card); }
+    .store-search-item:last-child {
+      border-bottom: none;
+    }
+
+    .store-search-item:hover {
+      background: var(--card);
+    }
 
     .store-search-item-name {
       font-size: 13px;
@@ -638,7 +659,8 @@
         padding: 5px 10px;
         gap: 5px;
         flex-wrap: wrap;
-        overflow: visible; /* 드롭다운이 잘리지 않도록 */
+        overflow: visible;
+        /* 드롭다운이 잘리지 않도록 */
       }
 
       .sido-select {
@@ -730,7 +752,8 @@
       /* 상세 패널 */
       .detail-panel {
         position: fixed;
-        bottom: 50px; /* 쿠팡 배너 높이만큼 위로 */
+        bottom: 50px;
+        /* 쿠팡 배너 높이만큼 위로 */
         left: 0;
         right: 0;
         width: 100%;
@@ -757,7 +780,8 @@
       }
 
       .mobile-sheet.show {
-        bottom: 50px; /* 배너 높이만큼 띄움 */
+        bottom: 50px;
+        /* 배너 높이만큼 띄움 */
       }
     }
 
@@ -792,7 +816,9 @@
       transition: opacity 0.15s;
     }
 
-    .donate-btn:hover { opacity: 0.85; }
+    .donate-btn:hover {
+      opacity: 0.85;
+    }
 
     /* 모바일 FAB 래퍼: 전체 너비, 양 끝 배치 */
     .mobile-fab-wrap {
@@ -826,7 +852,7 @@
       font-weight: 700;
       text-decoration: none;
       white-space: nowrap;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
     }
 
     /* ── MOBILE FAB + BOTTOM SHEET ── */
@@ -915,7 +941,8 @@
       top: 12px;
       right: 12px;
       z-index: 10;
-      display: none; /* PC에서는 기본 숨김 */
+      display: none;
+      /* PC에서는 기본 숨김 */
       align-items: center;
       gap: 6px;
       padding: 8px 14px;
@@ -1063,7 +1090,10 @@
       flex-shrink: 0;
       transition: opacity 0.15s;
     }
-    .store-suggest-btn:hover { opacity: 0.85; }
+
+    .store-suggest-btn:hover {
+      opacity: 0.85;
+    }
 
     /* 모바일 매장 제안 버튼 — PC 헤더와 동일한 스타일 */
     .mobile-suggest-btn,
@@ -1080,12 +1110,14 @@
       font-family: 'Noto Sans KR', sans-serif;
       text-decoration: none;
       white-space: nowrap;
-      box-shadow: 0 4px 20px rgba(255,107,53,0.2);
+      box-shadow: 0 4px 20px rgba(255, 107, 53, 0.2);
     }
 
     /* 모바일에서 헤더 매장 제안 버튼 숨김 */
     @media (max-width: 768px) {
-      .store-suggest-btn { display: none !important; }
+      .store-suggest-btn {
+        display: none !important;
+      }
     }
 
     /* ── 쿠팡 배너: iframe width=100% 반응형 ── */
@@ -1129,12 +1161,16 @@
       <div class="location-modal-desc" id="locationModalDesc">
         브라우저에서 위치 권한을 허용해주세요.
       </div>
-      <button class="location-modal-close" id="locationModalClose" onclick="document.getElementById('locationModal').classList.remove('show')">확인</button>
+      <button class="location-modal-close" id="locationModalClose"
+        onclick="document.getElementById('locationModal').classList.remove('show')">확인</button>
     </div>
   </div>
 
   <header>
-    <div class="logo"><img src="data:image/png;base64,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" style="height:28px;width:28px;vertical-align:middle;margin-right:4px;object-fit:contain;" alt="마스코트">트렌디<span>맵</span></div>
+    <div class="logo"><img
+        src="data:image/png;base64,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"
+        style="height:28px;width:28px;vertical-align:middle;margin-right:4px;object-fit:contain;"
+        alt="마스코트">트렌디<span>맵</span></div>
     <div class="tabs">
       <div class="tab active" data-query="버터떡" data-emoji="🥮">🥮 버터떡</div>
       <div class="tab" data-query="두바이 쫀득쿠키" data-emoji="🍪">🍪 두바이 쫀득쿠키</div>
@@ -1178,7 +1214,8 @@
     </div>
     <!-- 매장명 검색 -->
     <div class="store-search" id="storeSearchWrap">
-      <input class="store-search-input" id="storeSearchInput" type="text" placeholder="🔍 매장명 검색 (예: 홍대 버터떡)" autocomplete="off" />
+      <input class="store-search-input" id="storeSearchInput" type="text" placeholder="🔍 매장명 검색 (예: 홍대 버터떡)"
+        autocomplete="off" />
       <button class="store-search-btn" id="storeSearchBtn">검색</button>
       <div class="store-search-dropdown" id="storeSearchDropdown"></div>
     </div>
@@ -1244,15 +1281,9 @@
   <!-- 쿠팡 배너 (전체 너비) -->
   <!-- 쿠팡 배너: iframe width=100% → 재렌더링 없이 창 너비 자동 반응 -->
   <div id="coupangBanner" style="display:none;">
-    <iframe
-      id="coupangIframe"
+    <iframe id="coupangIframe"
       src="https://ads-partners.coupang.com/widgets.html?id=967242&template=carousel&trackingCode=AF6001579&subId=&width=2000&height=50&tsource="
-      width="100%"
-      height="50"
-      frameborder="0"
-      scrolling="no"
-      referrerpolicy="unsafe-url"
-      browsingtopics>
+      width="100%" height="50" frameborder="0" scrolling="no" referrerpolicy="unsafe-url" browsingtopics>
     </iframe>
   </div>
 
@@ -1779,10 +1810,10 @@
           // 로드 완료 후 상세 패널 열기
           setTimeout(function () {
             if (window._stores) {
-              var matched = window._stores.findIndex(function(s) {
+              var matched = window._stores.findIndex(function (s) {
                 return s.name === store.name ||
                   (s.lat && Math.abs(s.lat - store.lat) < 0.0001 &&
-                   s.lng && Math.abs(s.lng - store.lng) < 0.0001);
+                    s.lng && Math.abs(s.lng - store.lng) < 0.0001);
               });
               if (matched >= 0) selectStore(matched);
             }
@@ -1852,7 +1883,7 @@
 
       // ── 매장명 검색 ──
       var storeSearchInput = document.getElementById('storeSearchInput');
-      var storeSearchBtn   = document.getElementById('storeSearchBtn');
+      var storeSearchBtn = document.getElementById('storeSearchBtn');
 
       // 입력 시 디바운스 자동검색
       storeSearchInput.addEventListener('input', function () {
