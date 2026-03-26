@@ -43,7 +43,6 @@ async function initDB() {
       created_at  TIMESTAMP DEFAULT NOW()
     )
   `);
-  // 매장 제안 테이블
   await pool.query(`
     CREATE TABLE IF NOT EXISTS store_suggestions (
       id          SERIAL PRIMARY KEY,
@@ -277,14 +276,12 @@ app.get('/api/stores', async (req, res) => {
 
 // =====================================================
 // API: 매장명 전국 검색
-// GET /api/store-search?query=버터떡+홍대&keyword=홍대
 // =====================================================
 app.get('/api/store-search', async (req, res) => {
-  // 캐시 완전 비활성화
   res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
   res.set('Pragma', 'no-cache');
   res.set('Surrogate-Control', 'no-store');
-  // category: 현재 탭 키워드 (예: "버터떡"), keyword: 사용자 입력 (예: "홍대")
+
   const { category, keyword } = req.query;
   const kw = (keyword || '').trim();
   if (!kw) return res.json({ total: 0, stores: [] });
@@ -292,14 +289,12 @@ app.get('/api/store-search', async (req, res) => {
   try {
     const headers = { Authorization: `KakaoAK ${KAKAO_REST_KEY}` };
 
-    // ── 1) 카카오 전국 검색: 매장명으로 검색 후 카테고리 조합도 추가 검색 ──
     const kwClean = category
       ? kw.split(/\s+/).filter(w => !category.includes(w) && !w.includes(category)).join(' ').trim()
       : kw;
 
     const kakaoResults = [];
 
-    // 1-A) 매장명만으로 검색 (이름 직접 검색)
     for (let page = 1; page <= 2; page++) {
       try {
         const r = await axios.get('https://dapi.kakao.com/v2/local/search/keyword.json', {
@@ -311,13 +306,11 @@ app.get('/api/store-search', async (req, res) => {
       } catch (e) { break; }
     }
 
-    // 1-B) 카테고리+매장명 조합 검색
     if (category && kwClean) {
-      const searchQuery2 = `${category} ${kwClean}`;
       for (let page = 1; page <= 2; page++) {
         try {
           const r = await axios.get('https://dapi.kakao.com/v2/local/search/keyword.json', {
-            params: { query: searchQuery2, size: 15, page, sort: 'accuracy' },
+            params: { query: `${category} ${kwClean}`, size: 15, page, sort: 'accuracy' },
             headers,
           });
           kakaoResults.push(...(r.data.documents || []));
@@ -326,7 +319,6 @@ app.get('/api/store-search', async (req, res) => {
       }
     }
 
-    // 카카오 중복 제거
     const seenKakao = new Set();
     const kakaoUnique = kakaoResults.filter(s => {
       if (seenKakao.has(s.id)) return false;
@@ -345,15 +337,11 @@ app.get('/api/store-search', async (req, res) => {
       source: 'kakao',
     }));
 
-    // ── 2) DB 전국 검색 (keyword가 이름/주소에 포함된 것) ──
     const kwLower = kw.toLowerCase();
     let dbStores = [];
     try {
-      // 이름/주소에 키워드 포함된 매장 검색 (카테고리 필터 없음 — 이름으로만 찾기)
       const dbResult = await pool.query(
-        `SELECT * FROM custom_stores
-         WHERE LOWER(name) LIKE $1 OR LOWER(addr) LIKE $1
-         LIMIT 30`,
+        `SELECT * FROM custom_stores WHERE LOWER(name) LIKE $1 OR LOWER(addr) LIKE $1 LIMIT 30`,
         [`%${kwLower}%`]
       );
       dbStores = dbResult.rows.map(row => ({
@@ -371,27 +359,18 @@ app.get('/api/store-search', async (req, res) => {
       console.error('DB 검색 오류:', dbErr.message);
     }
 
-    // ── 3) 합치기 + 관련성 점수로 정렬 ──
     const dbUnique = dbStores.filter(d => !isDuplicate(d, kakaoStores));
     const allStores = [...kakaoStores, ...dbUnique];
 
-    // 관련성 점수: 현재 카테고리 키워드가 이름/카테고리에 포함되면 가산점
     function relevanceScore(store) {
       let score = 0;
       const name = (store.name || '').toLowerCase();
       const cat = (store.category || '').toLowerCase();
       const cat_kw = (category || '').toLowerCase();
       const kw_lower = kw.toLowerCase();
-
-      // DB 등록 매장은 최고 우선순위
       if (store.source === 'custom') score += 100;
-
-      // 이름에 검색어가 포함되면 가산
       if (name.includes(kw_lower)) score += 50;
-
-      // 카테고리 키워드가 이름/카테고리에 포함되면 가산
       if (cat_kw && (name.includes(cat_kw) || cat.includes(cat_kw))) score += 30;
-
       return score;
     }
 
@@ -436,53 +415,6 @@ app.get('/api/geocode', async (req, res) => {
 
 // =====================================================
 // API: 매장 제안
-// POST /api/suggest
-// =====================================================
-app.post('/api/suggest', async (req, res) => {
-  const { store_name, region, category, memo } = req.body;
-  if (!store_name || !region)
-    return res.status(400).json({ error: '매장명과 지역은 필수입니다.' });
-  try {
-    await pool.query(
-      `INSERT INTO store_suggestions (store_name, region, category, memo)
-       VALUES ($1, $2, $3, $4)`,
-      [store_name.trim(), region.trim(), category?.trim() || null, memo?.trim() || null]
-    );
-    console.log(`📬 매장 제안: ${store_name} (${region})`);
-    res.json({ ok: true });
-  } catch (err) {
-    console.error('제안 저장 오류:', err.message);
-    res.status(500).json({ error: '저장 중 오류가 발생했습니다.' });
-  }
-});
-
-// 제안 목록 조회 (관리자용)
-app.get('/api/admin/suggestions', async (req, res) => {
-  const pw = req.query.pw;
-  if (pw !== ADMIN_PASSWORD) return res.status(401).json({ error: '비밀번호가 틀렸습니다.' });
-  const result = await pool.query('SELECT * FROM store_suggestions ORDER BY created_at DESC');
-  res.json({ total: result.rows.length, suggestions: result.rows });
-});
-
-// 제안 상태 변경 (pending → done)
-app.put('/api/admin/suggestions/:id', async (req, res) => {
-  const pw = req.query.pw || req.body?.pw;
-  if (pw !== ADMIN_PASSWORD) return res.status(401).json({ error: '비밀번호가 틀렸습니다.' });
-  await pool.query('UPDATE store_suggestions SET status=$1 WHERE id=$2', [req.body.status, req.params.id]);
-  res.json({ ok: true });
-});
-
-// 제안 삭제
-app.delete('/api/admin/suggestions/:id', async (req, res) => {
-  const pw = req.query.pw;
-  if (pw !== ADMIN_PASSWORD) return res.status(401).json({ error: '비밀번호가 틀렸습니다.' });
-  await pool.query('DELETE FROM store_suggestions WHERE id=$1', [req.params.id]);
-  res.json({ ok: true });
-});
-
-// =====================================================
-// API: 매장 제안
-// POST /api/suggest
 // =====================================================
 app.post('/api/suggest', async (req, res) => {
   const { category, name, region, addr, memo } = req.body;
@@ -542,10 +474,19 @@ app.delete('/api/admin/stores/:id', authAdmin, async (req, res) => {
   res.json({ ok: true });
 });
 
-// 제안 목록 조회
 app.get('/api/admin/suggestions', authAdmin, async (req, res) => {
   const result = await pool.query('SELECT * FROM store_suggestions ORDER BY created_at DESC');
   res.json({ total: result.rows.length, suggestions: result.rows });
+});
+
+app.put('/api/admin/suggestions/:id', authAdmin, async (req, res) => {
+  await pool.query('UPDATE store_suggestions SET status=$1 WHERE id=$2', [req.body.status, req.params.id]);
+  res.json({ ok: true });
+});
+
+app.delete('/api/admin/suggestions/:id', authAdmin, async (req, res) => {
+  await pool.query('DELETE FROM store_suggestions WHERE id=$1', [req.params.id]);
+  res.json({ ok: true });
 });
 
 app.get('/api/admin/geocode', authAdmin, async (req, res) => {
@@ -569,87 +510,6 @@ app.get('/api/admin/geocode', authAdmin, async (req, res) => {
     res.json({ lat: parseFloat(doc.y), lng: parseFloat(doc.x) });
   } catch {
     res.status(500).json({ error: 'Geocoding 실패' });
-  }
-});
-
-// =====================================================
-// API: 네이버 블로그 매장 언급 랭킹
-// GET /api/blog-ranking?query=서울+버터떡
-// =====================================================
-app.get('/api/blog-ranking', async (req, res) => {
-  const { query } = req.query;
-  if (!query) return res.status(400).json({ error: 'query 파라미터가 필요합니다.' });
-  if (!NAVER_CLIENT_ID || !NAVER_CLIENT_SECRET)
-    return res.status(500).json({ error: '네이버 API 키가 설정되지 않았습니다.' });
-
-  try {
-    // ── 1) 네이버 블로그 검색 API로 상위 50개 글 수집 ──
-    const allItems = [];
-    for (let start = 1; start <= 50; start += 10) {
-      const r = await axios.get('https://openapi.naver.com/v1/search/blog.json', {
-        params: { query, display: 10, start, sort: 'sim' },
-        headers: {
-          'X-Naver-Client-Id': NAVER_CLIENT_ID,
-          'X-Naver-Client-Secret': NAVER_CLIENT_SECRET,
-        },
-        timeout: 5000,
-      });
-      const items = r.data.items || [];
-      allItems.push(...items);
-      if (items.length < 10) break;
-    }
-
-    if (allItems.length === 0) return res.json({ total: 0, rankings: [] });
-
-    // ── 2) 각 글의 제목+설명에서 매장명 후보 추출 ──
-    const storeCount = {};
-    const storeLinks = {};
-
-    const htmlRe = /<[^>]+>/g;
-    const patternList = [
-      /([가-힣a-zA-Z0-9][가-힣a-zA-Z0-9\s]{1,14}(?:카페|베이커리|떡집|빵집|디저트|공방|스튜디오|마켓|샵|shop|cafe))/gi,
-      /(?:카페|베이커리|떡집|빵집|디저트)\s*([가-힣a-zA-Z0-9][가-힣a-zA-Z0-9\s]{1,12})/gi,
-    ];
-
-    for (const item of allItems) {
-      const raw = (item.title + ' ' + item.description)
-        .replace(htmlRe, '')
-        .replace(/&[a-z]+;/gi, ' ')
-        .trim();
-
-      for (const pattern of patternList) {
-        const matches = raw.matchAll(pattern);
-        for (const m of matches) {
-          const name = (m[1] || m[0]).trim().replace(/\s+/g, ' ');
-          if (name.length < 2 || name.length > 20) continue;
-          storeCount[name] = (storeCount[name] || 0) + 1;
-          if (!storeLinks[name]) storeLinks[name] = item.link;
-        }
-      }
-    }
-
-    // ── 3) 언급 횟수 2회 이상인 매장만 내림차순 정렬 ──
-    const rankings = Object.entries(storeCount)
-      .filter(([, count]) => count >= 2)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 20)
-      .map(([name, count]) => ({
-        name,
-        count,
-        link: storeLinks[name] || null,
-      }));
-
-    console.log(`📝 블로그 랭킹 [${query}] 글 ${allItems.length}개 → 매장 ${rankings.length}개`);
-    res.json({
-      query,
-      blogCount: allItems.length,
-      total: rankings.length,
-      rankings,
-    });
-
-  } catch (err) {
-    console.error('블로그 랭킹 오류:', err.response?.data || err.message);
-    res.status(500).json({ error: '블로그 랭킹 검색 중 오류가 발생했습니다.' });
   }
 });
 
