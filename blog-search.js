@@ -87,6 +87,7 @@ const NOISE_CONTAINS = [
   '롯데마트', '스타필드', '코엑스', '타임스퀘어', '더현대',
   '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월',
   '1월', '2월', '상하이', '두바이', '맛집투어', '후기',
+  '에서', '리단길', '로수길', '디저트맛집', '몰', '카페거리', '디저트'
 ];
 
 function isNoiseName(key) {
@@ -104,7 +105,7 @@ async function main() {
   console.log('='.repeat(70));
 
   const allItems = [];
-  for (let start = 1; start <= 201; start += 100) {
+  for (let start = 1; start <= 401; start += 100) {
     try {
       const data = await fetchBlogPosts(query, start);
       if (!data.items?.length) break;
