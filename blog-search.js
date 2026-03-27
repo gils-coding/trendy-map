@@ -105,7 +105,7 @@ async function main() {
   console.log('='.repeat(70));
 
   const allItems = [];
-  for (let start = 1; start <= 401; start += 100) {
+  for (let start = 1; start <= 901; start += 100) {
     try {
       const data = await fetchBlogPosts(query, start);
       if (!data.items?.length) break;
