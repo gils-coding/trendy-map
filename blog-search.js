@@ -6,8 +6,8 @@
 const https = require('https');
 
 // ⚠️ 여기에 네이버 API 키 입력
-const NAVER_CLIENT_ID = 'YOUR_NAVER_CLIENT_ID';
-const NAVER_CLIENT_SECRET = 'YOUR_NAVER_CLIENT_SECRET';
+const NAVER_CLIENT_ID = 'af92015VWkBED6l313do';
+const NAVER_CLIENT_SECRET = 'grSkcecCWs';
 
 const query = process.argv[2];
 if (!query) {
