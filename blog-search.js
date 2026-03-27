@@ -2,6 +2,8 @@
 // 네이버 블로그 맛집 조사 스크립트
 // 사용법: node blog-search.js "서울 버터떡 맛집"
 // =====================================================
+require('dotenv').config();
+
 
 const https = require('https');
 
