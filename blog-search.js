@@ -5,9 +5,11 @@
 
 const https = require('https');
 
-// ⚠️ 여기에 네이버 API 키 입력
-const NAVER_CLIENT_ID = 'af92015VWkBED6l313do';
-const NAVER_CLIENT_SECRET = 'grSkcecCWs';
+// server.js와 동일하게 환경변수로 관리
+// Railway 환경변수에 NAVER_CLIENT_ID, NAVER_CLIENT_SECRET 설정되어 있으면 자동 사용
+// 로컬 실행 시: $env:NAVER_CLIENT_ID="키"; $env:NAVER_CLIENT_SECRET="시크릿"; node blog-search.js "검색어"
+const NAVER_CLIENT_ID = process.env.NAVER_CLIENT_ID || '';
+const NAVER_CLIENT_SECRET = process.env.NAVER_CLIENT_SECRET || '';
 
 const query = process.argv[2];
 const showList = process.argv.includes('--list');
@@ -21,7 +23,7 @@ if (!query) {
 
 async function fetchBlogPosts(query, start) {
   return new Promise((resolve, reject) => {
-    const params = new URLSearchParams({ query, display: 10, start, sort: 'sim' });
+    const params = new URLSearchParams({ query, display: 100, start, sort: 'sim' });
     const options = {
       hostname: 'openapi.naver.com',
       path: `/v1/search/blog.json?${params}`,
@@ -77,9 +79,19 @@ const STOP_WORDS = new Set([
 // 지역명+카테고리 조합 패턴 (매장명 아님) — 예: "잠실디저트", "홍대카페", "SNS에서"
 const LOCATION_CATEGORY_RE = /^(서울|경기|인천|강남|홍대|잠실|신촌|이태원|합정|성수|건대|압구정|여의도|신림|수원|분당|송파|강동|강서|마포|용산|종로|중구|유행|요즘|SNS|AI|인기|핫플)(디저트|카페|빵집|떡집|베이커리|마켓|브런치|맛집|케이크)?$/;
 
+// 이 단어가 포함된 이름은 매장명이 아님 (부분 일치)
+const NOISE_CONTAINS = [
+  '월드몰', '백화점', '아울렛', '팝업', '홈플러스', '이마트', '코스트코',
+  '롯데마트', '스타필드', '코엑스', '타임스퀘어', '더현대',
+  '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월',
+  '1월', '2월', '상하이', '두바이', '맛집투어', '후기',
+];
+
 function isNoiseName(key) {
   if (STOP_WORDS.has(key)) return true;
   if (LOCATION_CATEGORY_RE.test(key)) return true;
+  // 노이즈 단어가 키 안에 포함된 경우
+  if (NOISE_CONTAINS.some(w => key.includes(w))) return true;
   // 순수 카테고리어만 있는 경우
   if (/^(디저트|카페|빵집|떡집|베이커리|마켓|브런치|케이크|공방|샵|스튜디오)+$/.test(key)) return true;
   return false;
@@ -90,12 +102,12 @@ async function main() {
   console.log('='.repeat(70));
 
   const allItems = [];
-  for (let start = 1; start <= 91; start += 10) {
+  for (let start = 1; start <= 201; start += 100) {
     try {
       const data = await fetchBlogPosts(query, start);
       if (!data.items?.length) break;
       allItems.push(...data.items);
-      if (data.items.length < 10) break;
+      if (data.items.length < 100) break;
     } catch (e) {
       console.error('오류:', e.message);
       break;
