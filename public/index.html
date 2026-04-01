@@ -373,6 +373,7 @@
       font-family: 'Do Hyeon', sans-serif;
       font-size: 16px;
       color: var(--text);
+      display: inline;
     }
 
     .sidebar-header p {
@@ -976,6 +977,7 @@
     .sheet-header h2 {
       font-size: 14px;
       font-family: 'Do Hyeon', sans-serif;
+      display: inline;
     }
 
     .sheet-header p {
@@ -1367,12 +1369,14 @@
         <div class="handle-bar"></div>
       </div>
       <div class="sidebar-header">
-        <h2 id="sidebar-title">🥮 버터떡</h2>
+        <div style="display:flex;align-items:center;gap:0;flex-wrap:wrap;">
+          <h2 id="sidebar-title" style="margin:0;">🥮 버터떡</h2>
+          <label class="franchise-filter" id="franchiseFilterLabel" style="display:none;margin-left:8px;">
+            <input type="checkbox" id="franchiseFilterCheck" onchange="onFranchiseFilterChange()">
+            프랜차이즈 제외
+          </label>
+        </div>
         <p id="sidebar-count">지도를 움직이면 해당 지역 매장이 표시됩니다</p>
-        <label class="franchise-filter" id="franchiseFilterLabel" style="display:none;">
-          <input type="checkbox" id="franchiseFilterCheck" onchange="onFranchiseFilterChange()">
-          프랜차이즈 제외
-        </label>
       </div>
       <div class="store-list" id="storeList">
         <div class="loading">
@@ -1410,12 +1414,14 @@
   <div class="mobile-sheet" id="mobileSheet">
     <div class="sheet-drag"></div>
     <div class="sheet-header">
-      <h2 id="sheetTitle">🥮 버터떡</h2>
+      <div style="display:flex;align-items:center;gap:0;flex-wrap:wrap;">
+        <h2 id="sheetTitle" style="margin:0;">🥮 버터떡</h2>
+        <label class="franchise-filter" id="franchiseFilterLabelMobile" style="display:none;margin-left:8px;">
+          <input type="checkbox" id="franchiseFilterCheckMobile" onchange="onFranchiseFilterChangeMobile()">
+          프랜차이즈 제외
+        </label>
+      </div>
       <p id="sheetCount">지도를 움직이면 매장이 표시됩니다</p>
-      <label class="franchise-filter" id="franchiseFilterLabelMobile" style="display:none;">
-        <input type="checkbox" id="franchiseFilterCheckMobile" onchange="onFranchiseFilterChangeMobile()">
-        프랜차이즈 제외
-      </label>
     </div>
     <div class="sheet-body" id="mobileList"></div>
   </div>
@@ -1522,7 +1528,13 @@
       const cbM = document.getElementById('franchiseFilterCheckMobile');
       excludeFranchise = cb.checked;
       if (cbM) cbM.checked = excludeFranchise;
-      if (window._stores) renderStoreList(window._stores);
+      if (excludeFranchise) {
+        // 체크 시: 현재 데이터에서 클라이언트 필터링만
+        if (window._stores) renderStoreList(window._stores);
+      } else {
+        // 해제 시: 서버에서 다시 로딩
+        loadStores();
+      }
     }
 
     function onFranchiseFilterChangeMobile() {
@@ -1530,7 +1542,11 @@
       const cbM = document.getElementById('franchiseFilterCheckMobile');
       excludeFranchise = cbM.checked;
       if (cb) cb.checked = excludeFranchise;
-      if (window._stores) renderStoreList(window._stores);
+      if (excludeFranchise) {
+        if (window._stores) renderStoreList(window._stores);
+      } else {
+        loadStores();
+      }
     }
 
     function smoothPanTo(lat, lng, onComplete) {
