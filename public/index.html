@@ -1846,6 +1846,7 @@
       currentQuery = tabEl.dataset.query;
       currentEmoji = tabEl.dataset.emoji;
       updateCoupangBanner(currentQuery);
+      clearMarkers(); // 탭 전환 시 이전 카테고리 마커 전부 제거
       loadStores();
     }
 
