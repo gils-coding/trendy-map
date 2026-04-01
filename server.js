@@ -55,6 +55,17 @@ async function initDB() {
       created_at  TIMESTAMP DEFAULT NOW()
     )
   `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS food_suggestions (
+      id          SERIAL PRIMARY KEY,
+      food_name   TEXT NOT NULL,
+      reason      TEXT,
+      sns_link    TEXT,
+      contact     TEXT,
+      status      TEXT DEFAULT 'pending',
+      created_at  TIMESTAMP DEFAULT NOW()
+    )
+  `);
   console.log('✅ PostgreSQL 테이블 준비 완료');
 }
 
@@ -431,6 +442,41 @@ app.post('/api/suggest', async (req, res) => {
     console.error('매장 제안 오류:', err.message);
     res.status(500).json({ error: '저장 중 오류 발생' });
   }
+});
+
+// =====================================================
+// API: 유행 음식 제안
+// =====================================================
+app.post('/api/suggest-food', async (req, res) => {
+  const { food_name, reason, sns_link, contact } = req.body;
+  if (!food_name)
+    return res.status(400).json({ error: 'food_name 필수' });
+  try {
+    await pool.query(
+      `INSERT INTO food_suggestions (food_name, reason, sns_link, contact) VALUES ($1,$2,$3,$4)`,
+      [food_name, reason || null, sns_link || null, contact || null]
+    );
+    console.log(`🍽️ 유행 음식 제안: ${food_name}`);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('음식 제안 오류:', err.message);
+    res.status(500).json({ error: '저장 중 오류 발생' });
+  }
+});
+
+app.get('/api/admin/food-suggestions', authAdmin, async (req, res) => {
+  const result = await pool.query('SELECT * FROM food_suggestions ORDER BY created_at DESC');
+  res.json({ total: result.rows.length, suggestions: result.rows });
+});
+
+app.put('/api/admin/food-suggestions/:id', authAdmin, async (req, res) => {
+  await pool.query('UPDATE food_suggestions SET status=$1 WHERE id=$2', [req.body.status, req.params.id]);
+  res.json({ ok: true });
+});
+
+app.delete('/api/admin/food-suggestions/:id', authAdmin, async (req, res) => {
+  await pool.query('DELETE FROM food_suggestions WHERE id=$1', [req.params.id]);
+  res.json({ ok: true });
 });
 
 // =====================================================

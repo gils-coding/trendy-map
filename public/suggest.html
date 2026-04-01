@@ -1,155 +1,618 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>매장 제안 — 트렌디맵</title>
-  <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <title>제안하기 — 트렌디맵</title>
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-W9ZYY9DHJL"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-W9ZYY9DHJL');
+  </script>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Do+Hyeon&family=Noto+Sans+KR:wght@300;400;500;700&display=swap"
+    rel="stylesheet">
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
     :root {
-      --bg: #f7f7f5; --surface: #ffffff;
-      --accent: #ff6b35; --accent2: #ff9500;
-      --text: #1a1a1a; --muted: #888; --border: #e0e0e0; --card: #f2f2f0;
+      --bg: #f7f7f5;
+      --surface: #ffffff;
+      --accent: #ff6b35;
+      --accent2: #ff9500;
+      --text: #1a1a1a;
+      --muted: #888;
+      --border: #e0e0e0;
+      --card: #f2f2f0;
     }
-    body { font-family: 'Noto Sans KR', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    body {
+      font-family: 'Noto Sans KR', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── 헤더 ── */
     header {
-      display: flex; align-items: center; gap: 10px;
-      padding: 12px 20px; background: var(--surface);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 20px;
+      background: var(--surface);
       border-bottom: 1.5px solid var(--border);
-      position: sticky; top: 0; z-index: 100;
+      position: sticky;
+      top: 0;
+      z-index: 100;
     }
-    .logo { font-family: 'Black Han Sans', sans-serif; font-size: 20px; color: var(--accent); text-decoration: none; }
-    .logo span { color: var(--accent2); }
-    .container { max-width: 520px; margin: 0 auto; padding: 40px 20px 80px; }
+
+    .logo {
+      font-family: 'Black Han Sans', sans-serif;
+      font-size: 20px;
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    .logo span {
+      color: var(--accent2);
+    }
+
     .back-btn {
-      display: inline-flex; align-items: center; gap: 6px;
-      padding: 9px 18px; background: var(--accent); color: #fff;
-      border-radius: 20px; text-decoration: none;
-      font-size: 13px; font-weight: 700; margin-bottom: 32px;
-      transition: opacity 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: var(--card);
+      border: 1.5px solid var(--border);
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text);
+      text-decoration: none;
+      transition: border-color 0.2s;
     }
-    .back-btn:hover { opacity: 0.85; }
+
+    .back-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* ── 탭 ── */
+    .tab-bar {
+      display: flex;
+      border-bottom: 1.5px solid var(--border);
+      background: var(--surface);
+      padding: 0 20px;
+      gap: 0;
+    }
+
+    .tab-btn {
+      flex: 1;
+      max-width: 200px;
+      padding: 14px 0 12px;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--muted);
+      background: none;
+      border: none;
+      border-bottom: 3px solid transparent;
+      cursor: pointer;
+      font-family: inherit;
+      transition: color 0.15s, border-color 0.15s;
+    }
+
+    .tab-btn.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    /* ── 컨텐츠 ── */
+    .container {
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 32px 20px 80px;
+    }
+
+    .tab-panel {
+      display: none;
+    }
+
+    .tab-panel.active {
+      display: block;
+    }
+
+    /* ── 상단 설명 ── */
+    .page-hero {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+
+    .hero-emoji {
+      font-size: 44px;
+      margin-bottom: 10px;
+      display: block;
+      animation: bounce 1.8s ease-in-out infinite;
+    }
+
+    @keyframes bounce {
+
+      0%,
+      100% {
+        transform: translateY(0);
+      }
+
+      50% {
+        transform: translateY(-6px);
+      }
+    }
+
+    .hero-title {
+      font-family: 'Do Hyeon', sans-serif;
+      font-size: 22px;
+      margin-bottom: 6px;
+    }
+
+    .hero-title span {
+      color: var(--accent);
+    }
+
+    .hero-desc {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.8;
+    }
+
+    /* ── 폼 카드 ── */
     .card {
       background: var(--surface);
       border: 1.5px solid var(--border);
       border-radius: 16px;
-      padding: 32px 28px;
+      padding: 28px 24px;
+      box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
     }
-    .card-title { font-family: 'Black Han Sans', sans-serif; font-size: 22px; color: var(--accent); margin-bottom: 6px; }
-    .card-desc { font-size: 13px; color: var(--muted); margin-bottom: 28px; line-height: 1.7; }
-    .form-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 18px; }
-    label { font-size: 13px; font-weight: 700; color: var(--text); }
-    label .req { color: var(--accent); margin-left: 2px; }
-    label .opt { color: var(--muted); font-weight: 400; font-size: 11px; margin-left: 4px; }
-    input, select, textarea {
-      background: var(--card); border: 1.5px solid var(--border);
-      border-radius: 10px; padding: 10px 14px;
-      font-size: 14px; font-family: inherit; color: var(--text);
-      outline: none; transition: border-color 0.15s; width: 100%;
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 18px;
     }
-    input:focus, select:focus, textarea:focus { border-color: var(--accent); }
-    input::placeholder, textarea::placeholder { color: var(--muted); }
-    textarea { resize: vertical; min-height: 80px; }
+
+    label {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    label .req {
+      color: var(--accent);
+      margin-left: 3px;
+    }
+
+    label .opt {
+      color: var(--muted);
+      font-weight: 400;
+      font-size: 11px;
+      margin-left: 4px;
+    }
+
+    input,
+    select,
+    textarea {
+      background: var(--card);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 14px;
+      font-family: inherit;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      width: 100%;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+    }
+
+    input::placeholder,
+    textarea::placeholder {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    textarea {
+      resize: none;
+      min-height: 90px;
+    }
+
+    .hint {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    /* ── 제출 버튼 ── */
     .submit-btn {
-      width: 100%; padding: 13px; background: var(--accent); color: #fff;
-      border: none; border-radius: 10px; font-size: 15px; font-weight: 700;
-      font-family: inherit; cursor: pointer; margin-top: 8px; transition: opacity 0.15s;
+      width: 100%;
+      padding: 13px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      margin-top: 4px;
+      transition: background 0.15s, transform 0.1s;
     }
-    .submit-btn:hover { opacity: 0.85; }
-    .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .done { display: none; text-align: center; padding: 40px 20px; }
-    .done-icon { font-size: 52px; margin-bottom: 16px; }
-    .done-title { font-family: 'Black Han Sans', sans-serif; font-size: 22px; color: var(--accent); margin-bottom: 10px; }
-    .done-desc { font-size: 14px; color: var(--muted); line-height: 1.7; margin-bottom: 24px; }
-    .done-btn {
-      display: inline-block; padding: 11px 28px; background: var(--accent);
-      color: #fff; border-radius: 20px; text-decoration: none; font-weight: 700; font-size: 14px;
+
+    .submit-btn:hover {
+      background: #e85e28;
     }
+
+    .submit-btn:active {
+      transform: scale(0.98);
+    }
+
+    .submit-btn:disabled {
+      background: var(--muted);
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* ── 에러 ── */
+    .error-msg {
+      display: none;
+      background: #fff0f0;
+      border: 1.5px solid #ffc5c5;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 12px;
+      color: #c0392b;
+      margin-top: 10px;
+    }
+
+    .error-msg.show {
+      display: block;
+    }
+
+    /* ── 안내 카드 ── */
+    .info-card {
+      background: #fff8f5;
+      border: 1.5px solid #ffd4c2;
+      border-radius: 12px;
+      padding: 14px 18px;
+      margin-top: 18px;
+      font-size: 12px;
+      color: #7a4030;
+      line-height: 1.8;
+    }
+
+    .info-card strong {
+      color: var(--accent);
+      display: block;
+      margin-bottom: 3px;
+    }
+
+    /* ── 완료 화면 ── */
+    .done-box {
+      display: none;
+      text-align: center;
+      padding: 48px 20px;
+    }
+
+    .done-box.show {
+      display: block;
+    }
+
+    .done-emoji {
+      font-size: 52px;
+      margin-bottom: 16px;
+    }
+
+    .done-title {
+      font-family: 'Do Hyeon', sans-serif;
+      font-size: 22px;
+      margin-bottom: 8px;
+      color: var(--text);
+    }
+
+    .done-desc {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.8;
+      margin-bottom: 24px;
+    }
+
+    .done-back {
+      display: inline-block;
+      padding: 10px 28px;
+      background: var(--accent);
+      color: #fff;
+      border-radius: 24px;
+      font-size: 13px;
+      font-weight: 700;
+      text-decoration: none;
+      margin-right: 10px;
+    }
+
+    .done-again {
+      display: inline-block;
+      padding: 10px 20px;
+      background: var(--card);
+      color: var(--text);
+      border-radius: 24px;
+      font-size: 13px;
+      font-weight: 700;
+      border: 1.5px solid var(--border);
+      cursor: pointer;
+      font-family: inherit;
+    }
+
     @media (max-width: 480px) {
-      .card { padding: 24px 18px; }
-      .container { padding: 24px 16px 60px; }
+      .container {
+        padding: 20px 16px 60px;
+      }
+
+      .card {
+        padding: 20px 16px;
+      }
+
+      .hero-title {
+        font-size: 19px;
+      }
+
+      .tab-btn {
+        font-size: 13px;
+      }
     }
   </style>
 </head>
+
 <body>
-<header>
-  <a href="/" class="logo">트렌디<span>맵</span></a>
-</header>
-<div class="container">
-  <a href="/" class="back-btn">← 지도로 돌아가기</a>
-  <div class="card">
-    <div id="formWrap">
-      <div class="card-title">📍 매장 제안</div>
-      <p class="card-desc">지도에 없는 매장을 알고 계신가요?<br>지역과 매장명만 알려주시면 검토 후 추가할게요!</p>
-      <div class="form-group">
-        <label>음식 카테고리 <span class="req">*</span></label>
-        <select id="f_category">
-          <option value="">선택해주세요</option>
-          <option value="버터떡">🥮 버터떡</option>
-          <option value="두바이 쫀득쿠키">🍪 두바이 쫀득쿠키</option>
-          <option value="소금빵">🥐 소금빵</option>
-          <option value="탕후루">🍡 탕후루</option>
-          <option value="크로플">🧇 크로플</option>
-          <option value="마라탕">🌶️ 마라탕</option>
-          <option value="기타">기타</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>매장명 <span class="req">*</span></label>
-        <input id="f_name" type="text" placeholder="예: 홍대 버터떡 본점" />
-      </div>
-      <div class="form-group">
-        <label>지역 <span class="req">*</span></label>
-        <input id="f_region" type="text" placeholder="예: 서울 마포구 홍대" />
-      </div>
-      <div class="form-group">
-        <label>추가 정보 <span class="opt">(선택)</span></label>
-        <textarea id="f_memo" placeholder="주소, 전화번호 등 알고 계신 정보를 자유롭게 적어주세요."></textarea>
-      </div>
-      <button class="submit-btn" id="submitBtn" onclick="submitSuggest()">제안하기</button>
-    </div>
-    <div class="done" id="doneWrap">
-      <div class="done-icon">🎉</div>
-      <div class="done-title">제안해주셔서 감사해요!</div>
-      <p class="done-desc">소중한 제안을 검토 후 지도에 추가할게요.<br>트렌디맵을 이용해주셔서 감사합니다.</p>
-      <a href="/" class="done-btn">지도로 돌아가기</a>
-    </div>
+
+  <header>
+    <a href="/" class="back-btn">← 지도로</a>
+    <a href="/" class="logo">트렌디<span>맵</span></a>
+  </header>
+
+  <!-- 탭 바 -->
+  <div class="tab-bar">
+    <button class="tab-btn active" id="tabBtnStore" onclick="switchTab('store')">🏪 매장 제안</button>
+    <button class="tab-btn" id="tabBtnFood" onclick="switchTab('food')">✨ 음식 제안</button>
   </div>
-</div>
-<script>
-  async function submitSuggest() {
-    const category = document.getElementById('f_category').value.trim();
-    const name     = document.getElementById('f_name').value.trim();
-    const region   = document.getElementById('f_region').value.trim();
-    const memo     = document.getElementById('f_memo').value.trim();
-    if (!category) return alert('음식 카테고리를 선택해주세요.');
-    if (!name)     return alert('매장명을 입력해주세요.');
-    if (!region)   return alert('지역을 입력해주세요.');
-    const btn = document.getElementById('submitBtn');
-    btn.disabled = true;
-    btn.textContent = '제출 중...';
-    try {
-      const res = await fetch('/api/suggest', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ store_name: name, region, category, memo }),
-      });
-      const data = await res.json();
-      if (data.ok) {
-        document.getElementById('formWrap').style.display = 'none';
-        document.getElementById('doneWrap').style.display = 'block';
-      } else {
-        alert(data.error || '오류가 발생했습니다.');
-        btn.disabled = false;
-        btn.textContent = '제안하기';
-      }
-    } catch (e) {
-      alert('오류가 발생했습니다. 다시 시도해주세요.');
-      btn.disabled = false;
-      btn.textContent = '제안하기';
+
+  <div class="container">
+
+    <!-- ════════════════ 매장 제안 패널 ════════════════ -->
+    <div class="tab-panel active" id="panelStore">
+      <div class="page-hero">
+        <span class="hero-emoji">🏪</span>
+        <h1 class="hero-title">지도에 없는 <span>매장</span>을 알고 계신가요?</h1>
+        <p class="hero-desc">지역과 매장명만 알려주시면<br>검토 후 지도에 추가할게요!</p>
+      </div>
+
+      <div class="card" id="storeFormCard">
+        <div class="form-group">
+          <label for="s_category">음식 카테고리 <span class="req">*</span></label>
+          <select id="s_category">
+            <option value="">선택해주세요</option>
+            <option value="버터떡">🥮 버터떡</option>
+            <option value="두바이 쫀득쿠키">🍪 두바이 쫀득쿠키</option>
+            <option value="소금빵">🥐 소금빵</option>
+            <option value="탕후루">🍡 탕후루</option>
+            <option value="크로플">🧇 크로플</option>
+            <option value="마라탕">🌶️ 마라탕</option>
+            <option value="기타">기타</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="s_name">매장명 <span class="req">*</span></label>
+          <input id="s_name" type="text" placeholder="예: 홍대 버터떡 본점" />
+        </div>
+        <div class="form-group">
+          <label for="s_region">지역 <span class="req">*</span></label>
+          <input id="s_region" type="text" placeholder="예: 서울 마포구 홍대" />
+        </div>
+        <div class="form-group">
+          <label for="s_memo">추가 정보 <span class="opt">(선택)</span></label>
+          <textarea id="s_memo" placeholder="주소, 전화번호 등 알고 계신 정보를 자유롭게 적어주세요."></textarea>
+        </div>
+        <button class="submit-btn" id="storeSubmitBtn" onclick="submitStore()">📍 매장 제안하기</button>
+        <div class="error-msg" id="storeErrorMsg"></div>
+      </div>
+
+      <!-- 완료 -->
+      <div class="done-box" id="storeDoneBox">
+        <div class="done-emoji">🎉</div>
+        <div class="done-title">제안해주셔서 감사해요!</div>
+        <p class="done-desc">소중한 제안을 검토 후 지도에 추가할게요.<br>트렌디맵을 이용해주셔서 감사합니다.</p>
+        <a href="/" class="done-back">지도로 돌아가기</a>
+        <button class="done-again" onclick="resetStore()">추가 제안하기</button>
+      </div>
+
+      <div class="info-card" id="storeInfoCard">
+        <strong>📌 검토 안내</strong>
+        운영자가 검토 후 지도에 추가됩니다. 새로운 유행 음식 카테고리 추가 제안은
+        <strong onclick="switchTab('food')" style="cursor:pointer;text-decoration:underline;">음식 제안 탭</strong>을 이용해주세요.
+      </div>
+    </div>
+
+    <!-- ════════════════ 음식 제안 패널 ════════════════ -->
+    <div class="tab-panel" id="panelFood">
+      <div class="page-hero">
+        <span class="hero-emoji">✨</span>
+        <h1 class="hero-title">새로운 <span>유행 음식</span> 제안</h1>
+        <p class="hero-desc">요즘 SNS에서 핫한 음식을 알고 계신가요?<br>트렌디맵에 추가되면 더 많은 분들이 찾을 수 있어요!</p>
+      </div>
+
+      <div class="card" id="foodFormCard">
+        <div class="form-group">
+          <label for="f_food_name">음식 이름 <span class="req">*</span></label>
+          <input type="text" id="f_food_name" placeholder="예: 감자빵, 흑임자 라떼, 수플레 팬케이크" maxlength="50" />
+        </div>
+        <div class="form-group">
+          <label for="f_reason">왜 유행하고 있나요? <span class="opt">(선택)</span></label>
+          <textarea id="f_reason"
+            placeholder="예: 인스타그램에서 매주 수천 개 게시물이 올라오고 있어요. 맛도 독특하고 비주얼이 예뻐서 젊은 층에서 인기가 많아요."></textarea>
+        </div>
+        <div class="form-group">
+          <label for="f_sns_link">SNS 링크 <span class="opt">(선택)</span></label>
+          <input type="url" id="f_sns_link" placeholder="https://www.instagram.com/p/..." />
+          <p class="hint">관련 인스타그램, 유튜브, 블로그 링크를 붙여넣어 주세요.</p>
+        </div>
+        <div class="form-group">
+          <label for="f_contact">연락처 <span class="opt">(선택)</span></label>
+          <input type="text" id="f_contact" placeholder="이메일 또는 SNS 아이디 (검토 결과 안내용)" />
+        </div>
+        <button class="submit-btn" id="foodSubmitBtn" onclick="submitFood()">🚀 음식 제안 보내기</button>
+        <div class="error-msg" id="foodErrorMsg"></div>
+      </div>
+
+      <!-- 완료 -->
+      <div class="done-box" id="foodDoneBox">
+        <div class="done-emoji">🎉</div>
+        <div class="done-title">제안해 주셔서 감사해요!</div>
+        <p class="done-desc">운영자가 검토 후 트렌디맵에 반영할게요.<br>멋진 제안 감사합니다 😊</p>
+        <a href="/" class="done-back">지도로 돌아가기</a>
+        <button class="done-again" onclick="resetFood()">추가 제안하기</button>
+      </div>
+
+      <div class="info-card" id="foodInfoCard">
+        <strong>📌 검토 안내</strong>
+        제안해주신 음식은 운영자가 검토한 후 트렌디맵에 추가됩니다.
+        SNS 링크나 이유를 함께 보내주시면 더 빠르게 반영될 수 있어요!
+        특정 매장 제안은 <strong onclick="switchTab('store')" style="cursor:pointer;text-decoration:underline;">매장 제안
+          탭</strong>을 이용해주세요.
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // ── 탭 전환 ──
+    function switchTab(tab) {
+      document.getElementById('panelStore').classList.toggle('active', tab === 'store');
+      document.getElementById('panelFood').classList.toggle('active', tab === 'food');
+      document.getElementById('tabBtnStore').classList.toggle('active', tab === 'store');
+      document.getElementById('tabBtnFood').classList.toggle('active', tab === 'food');
     }
-  }
-</script>
+
+    // URL 파라미터로 탭 초기 선택
+    const params = new URLSearchParams(location.search);
+    if (params.get('tab') === 'food') switchTab('food');
+
+    // ── 매장 제안 제출 ──
+    async function submitStore() {
+      const category = document.getElementById('s_category').value.trim();
+      const name = document.getElementById('s_name').value.trim();
+      const region = document.getElementById('s_region').value.trim();
+      const memo = document.getElementById('s_memo').value.trim();
+      const errEl = document.getElementById('storeErrorMsg');
+      errEl.classList.remove('show');
+
+      if (!category) { errEl.textContent = '음식 카테고리를 선택해주세요.'; errEl.classList.add('show'); return; }
+      if (!name) { errEl.textContent = '매장명을 입력해주세요.'; errEl.classList.add('show'); return; }
+      if (!region) { errEl.textContent = '지역을 입력해주세요.'; errEl.classList.add('show'); return; }
+
+      const btn = document.getElementById('storeSubmitBtn');
+      btn.disabled = true; btn.textContent = '전송 중...';
+
+      try {
+        const res = await fetch('/api/suggest', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ category, name, region, memo }),
+        });
+        const data = await res.json();
+        if (data.ok) {
+          document.getElementById('storeFormCard').style.display = 'none';
+          document.getElementById('storeInfoCard').style.display = 'none';
+          document.getElementById('storeDoneBox').classList.add('show');
+        } else {
+          throw new Error(data.error || '오류 발생');
+        }
+      } catch (e) {
+        errEl.textContent = '전송 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
+        errEl.classList.add('show');
+        btn.disabled = false; btn.textContent = '📍 매장 제안하기';
+      }
+    }
+
+    function resetStore() {
+      document.getElementById('s_category').value = '';
+      document.getElementById('s_name').value = '';
+      document.getElementById('s_region').value = '';
+      document.getElementById('s_memo').value = '';
+      document.getElementById('storeFormCard').style.display = '';
+      document.getElementById('storeInfoCard').style.display = '';
+      document.getElementById('storeDoneBox').classList.remove('show');
+      document.getElementById('storeSubmitBtn').disabled = false;
+      document.getElementById('storeSubmitBtn').textContent = '📍 매장 제안하기';
+    }
+
+    // ── 음식 제안 제출 ──
+    async function submitFood() {
+      const food_name = document.getElementById('f_food_name').value.trim();
+      const reason = document.getElementById('f_reason').value.trim();
+      const sns_link = document.getElementById('f_sns_link').value.trim();
+      const contact = document.getElementById('f_contact').value.trim();
+      const errEl = document.getElementById('foodErrorMsg');
+      errEl.classList.remove('show');
+
+      if (!food_name) { errEl.textContent = '음식 이름을 입력해주세요.'; errEl.classList.add('show'); return; }
+
+      const btn = document.getElementById('foodSubmitBtn');
+      btn.disabled = true; btn.textContent = '전송 중...';
+
+      try {
+        const res = await fetch('/api/suggest-food', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ food_name, reason, sns_link, contact }),
+        });
+        const data = await res.json();
+        if (data.ok) {
+          document.getElementById('foodFormCard').style.display = 'none';
+          document.getElementById('foodInfoCard').style.display = 'none';
+          document.getElementById('foodDoneBox').classList.add('show');
+        } else {
+          throw new Error(data.error || '오류 발생');
+        }
+      } catch (e) {
+        errEl.textContent = '전송 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
+        errEl.classList.add('show');
+        btn.disabled = false; btn.textContent = '🚀 음식 제안 보내기';
+      }
+    }
+
+    function resetFood() {
+      document.getElementById('f_food_name').value = '';
+      document.getElementById('f_reason').value = '';
+      document.getElementById('f_sns_link').value = '';
+      document.getElementById('f_contact').value = '';
+      document.getElementById('foodFormCard').style.display = '';
+      document.getElementById('foodInfoCard').style.display = '';
+      document.getElementById('foodDoneBox').classList.remove('show');
+      document.getElementById('foodSubmitBtn').disabled = false;
+      document.getElementById('foodSubmitBtn').textContent = '🚀 음식 제안 보내기';
+    }
+  </script>
+
 </body>
+
 </html>
