@@ -444,6 +444,25 @@
       color: var(--text);
     }
 
+    /* 매장명 + 주소 한 줄 */
+    .store-name-row {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      flex-wrap: nowrap;
+      overflow: hidden;
+    }
+
+    .store-addr-inline {
+      font-size: 11px;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex-shrink: 1;
+      min-width: 0;
+    }
+
     .store-addr {
       font-size: 11px;
       color: var(--muted);
@@ -929,7 +948,7 @@
     }
 
     .mobile-sheet.show {
-      bottom: 0;
+      bottom: 7%;
     }
 
     .sheet-drag {
@@ -1212,7 +1231,6 @@
       <a href="https://litt.ly/trendymap" target="_blank" class="donate-tab-btn">💚 응원</a>
     </div>
     <a href="/suggest.html" class="store-suggest-btn">🏪 매장 제안</a>
-    <a href="/suggest.html?tab=food" class="suggest-btn">✨ 음식 제안</a>
     <a href="https://litt.ly/trendymap" target="_blank" class="donate-btn">💚 개발자 응원</a>
   </header>
 
@@ -1328,11 +1346,11 @@
 
   <!-- MOBILE FAB + BOTTOM SHEET -->
   <div class="mobile-fab-wrap">
-    <a href="/suggest.html" class="mobile-suggest-btn">🏪 매장</a>
+    <a href="https://litt.ly/trendymap" target="_blank" class="mobile-donate-btn">💚 개발자 응원</a>
     <button class="mobile-fab" id="mobileFab">
       📋 <span id="fabLabel">목록 보기</span>
     </button>
-    <a href="/suggest.html?tab=food" class="mobile-store-suggest-btn">✨ 음식</a>
+    <a href="/suggest.html" class="mobile-store-suggest-btn">🏪 매장 제안</a>
   </div>
   <div class="mobile-sheet" id="mobileSheet">
     <div class="sheet-drag"></div>
@@ -1458,7 +1476,6 @@
 
       showMapLoading(true);
       closeDetail();
-      clearMarkers();
       document.getElementById('storeList').innerHTML = '<div class="loading"><div class="spinner"></div>매장 검색 중...</div>';
       document.getElementById('sidebar-count').textContent = '검색 중...';
 
@@ -1490,7 +1507,7 @@
 
         window._stores = merged;
         renderStoreList(merged);
-        renderMarkers(merged);
+        updateMarkers(merged);
       } catch (err) {
         var errDiv = document.createElement('div');
         errDiv.className = 'error-msg';
@@ -1545,8 +1562,10 @@
       stores.forEach((s, i) => {
         listHTML += `
         <div class="store-item" id="store-${i}" onclick="selectStore(${i})">
-          <div class="store-name">${s.name}</div>
-          <div class="store-addr">📍 ${s.addr}</div>
+          <div class="store-name-row">
+            <span class="store-name">${s.name}</span>
+            <span class="store-addr-inline">📍 ${(s.addr || '').split(' ').slice(0, 3).join(' ')}</span>
+          </div>
           <div class="store-meta">
             ${s.category ? `<span class="badge">${s.category.split('>').pop()}</span>` : ''}
             ${s.phone ? `<span class="badge">📞 ${s.phone}</span>` : ''}
@@ -1568,6 +1587,40 @@
       markers = [];
     }
 
+    // 화면 내 마커는 유지, 화면 밖만 제거
+    function updateMarkers(stores) {
+      const bounds = naverMap.getBounds();
+
+      // 기존 마커 중 새 stores에 없는 것만 제거
+      const newKeys = new Set(stores.map(s => s.name + '|' + s.addr));
+      const keepMarkers = [];
+      markers.forEach(m => {
+        if (newKeys.has(m._storeKey)) {
+          keepMarkers.push(m); // 유지
+        } else {
+          m.setMap(null); // 제거
+        }
+      });
+      markers = keepMarkers;
+
+      // 기존에 없던 새 매장만 마커 추가
+      const existKeys = new Set(markers.map(m => m._storeKey));
+      const color = COLORS[currentQuery] || '#CCFFCC';
+      stores.forEach((store, i) => {
+        if (!store.lat || !store.lng) return;
+        const key = store.name + '|' + store.addr;
+        if (existKeys.has(key)) return; // 이미 있으면 스킵
+        const content = `<div onclick="selectStore(${i})" style="background:${color};width:34px;height:34px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(0,0,0,0.2);cursor:pointer;border:2px solid rgba(0,0,0,0.15)"><span style="transform:rotate(45deg);font-size:15px">${currentEmoji}</span></div>`;
+        const marker = new naver.maps.Marker({
+          position: new naver.maps.LatLng(store.lat, store.lng),
+          map: naverMap,
+          icon: { content: content, anchor: new naver.maps.Point(17, 34) },
+        });
+        marker._storeKey = key;
+        markers.push(marker);
+      });
+    }
+
     function renderMarkers(stores) {
       const color = COLORS[currentQuery] || '#CCFFCC';
       stores.forEach((store, i) => {
@@ -1580,6 +1633,7 @@
             anchor: new naver.maps.Point(17, 34),
           },
         });
+        marker._storeKey = store.name + '|' + store.addr;
         markers.push(marker);
       });
     }
@@ -1753,8 +1807,8 @@
       document.getElementById('mobileSheet').classList.toggle('show', sheetOpen);
       document.getElementById('fabLabel').textContent = sheetOpen ? '닫기' : '목록 보기';
       // 바텀시트 열릴 때 FAB 양옆 버튼 숨김
-      var suggestBtn = document.querySelector('.mobile-suggest-btn');
-      if (suggestBtn) suggestBtn.style.visibility = sheetOpen ? 'hidden' : 'visible';
+      var donateBtn2 = document.querySelector('.mobile-donate-btn');
+      if (donateBtn2) donateBtn2.style.visibility = sheetOpen ? 'hidden' : 'visible';
       var storeSuggestBtn = document.querySelector('.mobile-store-suggest-btn');
       if (storeSuggestBtn) storeSuggestBtn.style.visibility = sheetOpen ? 'hidden' : 'visible';
     }
