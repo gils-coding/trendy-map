@@ -941,7 +941,8 @@
       bottom: -100%;
       left: 0;
       right: 0;
-      height: 42%;
+      height: 430px;
+      /* 헤더 + 매장 5개 */
       background: var(--surface);
       border-top: 3px solid var(--accent);
       border-radius: 16px 16px 0 0;
@@ -952,7 +953,8 @@
     }
 
     .mobile-sheet.show {
-      bottom: 12%;
+      bottom: 50px;
+      /* 쿠팡 배너(50px) 바로 위 */
     }
 
     .sheet-drag {
@@ -1615,9 +1617,10 @@
         if (!store.lat || !store.lng) return;
         const key = store.name + '|' + store.addr;
         if (existKeys.has(key)) return; // 이미 있으면 스킵
-        const content = `<div onclick="selectStore(${i})" style="background:${color};width:34px;height:34px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(0,0,0,0.2);cursor:pointer;border:2px solid rgba(0,0,0,0.15)"><span style="transform:rotate(45deg);font-size:15px">${currentEmoji}</span></div>`;
+        const lat = store.lat, lng = store.lng;
+        const content = `<div onclick="selectStoreByLatLng(${lat},${lng})" style="background:${color};width:34px;height:34px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(0,0,0,0.2);cursor:pointer;border:2px solid rgba(0,0,0,0.15)"><span style="transform:rotate(45deg);font-size:15px">${currentEmoji}</span></div>`;
         const marker = new naver.maps.Marker({
-          position: new naver.maps.LatLng(store.lat, store.lng),
+          position: new naver.maps.LatLng(lat, lng),
           map: naverMap,
           icon: { content: content, anchor: new naver.maps.Point(17, 34) },
         });
@@ -1626,15 +1629,26 @@
       });
     }
 
+    // 인덱스 대신 lat/lng로 매장 찾기 → 재검색 후에도 정확한 매장 선택
+    function selectStoreByLatLng(lat, lng) {
+      if (!window._stores) return;
+      const idx = window._stores.findIndex(s =>
+        s.lat && Math.abs(s.lat - lat) < 0.00001 &&
+        s.lng && Math.abs(s.lng - lng) < 0.00001
+      );
+      if (idx >= 0) selectStore(idx);
+    }
+
     function renderMarkers(stores) {
       const color = COLORS[currentQuery] || '#CCFFCC';
-      stores.forEach((store, i) => {
+      stores.forEach((store) => {
         if (!store.lat || !store.lng) return;
+        const lat = store.lat, lng = store.lng;
         const marker = new naver.maps.Marker({
-          position: new naver.maps.LatLng(store.lat, store.lng),
+          position: new naver.maps.LatLng(lat, lng),
           map: naverMap,
           icon: {
-            content: `<div onclick="selectStore(${i})" style="background:${color};width:34px;height:34px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(0,0,0,0.2);cursor:pointer;border:2px solid rgba(0,0,0,0.15)"><span style="transform:rotate(45deg);font-size:15px">${currentEmoji}</span></div>`,
+            content: `<div onclick="selectStoreByLatLng(${lat},${lng})" style="background:${color};width:34px;height:34px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(0,0,0,0.2);cursor:pointer;border:2px solid rgba(0,0,0,0.15)"><span style="transform:rotate(45deg);font-size:15px">${currentEmoji}</span></div>`,
             anchor: new naver.maps.Point(17, 34),
           },
         });
