@@ -1175,6 +1175,52 @@
       }
     }
 
+    /* ── 프랜차이즈 필터 체크박스 ── */
+    .franchise-filter {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      margin-left: 8px;
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: 400;
+      cursor: pointer;
+      user-select: none;
+      vertical-align: middle;
+    }
+
+    .franchise-filter input[type="checkbox"] {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      border: 1.5px solid var(--border);
+      border-radius: 3px;
+      background: var(--surface);
+      cursor: pointer;
+      position: relative;
+      flex-shrink: 0;
+      transition: background 0.15s, border-color 0.15s;
+    }
+
+    .franchise-filter input[type="checkbox"]:checked {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .franchise-filter input[type="checkbox"]:checked::after {
+      content: '';
+      position: absolute;
+      left: 2px;
+      top: 0px;
+      width: 5px;
+      height: 8px;
+      border: 2px solid #fff;
+      border-top: none;
+      border-left: none;
+      transform: rotate(45deg);
+    }
+
     /* ── 쿠팡 배너: iframe width=100% 반응형 ── */
     #coupangBanner {
       display: none;
@@ -1323,6 +1369,10 @@
       <div class="sidebar-header">
         <h2 id="sidebar-title">🥮 버터떡</h2>
         <p id="sidebar-count">지도를 움직이면 해당 지역 매장이 표시됩니다</p>
+        <label class="franchise-filter" id="franchiseFilterLabel" style="display:none;">
+          <input type="checkbox" id="franchiseFilterCheck" onchange="onFranchiseFilterChange()">
+          프랜차이즈 제외
+        </label>
       </div>
       <div class="store-list" id="storeList">
         <div class="loading">
@@ -1362,6 +1412,10 @@
     <div class="sheet-header">
       <h2 id="sheetTitle">🥮 버터떡</h2>
       <p id="sheetCount">지도를 움직이면 매장이 표시됩니다</p>
+      <label class="franchise-filter" id="franchiseFilterLabelMobile" style="display:none;">
+        <input type="checkbox" id="franchiseFilterCheckMobile" onchange="onFranchiseFilterChangeMobile()">
+        프랜차이즈 제외
+      </label>
     </div>
     <div class="sheet-body" id="mobileList"></div>
   </div>
@@ -1435,6 +1489,49 @@
     let currentEmoji = '🥮';
     let searchTimer = null;
     let isSearching = false;
+
+    // ── 프랜차이즈 브랜드 키워드 목록 ──
+    // 매장명에 이 키워드가 포함되면 프랜차이즈로 간주
+    const FRANCHISE_KEYWORDS = [
+      // 커피·카페 체인
+      '이디야', '스타벅스', '투썸플레이스', '메가커피', '컴포즈커피', '할리스', '파스쿠찌', '커피빈',
+      '엔제리너스', '탐앤탐스', '빽다방', '더벤티', '폴바셋', '드롭탑', '카페베네', '공차',
+      // 베이커리·디저트 체인
+      '파리바게뜨', '뚜레쥬르', '성심당', '던킨', '크리스피크림', '배스킨라빈스', '나뚜루',
+      '설빙', '빙그레', '롯데리아', '맥도날드', '버거킹', '써브웨이', 'KFC',
+      // 탕후루·마라탕 등 유행 음식 체인
+      '왕가탕후루', '탕후루나라', '꽈배기하우스', '홍루이젠', '마라하오', '마라탕후루',
+      '마라나라', '마라연', '하이디라오',
+      // 편의점·패스트푸드
+      'GS25', 'CU', '세븐일레븐', '미니스톱', '이마트24',
+      // 소금빵·크로플 체인
+      '롤링핀', '르뺑', '산리오', '아티제',
+      // 기타 유명 프랜차이즈
+      '올리브영', '다이소', '이마트', '롯데마트', '홈플러스',
+    ];
+
+    let excludeFranchise = false;
+
+    function isFranchise(store) {
+      const name = (store.name || '').toLowerCase();
+      return FRANCHISE_KEYWORDS.some(kw => name.includes(kw.toLowerCase()));
+    }
+
+    function onFranchiseFilterChange() {
+      const cb = document.getElementById('franchiseFilterCheck');
+      const cbM = document.getElementById('franchiseFilterCheckMobile');
+      excludeFranchise = cb.checked;
+      if (cbM) cbM.checked = excludeFranchise;
+      if (window._stores) renderStoreList(window._stores);
+    }
+
+    function onFranchiseFilterChangeMobile() {
+      const cb = document.getElementById('franchiseFilterCheck');
+      const cbM = document.getElementById('franchiseFilterCheckMobile');
+      excludeFranchise = cbM.checked;
+      if (cb) cb.checked = excludeFranchise;
+      if (window._stores) renderStoreList(window._stores);
+    }
 
     function smoothPanTo(lat, lng, onComplete) {
       // 네이버 지도는 panTo 내장
@@ -1535,21 +1632,55 @@
     }
 
     function renderStoreList(stores) {
-      document.getElementById('sidebar-title').innerHTML = stores.length > 0
-        ? `${currentEmoji} ${currentQuery} <span style="font-size:13px;font-weight:400;color:var(--muted)">${stores.length}곳</span>`
+      // 프랜차이즈 필터 적용
+      const filteredStores = excludeFranchise
+        ? stores.filter(s => !isFranchise(s))
+        : stores;
+
+      const displayCount = filteredStores.length;
+      const totalCount = stores.length;
+      const countLabel = excludeFranchise && totalCount !== displayCount
+        ? `${displayCount}곳 <span style="font-size:10px;color:var(--muted)">(전체 ${totalCount}곳 중)</span>`
+        : `${displayCount}곳`;
+
+      document.getElementById('sidebar-title').innerHTML = totalCount > 0
+        ? `${currentEmoji} ${currentQuery} <span style="font-size:13px;font-weight:400;color:var(--muted)">${countLabel}</span>`
         : `${currentEmoji} ${currentQuery}`;
       document.getElementById('sidebar-count').style.display = 'none';
 
-      if (stores.length === 0) {
+      // 체크박스 표시/숨김
+      const filterLabel = document.getElementById('franchiseFilterLabel');
+      const filterLabelM = document.getElementById('franchiseFilterLabelMobile');
+      if (totalCount > 0) {
+        if (filterLabel) filterLabel.style.display = 'inline-flex';
+        if (filterLabelM) filterLabelM.style.display = 'inline-flex';
+      } else {
+        if (filterLabel) filterLabel.style.display = 'none';
+        if (filterLabelM) filterLabelM.style.display = 'none';
+      }
+
+      if (filteredStores.length === 0) {
+        const msg = excludeFranchise && totalCount > 0
+          ? '프랜차이즈를 제외하면 이 지역에 매장이 없습니다.<br>필터를 해제하거나 다른 지역을 검색해보세요.'
+          : '이 지역에서 검색된 매장이 없습니다.<br>지도를 이동하거나 다른 지역을 검색해보세요.';
         document.getElementById('storeList').innerHTML =
-          '<div class="error-msg">이 지역에서 검색된 매장이 없습니다.<br>지도를 이동하거나 다른 지역을 검색해보세요.</div>';
+          `<div class="error-msg">${msg}</div>`;
+        const mobileList = document.getElementById('mobileList');
+        if (mobileList) mobileList.innerHTML = `<div class="error-msg">${msg}</div>`;
+
+        const sheetTitle = document.getElementById('sheetTitle');
+        const sheetCount = document.getElementById('sheetCount');
+        if (sheetTitle) sheetTitle.innerHTML = totalCount > 0
+          ? `${currentEmoji} ${currentQuery} <span style="font-size:13px;font-weight:400;color:var(--muted)">${countLabel}</span>`
+          : `${currentEmoji} ${currentQuery}`;
+        if (sheetCount) sheetCount.style.display = 'none';
         return;
       }
 
       const sheetTitle = document.getElementById('sheetTitle');
       const sheetCount = document.getElementById('sheetCount');
-      if (sheetTitle) sheetTitle.innerHTML = stores.length > 0
-        ? `${currentEmoji} ${currentQuery} <span style="font-size:13px;font-weight:400;color:var(--muted)">${stores.length}곳</span>`
+      if (sheetTitle) sheetTitle.innerHTML = totalCount > 0
+        ? `${currentEmoji} ${currentQuery} <span style="font-size:13px;font-weight:400;color:var(--muted)">${countLabel}</span>`
         : `${currentEmoji} ${currentQuery}`;
       if (sheetCount) sheetCount.style.display = 'none';
 
@@ -1566,9 +1697,11 @@
       // 매장 아이템 + 5개마다 광고 삽입
       const AD_INTERVAL = 5;
       let listHTML = '';
-      stores.forEach((s, i) => {
+      filteredStores.forEach((s, i) => {
+        // window._stores(원본) 기준 인덱스를 찾아야 selectStore가 정확히 동작
+        const originalIndex = stores.indexOf(s);
         listHTML += `
-        <div class="store-item" id="store-${i}" onclick="selectStore(${i})">
+        <div class="store-item" id="store-${originalIndex}" onclick="selectStore(${originalIndex})">
           <div class="store-name-row">
             <span class="store-name">${s.name}</span>
             <span class="store-addr-inline">📍 ${s.addr || ''}</span>
@@ -1579,7 +1712,7 @@
           </div>
         </div>`;
         // 5개마다 광고 삽입 (마지막 아이템 제외)
-        if ((i + 1) % AD_INTERVAL === 0 && i < stores.length - 1) {
+        if ((i + 1) % AD_INTERVAL === 0 && i < filteredStores.length - 1) {
           listHTML += adHTML;
         }
       });
