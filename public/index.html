@@ -869,7 +869,7 @@
       opacity: 0.85;
     }
 
-    /* 모바일 FAB 래퍼: 전체 너비, 양 끝 배치 */
+    /* 모바일 FAB 래퍼: 목록 보기 중앙, 매장 제안 오른쪽 */
     .mobile-fab-wrap {
       display: none;
       position: fixed;
@@ -878,7 +878,6 @@
       right: 0;
       z-index: 100;
       align-items: center;
-      justify-content: space-between;
       padding: 0 20px;
     }
 
@@ -887,6 +886,11 @@
       position: absolute !important;
       left: 50%;
       transform: translateX(-50%);
+    }
+
+    /* 매장 제안: 오른쪽 고정 */
+    .mobile-fab-wrap .mobile-store-suggest-btn {
+      margin-left: auto;
     }
 
     /* 모바일 후원 버튼 */
@@ -948,7 +952,7 @@
     }
 
     .mobile-sheet.show {
-      bottom: 7%;
+      bottom: 12%;
     }
 
     .sheet-drag {
@@ -1230,7 +1234,7 @@
       <!-- 개발자 응원: 탭 스크롤 영역 맨 끝 -->
       <a href="https://litt.ly/trendymap" target="_blank" class="donate-tab-btn">💚 응원</a>
     </div>
-    <a href="/suggest.html" class="store-suggest-btn">🏪 매장 제안</a>
+    <a href="/suggest.html" class="store-suggest-btn">🏪 매장/음식 제안</a>
     <a href="https://litt.ly/trendymap" target="_blank" class="donate-btn">💚 개발자 응원</a>
   </header>
 
@@ -1346,11 +1350,10 @@
 
   <!-- MOBILE FAB + BOTTOM SHEET -->
   <div class="mobile-fab-wrap">
-    <a href="https://litt.ly/trendymap" target="_blank" class="mobile-donate-btn">💚 개발자 응원</a>
     <button class="mobile-fab" id="mobileFab">
       📋 <span id="fabLabel">목록 보기</span>
     </button>
-    <a href="/suggest.html" class="mobile-store-suggest-btn">🏪 매장 제안</a>
+    <a href="/suggest.html" class="mobile-store-suggest-btn">🏪 매장/음식 제안</a>
   </div>
   <div class="mobile-sheet" id="mobileSheet">
     <div class="sheet-drag"></div>
@@ -1530,9 +1533,10 @@
     }
 
     function renderStoreList(stores) {
-      document.getElementById('sidebar-title').textContent = `${currentEmoji} ${currentQuery}`;
-      document.getElementById('sidebar-count').innerHTML =
-        stores.length > 0 ? `검색 결과 <strong>${stores.length}곳</strong>` : '이 지역에 매장이 없습니다';
+      document.getElementById('sidebar-title').innerHTML = stores.length > 0
+        ? `${currentEmoji} ${currentQuery} <span style="font-size:13px;font-weight:400;color:var(--muted)">${stores.length}곳</span>`
+        : `${currentEmoji} ${currentQuery}`;
+      document.getElementById('sidebar-count').style.display = 'none';
 
       if (stores.length === 0) {
         document.getElementById('storeList').innerHTML =
@@ -1542,9 +1546,10 @@
 
       const sheetTitle = document.getElementById('sheetTitle');
       const sheetCount = document.getElementById('sheetCount');
-      if (sheetTitle) sheetTitle.textContent = `${currentEmoji} ${currentQuery}`;
-      if (sheetCount) sheetCount.innerHTML = stores.length > 0
-        ? `검색 결과 <strong>${stores.length}곳</strong>` : '이 지역에 매장이 없습니다';
+      if (sheetTitle) sheetTitle.innerHTML = stores.length > 0
+        ? `${currentEmoji} ${currentQuery} <span style="font-size:13px;font-weight:400;color:var(--muted)">${stores.length}곳</span>`
+        : `${currentEmoji} ${currentQuery}`;
+      if (sheetCount) sheetCount.style.display = 'none';
 
       // 광고 HTML (카카오 애드핏)
       const adHTML = `
@@ -1564,7 +1569,7 @@
         <div class="store-item" id="store-${i}" onclick="selectStore(${i})">
           <div class="store-name-row">
             <span class="store-name">${s.name}</span>
-            <span class="store-addr-inline">📍 ${(s.addr || '').split(' ').slice(0, 3).join(' ')}</span>
+            <span class="store-addr-inline">📍 ${s.addr || ''}</span>
           </div>
           <div class="store-meta">
             ${s.category ? `<span class="badge">${s.category.split('>').pop()}</span>` : ''}
@@ -1807,8 +1812,6 @@
       document.getElementById('mobileSheet').classList.toggle('show', sheetOpen);
       document.getElementById('fabLabel').textContent = sheetOpen ? '닫기' : '목록 보기';
       // 바텀시트 열릴 때 FAB 양옆 버튼 숨김
-      var donateBtn2 = document.querySelector('.mobile-donate-btn');
-      if (donateBtn2) donateBtn2.style.visibility = sheetOpen ? 'hidden' : 'visible';
       var storeSuggestBtn = document.querySelector('.mobile-store-suggest-btn');
       if (storeSuggestBtn) storeSuggestBtn.style.visibility = sheetOpen ? 'hidden' : 'visible';
     }
