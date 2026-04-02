@@ -279,7 +279,8 @@ app.get('/api/stores', async (req, res) => {
     const customUnique = customRaw.filter(s => !isDuplicate(s, allSoFar));
     const customStores = customUnique.map((s, i) => ({ ...s, id: allSoFar.length + i + 1 }));
 
-    const stores = [...kakaoStores, ...naverStores, ...customStores];
+    const stores = [...kakaoStores, ...naverStores, ...customStores]
+      .sort((a, b) => haversineM(lat, lng, a.lat, a.lng) - haversineM(lat, lng, b.lat, b.lng));
     console.log(`📦 최종 ${stores.length}개 (카카오 ${kakaoStores.length} + 네이버 ${naverStores.length} + DB ${customStores.length})`);
 
     res.json({ total: stores.length, stores });
