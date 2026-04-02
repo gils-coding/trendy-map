@@ -819,6 +819,10 @@
         padding: 5px 9px;
       }
 
+      /* 모바일에서 헤더 후원 버튼 숨김 */
+      .donate-btn {
+        display: none !important;
+      }
     }
 
     /* 탭 스크롤 영역 내 개발자 응원 버튼 */
@@ -1042,7 +1046,7 @@
       right: 0;
       background: #f5a623;
       color: #fff;
-      padding: 12px 16px;
+      padding: 12px 36px 12px 16px;
       z-index: 9999;
       text-align: center;
       font-size: 13px;
@@ -1067,6 +1071,39 @@
       cursor: pointer;
       border: none;
       font-family: inherit;
+    }
+
+    .inapp-banner-close {
+      position: absolute;
+      top: 8px;
+      right: 10px;
+      background: none;
+      border: none;
+      color: #fff;
+      font-size: 16px;
+      cursor: pointer;
+      font-family: inherit;
+      line-height: 1;
+      opacity: 0.8;
+    }
+
+    .inapp-banner-close:hover { opacity: 1; }
+
+    .inapp-reopen-btn {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 9998;
+      background: #f5a623;
+      color: #fff;
+      border: none;
+      padding: 8px 16px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+      text-align: center;
     }
 
     /* ── 위치 권한 안내 모달 ── */
@@ -1249,11 +1286,14 @@
 
   <!-- 인앱 브라우저 안내 배너 -->
   <div class="inapp-banner" id="inappBanner">
+    <button class="inapp-banner-close" id="inappCloseBtn" onclick="document.getElementById('inappBanner').classList.remove('show'); document.getElementById('inappReopenBtn').style.display='flex';">✕</button>
     카카오톡 내에서는 일부 기능이 제한됩니다.<br>
     원활한 이용을 위해 외부 브라우저로 열어주세요.
     <br>
-    <button class="inapp-banner-btn" id="inappOpenBtn">크롬으로 열기</button>
+    <button class="inapp-banner-btn" id="inappOpenBtn">외부 브라우저로 열기</button>
   </div>
+  <!-- 배너 닫은 후 다시 열기 버튼 -->
+  <button class="inapp-reopen-btn" id="inappReopenBtn" style="display:none;" onclick="document.getElementById('inappBanner').classList.add('show'); this.style.display='none';">⚠️ 기능 제한 안내</button>
 
   <!-- 위치 권한 안내 모달 -->
   <div class="location-modal" id="locationModal">
@@ -1280,10 +1320,11 @@
       <div class="tab" data-query="탕후루" data-emoji="🍡">🍡 탕후루</div>
       <div class="tab" data-query="크로플" data-emoji="🧇">🧇 크로플</div>
       <div class="tab" data-query="마라탕" data-emoji="🌶️">🌶️ 마라탕</div>
-
+      <!-- 개발자 응원: 탭 스크롤 영역 맨 끝 -->
+      <a href="https://litt.ly/trendymap" target="_blank" class="donate-tab-btn">💚 응원</a>
     </div>
     <a href="/suggest.html" class="store-suggest-btn">🏪 매장/음식 제안</a>
-    <a href="https://litt.ly/trendymap" target="_blank" class="donate-btn">💚 커피 후원</a>
+    <a href="https://litt.ly/trendymap" target="_blank" class="donate-btn">💚 개발자 응원</a>
   </header>
 
   <div class="region-bar">
@@ -1498,8 +1539,8 @@
     // 매장명에 이 키워드가 포함되면 프랜차이즈로 간주
     const FRANCHISE_KEYWORDS = [
       // 커피·카페 체인
-      '이디야커피', '스타벅스', '투썸플레이스', '메가커피', '컴포즈커피', '할리스', '파스쿠찌', '커피빈',
-      '엔제리너스', '탐앤탐스', '빽다방', '더벤티', '폴바셋', '드롭탑', '카페베네', '공차', '요거트월드',
+      '이디야', '스타벅스', '투썸플레이스', '메가커피', '컴포즈커피', '할리스', '파스쿠찌', '커피빈',
+      '엔제리너스', '탐앤탐스', '빽다방', '더벤티', '폴바셋', '드롭탑', '카페베네', '공차',
       // 베이커리·디저트 체인
       '파리바게뜨', '뚜레쥬르', '성심당', '던킨', '크리스피크림', '배스킨라빈스', '나뚜루',
       '설빙', '빙그레', '롯데리아', '맥도날드', '버거킹', '써브웨이', 'KFC',
@@ -1853,22 +1894,23 @@
       var banner = document.getElementById('inappBanner');
       banner.classList.add('show');
 
+      var ua = navigator.userAgent || '';
+      var isIOS = /iPhone|iPad/i.test(ua) ||
+        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
       document.getElementById('inappOpenBtn').addEventListener('click', function () {
         var url = location.href;
-        var ua = navigator.userAgent || '';
-        var isIOS = /iPhone|iPad/i.test(ua) ||
-          (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-
         if (isIOS) {
-          window.open(url, '_blank');
+          // iOS: location.href로 사파리 열기 시도
+          location.href = url;
+          setTimeout(function () { window.open(url, '_blank'); }, 500);
         } else {
+          // Android: Chrome Intent
           location.href = 'intent://' + url.replace(/https?:\/\//, '') +
             '#Intent;scheme=https;package=com.android.chrome;end';
         }
       });
     }
-
-
 
     function getPermissionGuide() {
       var ua = navigator.userAgent || '';
@@ -2000,7 +2042,7 @@
       const sigungu = document.getElementById('sigunguSelect');
       sigungu.innerHTML = '<option value="">시/군/구 선택</option>';
       if (!sido) { sigungu.disabled = true; return; }
-      (SIGUNGU_DATA[sido] || []).slice().sort((a, b) => a.localeCompare(b, 'ko')).forEach(gu => {
+      (SIGUNGU_DATA[sido] || []).forEach(gu => {
         const opt = document.createElement('option');
         opt.value = `${sido} ${gu}`; opt.textContent = gu;
         sigungu.appendChild(opt);
