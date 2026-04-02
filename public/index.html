@@ -1850,19 +1850,25 @@
 
     function initInAppBanner() {
       if (!isInAppBrowser()) return;
-      var url = location.href;
-      var ua = navigator.userAgent || '';
-      var isIOS = /iPhone|iPad/i.test(ua) ||
-        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      var banner = document.getElementById('inappBanner');
+      banner.classList.add('show');
 
-      if (isIOS) {
-        window.open(url, '_blank');
-      } else {
-        // Android: Chrome Intent
-        location.href = 'intent://' + url.replace(/https?:\/\//, '') +
-          '#Intent;scheme=https;package=com.android.chrome;end';
-      }
+      document.getElementById('inappOpenBtn').addEventListener('click', function () {
+        var url = location.href;
+        var ua = navigator.userAgent || '';
+        var isIOS = /iPhone|iPad/i.test(ua) ||
+          (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+        if (isIOS) {
+          window.open(url, '_blank');
+        } else {
+          location.href = 'intent://' + url.replace(/https?:\/\//, '') +
+            '#Intent;scheme=https;package=com.android.chrome;end';
+        }
+      });
     }
+
+
 
     function getPermissionGuide() {
       var ua = navigator.userAgent || '';
