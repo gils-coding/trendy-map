@@ -54,7 +54,7 @@
       background: var(--bg);
       color: var(--text);
       height: 100vh;
-      height: 100vh;
+      height: 100dvh;
       overflow: hidden;
       display: flex;
       flex-direction: column;
@@ -675,6 +675,7 @@
       body {
         overflow: hidden;
         height: 100vh;
+        height: 100dvh;
       }
 
       .logo {
@@ -879,7 +880,7 @@
       right: 0;
       z-index: 100;
       align-items: center;
-      padding: 0 20px;
+      padding: 0 12px 0 20px;
     }
 
     /* 목록 보기: 중앙 고정 */
@@ -892,6 +893,8 @@
     /* 매장 제안: 오른쪽 고정 */
     .mobile-fab-wrap .mobile-store-suggest-btn {
       margin-left: auto;
+      margin-right: 0;
+      flex-shrink: 0;
     }
 
     /* 모바일 후원 버튼 */
@@ -1528,13 +1531,7 @@
       const cbM = document.getElementById('franchiseFilterCheckMobile');
       excludeFranchise = cb.checked;
       if (cbM) cbM.checked = excludeFranchise;
-      if (excludeFranchise) {
-        // 체크 시: 현재 데이터에서 클라이언트 필터링만
-        if (window._stores) renderStoreList(window._stores);
-      } else {
-        // 해제 시: 서버에서 다시 로딩
-        loadStores();
-      }
+      if (window._stores) renderStoreList(window._stores);
     }
 
     function onFranchiseFilterChangeMobile() {
@@ -1542,11 +1539,7 @@
       const cbM = document.getElementById('franchiseFilterCheckMobile');
       excludeFranchise = cbM.checked;
       if (cb) cb.checked = excludeFranchise;
-      if (excludeFranchise) {
-        if (window._stores) renderStoreList(window._stores);
-      } else {
-        loadStores();
-      }
+      if (window._stores) renderStoreList(window._stores);
     }
 
     function smoothPanTo(lat, lng, onComplete) {
@@ -1656,7 +1649,7 @@
       const displayCount = filteredStores.length;
       const totalCount = stores.length;
       const countLabel = excludeFranchise && totalCount !== displayCount
-        ? `${displayCount}곳 <span style="font-size:10px;color:var(--muted)">(전체 ${totalCount}곳 중)</span>`
+        ? `${displayCount} / ${totalCount}곳`
         : `${displayCount}곳`;
 
       document.getElementById('sidebar-title').innerHTML = totalCount > 0
