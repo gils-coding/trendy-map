@@ -1090,20 +1090,19 @@
     .inapp-banner-close:hover { opacity: 1; }
 
     .inapp-reopen-btn {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      z-index: 9998;
-      background: #f5a623;
-      color: #fff;
-      border: none;
-      padding: 8px 16px;
-      font-size: 12px;
-      font-weight: 700;
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      z-index: 10;
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 20px;
+      padding: 8px 10px;
+      font-size: 16px;
       cursor: pointer;
       font-family: inherit;
-      text-align: center;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+      line-height: 1;
     }
 
     /* ── 위치 권한 안내 모달 ── */
@@ -1286,14 +1285,12 @@
 
   <!-- 인앱 브라우저 안내 배너 -->
   <div class="inapp-banner" id="inappBanner">
-    <button class="inapp-banner-close" id="inappCloseBtn" onclick="document.getElementById('inappBanner').classList.remove('show'); document.getElementById('inappReopenBtn').style.display='flex';">✕</button>
+    <button class="inapp-banner-close" id="inappCloseBtn" onclick="document.getElementById('inappBanner').classList.remove('show'); document.getElementById('inappReopenBtn').style.display='block';">✕</button>
     카카오톡 내에서는 일부 기능이 제한됩니다.<br>
     원활한 이용을 위해 외부 브라우저로 열어주세요.
     <br>
     <button class="inapp-banner-btn" id="inappOpenBtn">외부 브라우저로 열기</button>
   </div>
-  <!-- 배너 닫은 후 다시 열기 버튼 -->
-  <button class="inapp-reopen-btn" id="inappReopenBtn" style="display:none;" onclick="document.getElementById('inappBanner').classList.add('show'); this.style.display='none';">⚠️ 기능 제한 안내</button>
 
   <!-- 위치 권한 안내 모달 -->
   <div class="location-modal" id="locationModal">
@@ -1375,6 +1372,7 @@
     <div class="map-area">
       <div id="map"></div>
       <button class="locate-btn" id="locateBtn">📍 내 위치 찾기</button>
+      <button class="inapp-reopen-btn" id="inappReopenBtn" style="display:none;" onclick="document.getElementById('inappBanner').classList.add('show'); this.style.display='none';">⚠️</button>
       <div class="map-loading" id="mapLoading">
         <div class="mini-spinner"></div>
         <span>이 지역 매장 검색 중...</span>
