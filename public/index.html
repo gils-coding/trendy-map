@@ -1997,7 +1997,7 @@
       const sigungu = document.getElementById('sigunguSelect');
       sigungu.innerHTML = '<option value="">시/군/구 선택</option>';
       if (!sido) { sigungu.disabled = true; return; }
-      (SIGUNGU_DATA[sido] || []).forEach(gu => {
+      (SIGUNGU_DATA[sido] || []).slice().sort((a, b) => a.localeCompare(b, 'ko')).forEach(gu => {
         const opt = document.createElement('option');
         opt.value = `${sido} ${gu}`; opt.textContent = gu;
         sigungu.appendChild(opt);
