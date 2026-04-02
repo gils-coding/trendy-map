@@ -819,10 +819,6 @@
         padding: 5px 9px;
       }
 
-      /* 모바일에서 헤더 후원 버튼 숨김 */
-      .donate-btn {
-        display: none !important;
-      }
     }
 
     /* 탭 스크롤 영역 내 개발자 응원 버튼 */
@@ -1284,11 +1280,10 @@
       <div class="tab" data-query="탕후루" data-emoji="🍡">🍡 탕후루</div>
       <div class="tab" data-query="크로플" data-emoji="🧇">🧇 크로플</div>
       <div class="tab" data-query="마라탕" data-emoji="🌶️">🌶️ 마라탕</div>
-      <!-- 개발자 응원: 탭 스크롤 영역 맨 끝 -->
-      <a href="https://litt.ly/trendymap" target="_blank" class="donate-tab-btn">💚 응원</a>
+
     </div>
     <a href="/suggest.html" class="store-suggest-btn">🏪 매장/음식 제안</a>
-    <a href="https://litt.ly/trendymap" target="_blank" class="donate-btn">💚 개발자 응원</a>
+    <a href="https://litt.ly/trendymap" target="_blank" class="donate-btn">💚 커피 후원</a>
   </header>
 
   <div class="region-bar">
@@ -1855,16 +1850,18 @@
 
     function initInAppBanner() {
       if (!isInAppBrowser()) return;
-      var banner = document.getElementById('inappBanner');
-      banner.classList.add('show');
+      var url = location.href;
+      var ua = navigator.userAgent || '';
+      var isIOS = /iPhone|iPad/i.test(ua) ||
+        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
-      document.getElementById('inappOpenBtn').addEventListener('click', function () {
-        var url = location.href;
-        var intentUrl = 'intent://' + url.replace(/https?:\/\//, '') +
+      if (isIOS) {
+        window.open(url, '_blank');
+      } else {
+        // Android: Chrome Intent
+        location.href = 'intent://' + url.replace(/https?:\/\//, '') +
           '#Intent;scheme=https;package=com.android.chrome;end';
-        location.href = intentUrl;
-        setTimeout(function () { window.open(url, '_blank'); }, 1500);
-      });
+      }
     }
 
     function getPermissionGuide() {
