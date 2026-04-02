@@ -1038,73 +1038,6 @@
     }
 
     /* ── 인앱 브라우저 안내 배너 ── */
-    .inapp-banner {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      background: #f5a623;
-      color: #fff;
-      padding: 12px 36px 12px 16px;
-      z-index: 9999;
-      text-align: center;
-      font-size: 13px;
-      font-weight: 700;
-      line-height: 1.5;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-    }
-
-    .inapp-banner.show {
-      display: block;
-    }
-
-    .inapp-banner-btn {
-      display: inline-block;
-      margin-top: 8px;
-      padding: 7px 18px;
-      background: #fff;
-      color: #f5a623;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 800;
-      cursor: pointer;
-      border: none;
-      font-family: inherit;
-    }
-
-    .inapp-banner-close {
-      position: absolute;
-      top: 8px;
-      right: 10px;
-      background: none;
-      border: none;
-      color: #fff;
-      font-size: 16px;
-      cursor: pointer;
-      font-family: inherit;
-      line-height: 1;
-      opacity: 0.8;
-    }
-
-    .inapp-banner-close:hover { opacity: 1; }
-
-    .inapp-reopen-btn {
-      position: absolute;
-      top: 12px;
-      left: 12px;
-      z-index: 10;
-      background: var(--surface);
-      border: 1.5px solid var(--border);
-      border-radius: 20px;
-      padding: 8px 10px;
-      font-size: 16px;
-      cursor: pointer;
-      font-family: inherit;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
-      line-height: 1;
-    }
-
     /* ── 위치 권한 안내 모달 ── */
     .location-modal {
       display: none;
@@ -1283,15 +1216,6 @@
 
 <body>
 
-  <!-- 인앱 브라우저 안내 배너 -->
-  <div class="inapp-banner" id="inappBanner">
-    <button class="inapp-banner-close" id="inappCloseBtn" onclick="document.getElementById('inappBanner').classList.remove('show'); document.getElementById('inappReopenBtn').style.display='block';">✕</button>
-    카카오톡 내에서는 일부 기능이 제한됩니다.<br>
-    원활한 이용을 위해 외부 브라우저로 열어주세요.
-    <br>
-    <button class="inapp-banner-btn" id="inappOpenBtn">외부 브라우저로 열기</button>
-  </div>
-
   <!-- 위치 권한 안내 모달 -->
   <div class="location-modal" id="locationModal">
     <div class="location-modal-box">
@@ -1372,7 +1296,6 @@
     <div class="map-area">
       <div id="map"></div>
       <button class="locate-btn" id="locateBtn">📍 내 위치 찾기</button>
-      <button class="inapp-reopen-btn" id="inappReopenBtn" style="display:none;" onclick="document.getElementById('inappBanner').classList.add('show'); this.style.display='none';">⚠️</button>
       <div class="map-loading" id="mapLoading">
         <div class="mini-spinner"></div>
         <span>이 지역 매장 검색 중...</span>
@@ -1887,29 +1810,6 @@
       return /KAKAOTALK|NAVER|Instagram|FB_IAB|FBAN|FBAV|Line\/|Twitter|Snapchat/i.test(ua);
     }
 
-    function initInAppBanner() {
-      if (!isInAppBrowser()) return;
-      var banner = document.getElementById('inappBanner');
-      banner.classList.add('show');
-
-      var ua = navigator.userAgent || '';
-      var isIOS = /iPhone|iPad/i.test(ua) ||
-        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-
-      document.getElementById('inappOpenBtn').addEventListener('click', function () {
-        var url = location.href;
-        if (isIOS) {
-          // iOS: location.href로 사파리 열기 시도
-          location.href = url;
-          setTimeout(function () { window.open(url, '_blank'); }, 500);
-        } else {
-          // Android: Chrome Intent
-          location.href = 'intent://' + url.replace(/https?:\/\//, '') +
-            '#Intent;scheme=https;package=com.android.chrome;end';
-        }
-      });
-    }
-
     function getPermissionGuide() {
       var ua = navigator.userAgent || '';
       // iPad OS 13+는 UA에 iPad가 없고 Mac처럼 보임 → maxTouchPoints로 감지
@@ -2239,9 +2139,6 @@
     }
 
     window.addEventListener('load', function () {
-      // ── 인앱 브라우저 배너 ──
-      initInAppBanner();
-
       // ── 위치 모달 닫기 ──
       document.getElementById('locationModalClose').addEventListener('click', function () {
         document.getElementById('locationModal').classList.remove('show');
