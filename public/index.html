@@ -1694,7 +1694,7 @@
       const mobileList = document.getElementById('mobileList');
       if (mobileList) mobileList.innerHTML = listHTML;
 
-      // 카카오 애드핏 광고를 DOM API로 삽입 (innerHTML로는 script가 실행 안 됨)
+      // 카카오 애드핏: 모든 <ins> 요소를 먼저 생성한 뒤 스크립트를 한 번만 로드
       document.querySelectorAll('.ad-slot').forEach(slot => {
         const ins = document.createElement('ins');
         ins.className = 'kakao_ad_area';
@@ -1703,13 +1703,13 @@
         ins.setAttribute('data-ad-width', '320');
         ins.setAttribute('data-ad-height', '50');
         slot.appendChild(ins);
-
-        const script = document.createElement('script');
-        script.type = 'text/javascript';
-        script.src = '//t1.daumcdn.net/kas/static/ba.min.js';
-        script.async = true;
-        slot.appendChild(script);
       });
+      // 모든 ins가 DOM에 존재한 후 SDK 로드 → 전체 슬롯 인식
+      const adScript = document.createElement('script');
+      adScript.type = 'text/javascript';
+      adScript.src = '//t1.daumcdn.net/kas/static/ba.min.js';
+      adScript.async = true;
+      document.body.appendChild(adScript);
     }
 
     function clearMarkers() {
