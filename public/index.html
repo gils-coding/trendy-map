@@ -3,6 +3,9 @@
 
 <head>
   <meta charset="UTF-8">
+  <meta name="description" content="트렌디맵은 소금빵, 탕후루, 크로플, 마라탕, 버터떡, 두바이 쫀득쿠키 등 SNS에서 유행 중인 음식 매장을 내 주변 지도에서 쉽게 찾을 수 있는 무료 서비스입니다.">
+  <meta name="keywords" content="유행 맛집, 트렌드 음식, 소금빵 맛집, 탕후루 매장, 크로플 맛집, 마라탕 맛집, 버터떡, 두바이 초콜릿, 맛집 지도, 내 주변 맛집, 트렌디맵">
+  <link rel="canonical" href="https://trendmap.up.railway.app/">
   <!-- Google Analytics -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-W9ZYY9DHJL"></script>
   <script>
@@ -21,6 +24,24 @@
   <meta name="twitter:image" content="https://trendmap.up.railway.app/og_image.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>트렌디맵 — 유행 맛집 지도</title>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "트렌디맵",
+    "alternateName": "Trendy Map",
+    "url": "https://trendmap.up.railway.app",
+    "description": "SNS에서 유행 중인 음식 매장을 내 주변 지도에서 쉽게 찾을 수 있는 서비스",
+    "applicationCategory": "FoodService",
+    "operatingSystem": "Web",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "KRW"
+    },
+    "inLanguage": "ko"
+  }
+  </script>
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5362877670530574"
     crossorigin="anonymous"></script>
   <!-- Naver Maps SDK는 /api/config에서 키를 받아 동적으로 로드됩니다 -->
@@ -1646,17 +1667,7 @@
         : `${currentEmoji} ${currentQuery}`;
       if (sheetCount) sheetCount.style.display = 'none';
 
-      // 광고 HTML (카카오 애드핏)
-      const adHTML = `
-        <div class="ad-item" style="padding:6px 8px;border-bottom:1.5px solid var(--border);background:var(--card);">
-          <ins class="kakao_ad_area" style="display:none;"
-            data-ad-unit="DAN-XVqNAnrdKnkPOvwi"
-            data-ad-width="320"
-            data-ad-height="50"></ins>
-          <script type="text/javascript" src="//t1.daumcdn.net/kas/static/ba.min.js" async><\/script>
-        </div>`;
-
-      // 매장 아이템 + 5개마다 광고 삽입
+      // 매장 아이템 + 5개마다 광고 자리 삽입
       const AD_INTERVAL = 5;
       let listHTML = '';
       filteredStores.forEach((s, i) => {
@@ -1673,15 +1684,32 @@
             ${s.phone ? `<span class="badge">📞 ${s.phone}</span>` : ''}
           </div>
         </div>`;
-        // 5개마다 광고 삽입 (마지막 아이템 제외)
+        // 5개마다 광고 플레이스홀더 삽입 (마지막 아이템 제외)
         if ((i + 1) % AD_INTERVAL === 0 && i < filteredStores.length - 1) {
-          listHTML += adHTML;
+          listHTML += `<div class="ad-slot" style="padding:6px 8px;border-bottom:1.5px solid var(--border);background:var(--card);"></div>`;
         }
       });
 
       document.getElementById('storeList').innerHTML = listHTML;
       const mobileList = document.getElementById('mobileList');
       if (mobileList) mobileList.innerHTML = listHTML;
+
+      // 카카오 애드핏 광고를 DOM API로 삽입 (innerHTML로는 script가 실행 안 됨)
+      document.querySelectorAll('.ad-slot').forEach(slot => {
+        const ins = document.createElement('ins');
+        ins.className = 'kakao_ad_area';
+        ins.style.display = 'none';
+        ins.setAttribute('data-ad-unit', 'DAN-XVqNAnrdKnkPOvwi');
+        ins.setAttribute('data-ad-width', '320');
+        ins.setAttribute('data-ad-height', '50');
+        slot.appendChild(ins);
+
+        const script = document.createElement('script');
+        script.type = 'text/javascript';
+        script.src = '//t1.daumcdn.net/kas/static/ba.min.js';
+        script.async = true;
+        slot.appendChild(script);
+      });
     }
 
     function clearMarkers() {
