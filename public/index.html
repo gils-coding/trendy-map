@@ -23,7 +23,7 @@
   <title>트렌디맵 — 유행 맛집 지도</title>
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5362877670530574"
     crossorigin="anonymous"></script>
-  <script type="text/javascript" src="https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=etv90lrqrg"></script>
+  <!-- Naver Maps SDK는 /api/config에서 키를 받아 동적으로 로드됩니다 -->
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Do+Hyeon&family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
 
@@ -2237,10 +2237,20 @@
       // ── 쿠팡 배너: iframe 방식 — 그냥 보이게만 하면 됨 ──
       document.getElementById('coupangBanner').style.display = 'block';
 
-      // ── 지도 초기화 ──
-      if (typeof naver !== 'undefined' && naver.maps) {
-        initMap();
-      } else {
+      // ── 네이버 지도 API 키를 서버에서 받아 동적 로드 ──
+      fetch('/api/config')
+        .then(function (r) { return r.json(); })
+        .then(function (cfg) {
+          if (!cfg.naverMapClientId) throw new Error('키 없음');
+          var script = document.createElement('script');
+          script.src = 'https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=' + cfg.naverMapClientId;
+          script.onload = function () { initMap(); };
+          script.onerror = function () { showMapError(); };
+          document.head.appendChild(script);
+        })
+        .catch(function () { showMapError(); });
+
+      function showMapError() {
         var mapEl = document.getElementById('map');
         mapEl.innerHTML = '';
         var msg = document.createElement('div');

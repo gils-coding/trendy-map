@@ -5,7 +5,9 @@
 // - PostgreSQL 직접 등록 DB
 // =====================================================
 
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+if (process.env.NODE_ENV !== 'production') {
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+}
 const express = require('express');
 const axios = require('axios');
 const cors = require('cors');
@@ -75,7 +77,11 @@ async function initDB() {
 const KAKAO_REST_KEY = process.env.KAKAO_REST_KEY || '';
 const NAVER_CLIENT_ID = process.env.NAVER_CLIENT_ID || '';
 const NAVER_CLIENT_SECRET = process.env.NAVER_CLIENT_SECRET || '';
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'trendymap2024';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+if (!ADMIN_PASSWORD) {
+  console.error('⚠️  ADMIN_PASSWORD 환경변수가 설정되지 않았습니다. 서버를 종료합니다.');
+  process.exit(1);
+}
 
 // =====================================================
 // 유틸: Haversine 거리(m)
@@ -230,6 +236,14 @@ function isDuplicate(store, referenceList) {
     return false;
   });
 }
+
+// =====================================================
+// API: 프론트엔드 설정 (Naver Maps 키 등)
+// =====================================================
+const NAVER_MAP_CLIENT_ID = process.env.NAVER_MAP_CLIENT_ID || '';
+app.get('/api/config', (req, res) => {
+  res.json({ naverMapClientId: NAVER_MAP_CLIENT_ID });
+});
 
 // =====================================================
 // API: 좌표 기반 매장 검색
