@@ -1667,9 +1667,8 @@
         : `${currentEmoji} ${currentQuery}`;
       if (sheetCount) sheetCount.style.display = 'none';
 
-      // 매장 아이템 + 5개마다 광고 자리 삽입
-      const AD_INTERVAL = 5;
-      let listHTML = '';
+      // 매장 목록 맨 위에 광고 슬롯 + 매장 아이템
+      let listHTML = '<div class="ad-slot" style="padding:6px 8px;border-bottom:1.5px solid var(--border);background:var(--card);"></div>';
       filteredStores.forEach((s, i) => {
         // window._stores(원본) 기준 인덱스를 찾아야 selectStore가 정확히 동작
         const originalIndex = stores.indexOf(s);
@@ -1684,17 +1683,13 @@
             ${s.phone ? `<span class="badge">📞 ${s.phone}</span>` : ''}
           </div>
         </div>`;
-        // 5개마다 광고 플레이스홀더 삽입 (마지막 아이템 제외)
-        if ((i + 1) % AD_INTERVAL === 0 && i < filteredStores.length - 1) {
-          listHTML += `<div class="ad-slot" style="padding:6px 8px;border-bottom:1.5px solid var(--border);background:var(--card);"></div>`;
-        }
       });
 
       document.getElementById('storeList').innerHTML = listHTML;
       const mobileList = document.getElementById('mobileList');
       if (mobileList) mobileList.innerHTML = listHTML;
 
-      // 카카오 애드핏: 모든 <ins> 요소를 먼저 생성한 뒤 스크립트를 한 번만 로드
+      // 카카오 애드핏 광고를 DOM API로 삽입
       document.querySelectorAll('.ad-slot').forEach(slot => {
         const ins = document.createElement('ins');
         ins.className = 'kakao_ad_area';
@@ -1703,13 +1698,13 @@
         ins.setAttribute('data-ad-width', '320');
         ins.setAttribute('data-ad-height', '50');
         slot.appendChild(ins);
+
+        const script = document.createElement('script');
+        script.type = 'text/javascript';
+        script.src = '//t1.daumcdn.net/kas/static/ba.min.js';
+        script.async = true;
+        slot.appendChild(script);
       });
-      // 모든 ins가 DOM에 존재한 후 SDK 로드 → 전체 슬롯 인식
-      const adScript = document.createElement('script');
-      adScript.type = 'text/javascript';
-      adScript.src = '//t1.daumcdn.net/kas/static/ba.min.js';
-      adScript.async = true;
-      document.body.appendChild(adScript);
     }
 
     function clearMarkers() {
