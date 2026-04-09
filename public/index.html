@@ -1353,6 +1353,7 @@
         </div>
         <p id="sidebar-count">지도를 움직이면 해당 지역 매장이 표시됩니다</p>
       </div>
+      <div class="ad-container" id="adContainerDesktop" style="padding:6px 8px;border-bottom:1.5px solid var(--border);background:var(--card);"></div>
       <div class="store-list" id="storeList">
         <div class="loading">
           <div class="spinner"></div>매장 검색 중...
@@ -1398,6 +1399,7 @@
       </div>
       <p id="sheetCount">지도를 움직이면 매장이 표시됩니다</p>
     </div>
+    <div class="ad-container" id="adContainerMobile" style="padding:6px 8px;border-bottom:1.5px solid var(--border);background:var(--card);"></div>
     <div class="sheet-body" id="mobileList"></div>
   </div>
 
@@ -1667,8 +1669,8 @@
         : `${currentEmoji} ${currentQuery}`;
       if (sheetCount) sheetCount.style.display = 'none';
 
-      // 매장 목록 HTML (광고 슬롯 + 매장 아이템)
-      let listHTML = '<div class="ad-slot" style="padding:6px 8px;border-bottom:1.5px solid var(--border);background:var(--card);"></div>';
+      // 매장 목록 HTML
+      let listHTML = '';
       filteredStores.forEach((s, i) => {
         // window._stores(원본) 기준 인덱스를 찾아야 selectStore가 정확히 동작
         const originalIndex = stores.indexOf(s);
@@ -1685,40 +1687,53 @@
         </div>`;
       });
 
-      // 데스크탑/모바일 모두 목록 삽입
       document.getElementById('storeList').innerHTML = listHTML;
       const mobileList = document.getElementById('mobileList');
       if (mobileList) mobileList.innerHTML = listHTML;
 
-      // 화면에 보이는 쪽에만 광고 삽입 (같은 광고 단위는 페이지당 1개만 렌더링 가능)
+      // 카카오 애드핏 광고 배치 (최초 1회만 생성, 이후 화면 변경 시 이동)
+      initAdFit();
+    }
+
+    // 카카오 애드핏: ins 요소 1개를 만들어 화면에 보이는 컨테이너로 이동
+    let _adFitIns = null;
+    function initAdFit() {
+      const desktopContainer = document.getElementById('adContainerDesktop');
+      const mobileContainer = document.getElementById('adContainerMobile');
       const isMobile = window.innerWidth <= 768;
-      const targetList = isMobile
-        ? document.getElementById('mobileList')
-        : document.getElementById('storeList');
-      const adSlot = targetList ? targetList.querySelector('.ad-slot') : null;
+      const target = isMobile ? mobileContainer : desktopContainer;
 
-      // 보이지 않는 쪽의 광고 슬롯은 제거
-      document.querySelectorAll('.ad-slot').forEach(slot => {
-        if (slot !== adSlot) slot.remove();
-      });
-
-      // 카카오 애드핏 광고를 DOM API로 삽입
-      if (adSlot) {
-        const ins = document.createElement('ins');
-        ins.className = 'kakao_ad_area';
-        ins.style.display = 'none';
-        ins.setAttribute('data-ad-unit', 'DAN-XVqNAnrdKnkPOvwi');
-        ins.setAttribute('data-ad-width', '320');
-        ins.setAttribute('data-ad-height', '50');
-        adSlot.appendChild(ins);
+      if (!_adFitIns) {
+        // 최초: ins + script 생성
+        _adFitIns = document.createElement('ins');
+        _adFitIns.className = 'kakao_ad_area';
+        _adFitIns.style.display = 'none';
+        _adFitIns.setAttribute('data-ad-unit', 'DAN-XVqNAnrdKnkPOvwi');
+        _adFitIns.setAttribute('data-ad-width', '320');
+        _adFitIns.setAttribute('data-ad-height', '50');
+        target.appendChild(_adFitIns);
 
         const script = document.createElement('script');
         script.type = 'text/javascript';
         script.src = '//t1.daumcdn.net/kas/static/ba.min.js';
         script.async = true;
-        adSlot.appendChild(script);
+        target.appendChild(script);
+      } else {
+        // 이미 생성됨: 보이는 쪽으로 이동
+        target.appendChild(_adFitIns);
       }
     }
+
+    // 화면 크기 변경 시 (회전, 폴드 등) 광고를 보이는 쪽으로 이동
+    window.addEventListener('resize', function() {
+      if (_adFitIns) {
+        const isMobile = window.innerWidth <= 768;
+        const target = isMobile
+          ? document.getElementById('adContainerMobile')
+          : document.getElementById('adContainerDesktop');
+        target.appendChild(_adFitIns);
+      }
+    });
 
     function clearMarkers() {
       markers.forEach(m => m.setMap(null));
