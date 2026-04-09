@@ -1667,7 +1667,7 @@
         : `${currentEmoji} ${currentQuery}`;
       if (sheetCount) sheetCount.style.display = 'none';
 
-      // 매장 목록 맨 위에 광고 슬롯 + 매장 아이템
+      // 매장 목록 HTML (광고 슬롯 + 매장 아이템)
       let listHTML = '<div class="ad-slot" style="padding:6px 8px;border-bottom:1.5px solid var(--border);background:var(--card);"></div>';
       filteredStores.forEach((s, i) => {
         // window._stores(원본) 기준 인덱스를 찾아야 selectStore가 정확히 동작
@@ -1685,26 +1685,39 @@
         </div>`;
       });
 
+      // 데스크탑/모바일 모두 목록 삽입
       document.getElementById('storeList').innerHTML = listHTML;
       const mobileList = document.getElementById('mobileList');
       if (mobileList) mobileList.innerHTML = listHTML;
 
-      // 카카오 애드핏 광고를 DOM API로 삽입
+      // 화면에 보이는 쪽에만 광고 삽입 (같은 광고 단위는 페이지당 1개만 렌더링 가능)
+      const isMobile = window.innerWidth <= 768;
+      const targetList = isMobile
+        ? document.getElementById('mobileList')
+        : document.getElementById('storeList');
+      const adSlot = targetList ? targetList.querySelector('.ad-slot') : null;
+
+      // 보이지 않는 쪽의 광고 슬롯은 제거
       document.querySelectorAll('.ad-slot').forEach(slot => {
+        if (slot !== adSlot) slot.remove();
+      });
+
+      // 카카오 애드핏 광고를 DOM API로 삽입
+      if (adSlot) {
         const ins = document.createElement('ins');
         ins.className = 'kakao_ad_area';
         ins.style.display = 'none';
         ins.setAttribute('data-ad-unit', 'DAN-XVqNAnrdKnkPOvwi');
         ins.setAttribute('data-ad-width', '320');
         ins.setAttribute('data-ad-height', '50');
-        slot.appendChild(ins);
+        adSlot.appendChild(ins);
 
         const script = document.createElement('script');
         script.type = 'text/javascript';
         script.src = '//t1.daumcdn.net/kas/static/ba.min.js';
         script.async = true;
-        slot.appendChild(script);
-      });
+        adSlot.appendChild(script);
+      }
     }
 
     function clearMarkers() {
