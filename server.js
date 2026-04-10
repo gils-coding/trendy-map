@@ -125,9 +125,9 @@ async function searchKakao(query, x, y, radius = 5000) {
 }
 
 // =====================================================
-// 네이버 지역검색 API
+// 네이버 지역검색 공개 API (fallback용)
 // =====================================================
-async function searchNaver(query, lat, lng) {
+async function searchNaverOpen(query, lat, lng) {
   if (!NAVER_CLIENT_ID || !NAVER_CLIENT_SECRET) return [];
   const results = [];
   const headers = {
@@ -146,7 +146,7 @@ async function searchNaver(query, lat, lng) {
       results.push(...items);
       if (items.length < 5) break;
     } catch (err) {
-      console.error('네이버 검색 오류:', err.response?.data || err.message);
+      console.error('네이버 공개 API 오류:', err.response?.data || err.message);
       break;
     }
   }
@@ -163,6 +163,66 @@ async function searchNaver(query, lat, lng) {
     isOpen: null,
     source: 'naver',
   }));
+}
+
+// =====================================================
+// 네이버 지도 내부 API (map.naver.com) — 실제 지도 앱과 동일한 결과
+// =====================================================
+async function searchNaverMaps(query, lat, lng) {
+  const results = [];
+  const searchCoord = `${lng};${lat}`;
+  const headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36',
+    'Accept': 'application/json, text/plain, */*',
+    'Accept-Language': 'ko-KR,ko;q=0.8,en-US;q=0.6,en;q=0.4',
+    'Referer': `https://map.naver.com/p/search/${encodeURIComponent(query)}`,
+    'sec-fetch-dest': 'empty',
+    'sec-fetch-mode': 'cors',
+    'sec-fetch-site': 'same-origin',
+  };
+
+  for (let page = 1; page <= 10; page++) {
+    try {
+      const res = await axios.get('https://map.naver.com/p/api/search/allSearch', {
+        params: { query, type: 'all', searchCoord, boundary: '', sscode: 'svc.mapv5.search', page },
+        headers,
+        timeout: 8000,
+      });
+      const place = res.data?.result?.place;
+      if (!place?.list?.length) break;
+      results.push(...place.list);
+      if (results.length >= (place.totalCount || 0)) break;
+    } catch (err) {
+      console.error(`네이버 지도 내부 API 오류 (page ${page}):`, err.message);
+      break;
+    }
+  }
+
+  return results.map(item => ({
+    name: item.name,
+    addr: item.roadAddress || item.address,
+    phone: item.tel || null,
+    category: item.category ? item.category.join(', ') : null,
+    lat: parseFloat(item.y),
+    lng: parseFloat(item.x),
+    naverUrl: `https://map.naver.com/p/entry/place/${item.id}`,
+    kakaoUrl: null,
+    hours: item.bizhourInfo || null,
+    isOpen: item.businessStatus?.status?.code === 2 ? true
+          : item.businessStatus?.status?.code === 3 ? false : null,
+    source: 'naver',
+  }));
+}
+
+// 내부 API 먼저 시도, 실패 시 공개 API fallback
+async function searchNaver(query, lat, lng) {
+  const mapsResult = await searchNaverMaps(query, lat, lng);
+  if (mapsResult.length > 0) {
+    console.log(`✅ 네이버 지도 내부 API: ${mapsResult.length}개`);
+    return mapsResult;
+  }
+  console.log('⚠️ 네이버 지도 내부 API 실패 → 공개 API fallback');
+  return searchNaverOpen(query, lat, lng);
 }
 
 function katecToWgs84(mapy, mapx) {
