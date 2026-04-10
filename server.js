@@ -129,32 +129,40 @@ async function searchKakao(query, x, y, radius = 5000) {
 // =====================================================
 async function searchNaver(query, lat, lng) {
   if (!NAVER_CLIENT_ID || !NAVER_CLIENT_SECRET) return [];
-  try {
-    const res = await axios.get('https://openapi.naver.com/v1/search/local.json', {
-      params: { query, display: 5, start: 1, sort: 'comment' },
-      headers: {
-        'X-Naver-Client-Id': NAVER_CLIENT_ID,
-        'X-Naver-Client-Secret': NAVER_CLIENT_SECRET,
-      },
-      timeout: 5000,
-    });
-    return (res.data.items || []).map(item => ({
-      name: item.title.replace(/<[^>]+>/g, ''),
-      addr: item.roadAddress || item.address,
-      phone: item.telephone || null,
-      category: item.category || null,
-      lat: katecToWgs84(parseInt(item.mapy), parseInt(item.mapx)).lat,
-      lng: katecToWgs84(parseInt(item.mapy), parseInt(item.mapx)).lng,
-      naverUrl: item.link || null,
-      kakaoUrl: null,
-      hours: null,
-      isOpen: null,
-      source: 'naver',
-    }));
-  } catch (err) {
-    console.error('네이버 검색 오류:', err.response?.data || err.message);
-    return [];
+  const results = [];
+  const headers = {
+    'X-Naver-Client-Id': NAVER_CLIENT_ID,
+    'X-Naver-Client-Secret': NAVER_CLIENT_SECRET,
+  };
+  for (let start = 1; start <= 96; start += 5) {
+    try {
+      const res = await axios.get('https://openapi.naver.com/v1/search/local.json', {
+        params: { query, display: 5, start, sort: 'comment' },
+        headers,
+        timeout: 5000,
+      });
+      const items = res.data.items || [];
+      if (items.length === 0) break;
+      results.push(...items);
+      if (items.length < 5) break;
+    } catch (err) {
+      console.error('네이버 검색 오류:', err.response?.data || err.message);
+      break;
+    }
   }
+  return results.map(item => ({
+    name: item.title.replace(/<[^>]+>/g, ''),
+    addr: item.roadAddress || item.address,
+    phone: item.telephone || null,
+    category: item.category || null,
+    lat: katecToWgs84(parseInt(item.mapy), parseInt(item.mapx)).lat,
+    lng: katecToWgs84(parseInt(item.mapy), parseInt(item.mapx)).lng,
+    naverUrl: item.link || null,
+    kakaoUrl: null,
+    hours: null,
+    isOpen: null,
+    source: 'naver',
+  }));
 }
 
 function katecToWgs84(mapy, mapx) {
