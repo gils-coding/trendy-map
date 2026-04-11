@@ -168,9 +168,15 @@ async function searchNaverOpen(query, lat, lng) {
 // =====================================================
 // 네이버 지도 내부 API (map.naver.com) — 실제 지도 앱과 동일한 결과
 // =====================================================
-async function searchNaverMaps(query, lat, lng) {
+async function searchNaverMaps(query, lat, lng, radius = 5000) {
   const results = [];
   const searchCoord = `${lng};${lat}`;
+
+  // 반경(m)으로 뷰포트 bounding box 계산 → boundary 파라미터로 전달
+  const deltaLat = radius / 111320;
+  const deltaLng = radius / (111320 * Math.cos(lat * Math.PI / 180));
+  const boundary = `${(lng - deltaLng).toFixed(6)},${(lat - deltaLat).toFixed(6)},${(lng + deltaLng).toFixed(6)},${(lat + deltaLat).toFixed(6)}`;
+
   const headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36',
     'Accept': 'application/json, text/plain, */*',
@@ -184,7 +190,7 @@ async function searchNaverMaps(query, lat, lng) {
   for (let page = 1; page <= 10; page++) {
     try {
       const res = await axios.get('https://map.naver.com/p/api/search/allSearch', {
-        params: { query, type: 'all', searchCoord, boundary: '', sscode: 'svc.mapv5.search', page },
+        params: { query, type: 'all', searchCoord, boundary, sscode: 'svc.mapv5.search', page },
         headers,
         timeout: 8000,
       });
@@ -215,8 +221,8 @@ async function searchNaverMaps(query, lat, lng) {
 }
 
 // 내부 API 먼저 시도, 실패 시 공개 API fallback
-async function searchNaver(query, lat, lng) {
-  const mapsResult = await searchNaverMaps(query, lat, lng);
+async function searchNaver(query, lat, lng, radius = 5000) {
+  const mapsResult = await searchNaverMaps(query, lat, lng, radius);
   if (mapsResult.length > 0) {
     console.log(`✅ 네이버 지도 내부 API: ${mapsResult.length}개`);
     return mapsResult;
@@ -327,7 +333,7 @@ app.get('/api/stores', async (req, res) => {
   try {
     const [kakaoRaw, naverRaw, customRaw] = await Promise.all([
       searchKakao(query, x, y, rad),
-      searchNaver(query, y, x),
+      searchNaver(query, y, x, rad),
       searchCustomDB(query, y, x, rad),
     ]);
 
@@ -370,6 +376,25 @@ app.get('/api/stores', async (req, res) => {
     console.error('오류:', error.response?.data || error.message);
     res.status(500).json({ error: '검색 중 오류가 발생했습니다.' });
   }
+});
+
+// =====================================================
+// API: 디버그 — 각 소스별 원본 결과 확인
+// =====================================================
+app.get('/api/debug-search', async (req, res) => {
+  const { query = '버터떡', lat = 35.1595, lng = 126.8526, radius = 10000 } = req.query;
+  const x = parseFloat(lng), y = parseFloat(lat), rad = parseInt(radius);
+  const [kakaoRaw, naverRaw, customRaw] = await Promise.all([
+    searchKakao(query, x, y, rad).catch(e => ({ error: e.message })),
+    searchNaver(query, y, x, rad).catch(e => ({ error: e.message })),
+    searchCustomDB(query, y, x, rad).catch(e => ({ error: e.message })),
+  ]);
+  res.json({
+    query, lat: y, lng: x, radius: rad,
+    kakao: { count: Array.isArray(kakaoRaw) ? kakaoRaw.length : 0, data: kakaoRaw },
+    naver: { count: Array.isArray(naverRaw) ? naverRaw.length : 0, data: naverRaw },
+    custom: { count: Array.isArray(customRaw) ? customRaw.length : 0, data: customRaw },
+  });
 });
 
 // =====================================================
