@@ -1538,7 +1538,7 @@
         },
       });
       naver.maps.Event.addListener(naverMap, 'dragend', () => scheduleSearch());
-      naver.maps.Event.addListener(naverMap, 'zoom_changed', () => scheduleSearch());
+      // zoom_changed 시 재검색 안 함 → 확대해도 기존 마커 유지
       loadStores();
     }
 
@@ -1566,8 +1566,8 @@
       var latM = latDiff * 111320;
       var lngM = lngDiff * 111320 * Math.cos(lat * Math.PI / 180);
       var viewportRadius = Math.round(Math.sqrt(latM * latM + lngM * lngM));
-      // 최소 3km, 최대 20km (카카오 API 한도)
-      var radius = Math.min(Math.max(viewportRadius, 3000), 20000);
+      // 최소 10km, 최대 20km (카카오 API 한도) — 확대 시에도 충분한 결과 확보
+      var radius = Math.min(Math.max(viewportRadius, 10000), 20000);
 
       showMapLoading(true);
       closeDetail();

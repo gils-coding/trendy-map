@@ -127,7 +127,7 @@ async function searchKakao(query, x, y, radius = 5000) {
 // =====================================================
 // 네이버 지역검색 공개 API (fallback용)
 // =====================================================
-async function searchNaverOpen(query, lat, lng) {
+async function searchNaverOpen(query, lat, lng, radius = 10000) {
   if (!NAVER_CLIENT_ID || !NAVER_CLIENT_SECRET) return [];
   const results = [];
   const headers = {
@@ -150,7 +150,7 @@ async function searchNaverOpen(query, lat, lng) {
       break;
     }
   }
-  return results.map(item => ({
+  const mapped = results.map(item => ({
     name: item.title.replace(/<[^>]+>/g, ''),
     addr: item.roadAddress || item.address,
     phone: item.telephone || null,
@@ -163,6 +163,7 @@ async function searchNaverOpen(query, lat, lng) {
     isOpen: null,
     source: 'naver',
   }));
+  return mapped.filter(s => haversineM(lat, lng, s.lat, s.lng) <= radius);
 }
 
 // =====================================================
@@ -250,7 +251,7 @@ async function searchNaver(query, lat, lng, radius = 5000) {
     return mapsResult;
   }
   console.log('⚠️ 네이버 지도 내부 API 실패 → 공개 API fallback');
-  return searchNaverOpen(query, lat, lng);
+  return searchNaverOpen(query, lat, lng, radius);
 }
 
 function katecToWgs84(mapy, mapx) {
