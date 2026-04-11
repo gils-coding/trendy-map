@@ -137,7 +137,7 @@ async function searchNaverOpen(query, lat, lng, radius = 10000) {
   for (let start = 1; start <= 96; start += 5) {
     try {
       const res = await axios.get('https://openapi.naver.com/v1/search/local.json', {
-        params: { query, display: 5, start, sort: 'comment' },
+        params: { query, display: 5, start, sort: 'random' },
         headers,
         timeout: 5000,
       });
@@ -412,13 +412,15 @@ app.get('/api/stores', async (req, res) => {
 app.get('/api/debug-search', async (req, res) => {
   const { query = '버터떡', lat = 35.1595, lng = 126.8526, radius = 10000 } = req.query;
   const x = parseFloat(lng), y = parseFloat(lat), rad = parseInt(radius);
+  const regionName = await getRegionName(y, x).catch(() => '');
+  const naverQuery = regionName ? `${regionName} ${query}` : query;
   const [kakaoRaw, naverRaw, customRaw] = await Promise.all([
     searchKakao(query, x, y, rad).catch(e => ({ error: e.message })),
-    searchNaver(query, y, x, rad).catch(e => ({ error: e.message })),
+    searchNaver(naverQuery, y, x, rad).catch(e => ({ error: e.message })),
     searchCustomDB(query, y, x, rad).catch(e => ({ error: e.message })),
   ]);
   res.json({
-    query, lat: y, lng: x, radius: rad,
+    query, naverQuery, regionName, lat: y, lng: x, radius: rad,
     kakao: { count: Array.isArray(kakaoRaw) ? kakaoRaw.length : 0, data: kakaoRaw },
     naver: { count: Array.isArray(naverRaw) ? naverRaw.length : 0, data: naverRaw },
     custom: { count: Array.isArray(customRaw) ? customRaw.length : 0, data: customRaw },
