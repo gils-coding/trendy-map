@@ -266,8 +266,7 @@ async function searchCustomDB(query, lat, lng, radius) {
     `SELECT * FROM custom_stores WHERE ',' || query_tags || ',' LIKE $1`,
     [`%,${query},%`]
   );
-  // 직접 등록 매장은 반경 제한 없이 항상 전부 표시 (카카오 API 누락 보완)
-  // 지도 중심에서 가까운 순으로 정렬
+  // 반경 내 매장만 표시, 가까운 순 정렬
   return result.rows
     .map(row => ({
       name: row.name,
@@ -284,6 +283,7 @@ async function searchCustomDB(query, lat, lng, radius) {
       memo: row.memo || null,
       _dist: haversineM(lat, lng, parseFloat(row.lat), parseFloat(row.lng)),
     }))
+    .filter(s => s._dist <= radius)
     .sort((a, b) => a._dist - b._dist)
     .map(({ _dist, ...store }) => store);
 }
