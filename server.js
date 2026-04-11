@@ -225,6 +225,23 @@ async function searchNaverMaps(query, lat, lng, radius = 5000) {
   return filtered;
 }
 
+// 좌표로 시/구 이름 추출 (카카오 역지오코딩)
+async function getRegionName(lat, lng) {
+  try {
+    const res = await axios.get('https://dapi.kakao.com/v2/local/geo/coord2regioncode.json', {
+      params: { x: lng, y: lat },
+      headers: { Authorization: `KakaoAK ${KAKAO_REST_KEY}` },
+      timeout: 3000,
+    });
+    const doc = res.data.documents?.find(d => d.region_type === 'H') || res.data.documents?.[0];
+    if (!doc) return '';
+    // "광주광역시 서구" 형태로 반환 (시 + 구)
+    return [doc.region_1depth_name, doc.region_2depth_name].filter(Boolean).join(' ');
+  } catch {
+    return '';
+  }
+}
+
 // 내부 API 먼저 시도, 실패 시 공개 API fallback
 async function searchNaver(query, lat, lng, radius = 5000) {
   const mapsResult = await searchNaverMaps(query, lat, lng, radius);
@@ -336,9 +353,14 @@ app.get('/api/stores', async (req, res) => {
   const rad = parseInt(radius);
 
   try {
+    // 지역명을 네이버 검색어에 포함시켜 로컬 결과 우선 확보
+    const regionName = await getRegionName(y, x);
+    const naverQuery = regionName ? `${regionName} ${query}` : query;
+    console.log(`🌍 지역명: "${regionName}" → 네이버 검색어: "${naverQuery}"`);
+
     const [kakaoRaw, naverRaw, customRaw] = await Promise.all([
       searchKakao(query, x, y, rad),
-      searchNaver(query, y, x, rad),
+      searchNaver(naverQuery, y, x, rad),
       searchCustomDB(query, y, x, rad),
     ]);
 
@@ -373,7 +395,7 @@ app.get('/api/stores', async (req, res) => {
     const customStores = customUnique.map((s, i) => ({ ...s, id: allSoFar.length + i + 1 }));
 
     const stores = [...kakaoStores, ...naverStores, ...customStores]
-      .sort((a, b) => haversineM(lat, lng, a.lat, a.lng) - haversineM(lat, lng, b.lat, b.lng));
+      .sort((a, b) => haversineM(y, x, a.lat, a.lng) - haversineM(y, x, b.lat, b.lng));
     console.log(`📦 최종 ${stores.length}개 (카카오 ${kakaoStores.length} + 네이버 ${naverStores.length} + DB ${customStores.length})`);
 
     res.json({ total: stores.length, stores });

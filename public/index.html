@@ -1557,9 +1557,17 @@
       var center = naverMap.getCenter();
       var lat = center.lat();
       var lng = center.lng();
-      var zoom = naverMap.getZoom();
-      // 줌 레벨→반경 변환 (zoom12≈10km, zoom14≈2.5km, zoom15≈1.2km)
-      var radius = Math.min(Math.round(40000 / Math.pow(2, zoom - 10)), 20000);
+      // 실제 뷰포트 bounds로 반경 계산 (화면에 보이는 영역을 모두 커버)
+      var bounds = naverMap.getBounds();
+      var ne = bounds.getNE();
+      var sw = bounds.getSW();
+      var latDiff = Math.abs(ne.lat() - sw.lat()) / 2;
+      var lngDiff = Math.abs(ne.lng() - sw.lng()) / 2;
+      var latM = latDiff * 111320;
+      var lngM = lngDiff * 111320 * Math.cos(lat * Math.PI / 180);
+      var viewportRadius = Math.round(Math.sqrt(latM * latM + lngM * lngM));
+      // 최소 3km, 최대 20km (카카오 API 한도)
+      var radius = Math.min(Math.max(viewportRadius, 3000), 20000);
 
       showMapLoading(true);
       closeDetail();
