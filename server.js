@@ -204,7 +204,7 @@ async function searchNaverMaps(query, lat, lng, radius = 5000) {
     }
   }
 
-  return results.map(item => ({
+  const mapped = results.map(item => ({
     name: item.name,
     addr: item.roadAddress || item.address,
     phone: item.tel || null,
@@ -218,6 +218,11 @@ async function searchNaverMaps(query, lat, lng, radius = 5000) {
           : item.businessStatus?.status?.code === 3 ? false : null,
     source: 'naver',
   }));
+
+  // boundary 파라미터가 무시되므로 반경 내 결과만 직접 필터링
+  const filtered = mapped.filter(s => haversineM(lat, lng, s.lat, s.lng) <= radius);
+  console.log(`🔍 네이버 원본 ${mapped.length}개 → 반경 ${radius}m 필터 후 ${filtered.length}개`);
+  return filtered;
 }
 
 // 내부 API 먼저 시도, 실패 시 공개 API fallback
