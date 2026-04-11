@@ -134,6 +134,7 @@ async function searchNaverOpen(query, lat, lng, radius = 10000) {
     'X-Naver-Client-Id': NAVER_CLIENT_ID,
     'X-Naver-Client-Secret': NAVER_CLIENT_SECRET,
   };
+  const seenTitles = new Set();
   for (let start = 1; start <= 96; start += 5) {
     try {
       const res = await axios.get('https://openapi.naver.com/v1/search/local.json', {
@@ -143,7 +144,11 @@ async function searchNaverOpen(query, lat, lng, radius = 10000) {
       });
       const items = res.data.items || [];
       if (items.length === 0) break;
-      results.push(...items);
+      // 이번 페이지가 이미 본 결과면 순환 반복 → 중단
+      const newItems = items.filter(i => !seenTitles.has(i.title + i.address));
+      if (newItems.length === 0) break;
+      newItems.forEach(i => seenTitles.add(i.title + i.address));
+      results.push(...newItems);
       if (items.length < 5) break;
     } catch (err) {
       console.error('네이버 공개 API 오류:', err.response?.data || err.message);
