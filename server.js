@@ -12,11 +12,36 @@ const express = require('express');
 const axios = require('axios');
 const cors = require('cors');
 const path = require('path');
+const crypto = require('crypto');
+const rateLimit = require('express-rate-limit');
 const { Pool } = require('pg');
 
 const app = express();
 app.use(cors({ origin: '*', methods: ['GET', 'POST', 'PUT', 'DELETE'] }));
 app.use(express.json());
+
+// =====================================================
+// Rate Limiting
+// =====================================================
+// 일반 API: 1분에 60회
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' },
+});
+// 관리자 API: 1분에 10회 (브루트포스 방지)
+const adminLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: '너무 많은 시도가 감지되었습니다. 1분 후 다시 시도해주세요.' },
+});
+app.use('/api/stores', apiLimiter);
+app.use('/api/store-search', apiLimiter);
+app.use('/api/admin', adminLimiter);
 
 // =====================================================
 // PostgreSQL 연결
@@ -412,25 +437,27 @@ app.get('/api/stores', async (req, res) => {
 });
 
 // =====================================================
-// API: 디버그 — 각 소스별 원본 결과 확인
+// API: 디버그 — 개발 환경 전용
 // =====================================================
-app.get('/api/debug-search', async (req, res) => {
-  const { query = '버터떡', lat = 35.1595, lng = 126.8526, radius = 10000 } = req.query;
-  const x = parseFloat(lng), y = parseFloat(lat), rad = parseInt(radius);
-  const regionName = await getRegionName(y, x).catch(() => '');
-  const naverQuery = regionName ? `${regionName} ${query}` : query;
-  const [kakaoRaw, naverRaw, customRaw] = await Promise.all([
-    searchKakao(query, x, y, rad).catch(e => ({ error: e.message })),
-    searchNaver(naverQuery, y, x, rad).catch(e => ({ error: e.message })),
-    searchCustomDB(query, y, x, rad).catch(e => ({ error: e.message })),
-  ]);
-  res.json({
-    query, naverQuery, regionName, lat: y, lng: x, radius: rad,
-    kakao: { count: Array.isArray(kakaoRaw) ? kakaoRaw.length : 0, data: kakaoRaw },
-    naver: { count: Array.isArray(naverRaw) ? naverRaw.length : 0, data: naverRaw },
-    custom: { count: Array.isArray(customRaw) ? customRaw.length : 0, data: customRaw },
+if (process.env.NODE_ENV !== 'production') {
+  app.get('/api/debug-search', async (req, res) => {
+    const { query = '버터떡', lat = 35.1595, lng = 126.8526, radius = 10000 } = req.query;
+    const x = parseFloat(lng), y = parseFloat(lat), rad = parseInt(radius);
+    const regionName = await getRegionName(y, x).catch(() => '');
+    const naverQuery = regionName ? `${regionName} ${query}` : query;
+    const [kakaoRaw, naverRaw, customRaw] = await Promise.all([
+      searchKakao(query, x, y, rad).catch(e => ({ error: e.message })),
+      searchNaver(naverQuery, y, x, rad).catch(e => ({ error: e.message })),
+      searchCustomDB(query, y, x, rad).catch(e => ({ error: e.message })),
+    ]);
+    res.json({
+      query, naverQuery, regionName, lat: y, lng: x, radius: rad,
+      kakao: { count: Array.isArray(kakaoRaw) ? kakaoRaw.length : 0, data: kakaoRaw },
+      naver: { count: Array.isArray(naverRaw) ? naverRaw.length : 0, data: naverRaw },
+      custom: { count: Array.isArray(customRaw) ? customRaw.length : 0, data: customRaw },
+    });
   });
-});
+}
 
 // =====================================================
 // API: 매장명 전국 검색
@@ -630,8 +657,16 @@ app.delete('/api/admin/food-suggestions/:id', authAdmin, async (req, res) => {
 // 관리자 API
 // =====================================================
 function authAdmin(req, res, next) {
-  const pw = req.query.pw || req.body?.pw;
-  if (pw !== ADMIN_PASSWORD) return res.status(401).json({ error: '비밀번호가 틀렸습니다.' });
+  const pw = req.query.pw || req.body?.pw || '';
+  try {
+    const valid = crypto.timingSafeEqual(
+      Buffer.from(pw).subarray(0, Math.max(pw.length, ADMIN_PASSWORD.length)),
+      Buffer.from(ADMIN_PASSWORD).subarray(0, Math.max(pw.length, ADMIN_PASSWORD.length))
+    ) && pw.length === ADMIN_PASSWORD.length;
+    if (!valid) return res.status(401).json({ error: '비밀번호가 틀렸습니다.' });
+  } catch {
+    return res.status(401).json({ error: '비밀번호가 틀렸습니다.' });
+  }
   next();
 }
 
