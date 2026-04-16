@@ -846,15 +846,28 @@
       resultEl.style.display = 'none';
 
       try {
-        const res = await fetch(`/api/admin/bulk-import?pw=${encodeURIComponent(adminPw)}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ json, query_tags, pw: adminPw })
-        });
-        const data = await res.json();
+        let res, data;
+        try {
+          res = await fetch(`/api/admin/bulk-import?pw=${encodeURIComponent(adminPw)}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ json, query_tags, pw: adminPw })
+          });
+        } catch (e) {
+          statusEl.textContent = '';
+          showToast('서버 연결 실패: ' + e.message, 'err');
+          return;
+        }
+        try {
+          data = await res.json();
+        } catch (e) {
+          statusEl.textContent = '';
+          showToast(`서버 응답 파싱 실패 (HTTP ${res.status})`, 'err');
+          return;
+        }
         if (!res.ok) {
           statusEl.textContent = '';
-          showToast(data.error || '오류 발생', 'err');
+          showToast(data.error || `오류 (HTTP ${res.status})`, 'err');
           return;
         }
         statusEl.textContent = '';
@@ -869,10 +882,6 @@
         showToast(`${data.inserted}개 등록됐습니다.`, 'ok');
         document.getElementById('bulk_json').value = '';
         loadList();
-      } catch (e) {
-        statusEl.textContent = '';
-        showToast('네트워크 오류', 'err');
-      }
     }
 
     // ── 토스트 ──
