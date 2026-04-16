@@ -1463,6 +1463,20 @@
 
     let naverMap = null;
     let markers = [];
+    let markerCluster = null;
+    let lastSearchCenter = null;  // { lat, lng } — 마지막 검색 중심
+    let lastSearchRadius = 0;     // 마지막 검색 반경(m)
+
+    // 클라이언트 측 Haversine 거리(m)
+    function haversineClientM(lat1, lng1, lat2, lng2) {
+      var R = 6371000;
+      var dLat = (lat2 - lat1) * Math.PI / 180;
+      var dLng = (lng2 - lng1) * Math.PI / 180;
+      var a = Math.sin(dLat / 2) ** 2
+        + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180)
+        * Math.sin(dLng / 2) ** 2;
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
     // 카테고리별 다중 키워드 (병렬 검색용)
     var MULTI_KEYWORDS = {
       '버터떡': ['버터떡', '버터 떡', '상하이 버터떡', '버터떡맛집', '버터떡전문', '버터찹쌀떡', '찹쌀버터떡', '버터떡케이크', '버터떡 빵집', '버터떡 카페'],
@@ -1544,6 +1558,31 @@
       });
       naver.maps.Event.addListener(naverMap, 'dragend', () => scheduleSearch());
       // zoom_changed 시 재검색 안 함 → 확대해도 기존 마커 유지
+
+      // 클러스터 초기화
+      if (naver.maps.MarkerClustering) {
+        var clusterIcon = function (size) {
+          return {
+            content: '<div style="cursor:pointer;width:' + size + 'px;height:' + size + 'px;line-height:' + size + 'px;text-align:center;background:#ff6b35;color:#fff;font-size:13px;font-weight:700;border-radius:50%;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.25);"><span></span></div>',
+            size: new naver.maps.Size(size, size),
+            anchor: new naver.maps.Point(size / 2, size / 2),
+          };
+        };
+        markerCluster = new naver.maps.MarkerClustering({
+          minClusterSize: 2,
+          maxZoom: 14,
+          map: naverMap,
+          markers: [],
+          disableClickZoom: false,
+          gridSize: 100,
+          icons: [clusterIcon(36), clusterIcon(44), clusterIcon(52)],
+          indexGenerator: [10, 50, 100],
+          stylingFunction: function (clusterMarker, count) {
+            clusterMarker.getElement().querySelector('span').textContent = count;
+          },
+        });
+      }
+
       loadStores();
     }
 
@@ -1552,7 +1591,15 @@
     function scheduleSearch() {
       if (_selectingStore) return;
       clearTimeout(searchTimer);
-      searchTimer = setTimeout(() => loadStores(), 500);
+      searchTimer = setTimeout(() => {
+        // 마지막 검색 중심에서 반경의 40% 미만으로 이동했으면 재검색 안 함
+        if (lastSearchCenter && lastSearchRadius) {
+          var c = naverMap.getCenter();
+          var dist = haversineClientM(c.lat(), c.lng(), lastSearchCenter.lat, lastSearchCenter.lng);
+          if (dist < lastSearchRadius * 0.4) return;
+        }
+        loadStores();
+      }, 500);
     }
 
     async function loadStores() {
@@ -1573,6 +1620,10 @@
       var viewportRadius = Math.round(Math.sqrt(latM * latM + lngM * lngM));
       // 최소 5km, 최대 20km (카카오 API 한도) — 확대 시에도 충분한 결과 확보
       var radius = Math.min(Math.max(viewportRadius, 5000), 20000);
+
+      // 검색 중심·반경 저장
+      lastSearchCenter = { lat, lng };
+      lastSearchRadius = radius;
 
       showMapLoading(true);
       closeDetail();
@@ -1605,9 +1656,22 @@
           throw new Error(results[0].error);
         }
 
-        window._stores = merged;
-        renderStoreList(merged);
-        updateMarkers(merged);
+        // 결과 누적 (탭 전환 전까지 이전 지역 마커 유지)
+        if (!window._allStores) window._allStores = [];
+        var allSeen = new Set(window._allStores.map(function (s) { return s.name + '|' + s.addr; }));
+        merged.forEach(function (s) {
+          var key = s.name + '|' + s.addr;
+          if (!allSeen.has(key)) { allSeen.add(key); window._allStores.push(s); }
+        });
+
+        // 사이드바는 현재 중심에서 가까운 순으로 정렬
+        var curLat = lat, curLng = lng;
+        var sorted = window._allStores.slice().sort(function (a, b) {
+          return haversineClientM(curLat, curLng, a.lat, a.lng) - haversineClientM(curLat, curLng, b.lat, b.lng);
+        });
+        window._stores = sorted;
+        renderStoreList(sorted);
+        updateMarkers(window._allStores);
       } catch (err) {
         var errDiv = document.createElement('div');
         errDiv.className = 'error-msg';
@@ -1751,41 +1815,39 @@
     function clearMarkers() {
       markers.forEach(m => m.setMap(null));
       markers = [];
+      if (markerCluster) markerCluster.setMarkers([]);
+      window._allStores = null;
+      lastSearchCenter = null;
+      lastSearchRadius = 0;
     }
 
-    // 화면 내 마커는 유지, 화면 밖만 제거
+    // 누적 stores 기준으로 새 마커만 추가 후 클러스터 갱신
     function updateMarkers(stores) {
-      const bounds = naverMap.getBounds();
-
-      // 기존 마커 중 새 stores에 없는 것만 제거
-      const newKeys = new Set(stores.map(s => s.name + '|' + s.addr));
-      const keepMarkers = [];
-      markers.forEach(m => {
-        if (newKeys.has(m._storeKey)) {
-          keepMarkers.push(m); // 유지
-        } else {
-          m.setMap(null); // 제거
-        }
-      });
-      markers = keepMarkers;
-
-      // 기존에 없던 새 매장만 마커 추가
       const existKeys = new Set(markers.map(m => m._storeKey));
-      const color = COLORS[currentQuery] || '#CCFFCC';
-      stores.forEach((store, i) => {
+      const color = COLORS[currentQuery] || '#ff6b35';
+
+      stores.forEach(store => {
         if (!store.lat || !store.lng) return;
         const key = store.name + '|' + store.addr;
-        if (existKeys.has(key)) return; // 이미 있으면 스킵
+        if (existKeys.has(key)) return;
         const lat = store.lat, lng = store.lng;
         const content = `<div onclick="selectStoreByLatLng(${lat},${lng})" style="background:${color};width:34px;height:34px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(0,0,0,0.2);cursor:pointer;border:2px solid rgba(0,0,0,0.15)"><span style="transform:rotate(45deg);font-size:15px">${currentEmoji}</span></div>`;
         const marker = new naver.maps.Marker({
           position: new naver.maps.LatLng(lat, lng),
-          map: naverMap,
-          icon: { content: content, anchor: new naver.maps.Point(17, 34) },
+          icon: { content, anchor: new naver.maps.Point(17, 34) },
+          // 클러스터 사용 시 map을 직접 지정하지 않음
         });
         marker._storeKey = key;
         markers.push(marker);
+        existKeys.add(key);
       });
+
+      if (markerCluster) {
+        markerCluster.setMarkers(markers);
+      } else {
+        // 클러스터 미지원 환경: 직접 지도에 표시
+        markers.forEach(m => { if (!m.getMap()) m.setMap(naverMap); });
+      }
     }
 
     // 인덱스 대신 lat/lng로 매장 찾기 → 재검색 후에도 정확한 매장 선택
@@ -2307,7 +2369,7 @@
         .then(function (cfg) {
           if (!cfg.naverMapClientId) throw new Error('키 없음');
           var script = document.createElement('script');
-          script.src = 'https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=' + cfg.naverMapClientId;
+          script.src = 'https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=' + cfg.naverMapClientId + '&submodules=cluster';
           script.onload = function () { initMap(); };
           script.onerror = function () { showMapError(); };
           document.head.appendChild(script);
