@@ -717,6 +717,73 @@ app.delete('/api/admin/suggestions/:id', authAdmin, async (req, res) => {
   res.json({ ok: true });
 });
 
+// 네이버맵 JSON 일괄 등록
+app.post('/api/admin/bulk-import', authAdmin, async (req, res) => {
+  const { json, query_tags } = req.body;
+  if (!json || !query_tags) return res.status(400).json({ error: 'json, query_tags 필수' });
+
+  let raw;
+  try {
+    raw = typeof json === 'string' ? JSON.parse(json) : json;
+  } catch {
+    return res.status(400).json({ error: 'JSON 파싱 실패 — 올바른 JSON인지 확인하세요.' });
+  }
+
+  // 네이버맵 allSearch 응답 구조에서 list 추출
+  let list = [];
+  if (Array.isArray(raw)) {
+    list = raw;
+  } else if (Array.isArray(raw?.result?.place?.list)) {
+    list = raw.result.place.list;
+  } else if (Array.isArray(raw?.place?.list)) {
+    list = raw.place.list;
+  } else if (Array.isArray(raw?.list)) {
+    list = raw.list;
+  } else {
+    return res.status(400).json({ error: '네이버맵 JSON 구조를 인식하지 못했습니다. result.place.list 또는 list 배열이 필요합니다.' });
+  }
+
+  if (list.length === 0) return res.status(400).json({ error: '매장 목록이 비어있습니다.' });
+
+  let inserted = 0, skipped = 0, errors = [];
+
+  for (const item of list) {
+    const name = item.name;
+    const addr = item.roadAddress || item.address || item.jibunAddress || null;
+    const lat = parseFloat(item.y);
+    const lng = parseFloat(item.x);
+
+    if (!name || !addr || isNaN(lat) || isNaN(lng)) {
+      errors.push(`스킵 (필드 누락): ${name || '이름없음'}`);
+      skipped++;
+      continue;
+    }
+
+    // 중복 체크 (이름 + 주소)
+    const dup = await pool.query(
+      'SELECT id FROM custom_stores WHERE name=$1 AND addr=$2',
+      [name, addr]
+    );
+    if (dup.rows.length > 0) {
+      skipped++;
+      continue;
+    }
+
+    const phone = item.tel || null;
+    const category = Array.isArray(item.category) ? item.category.join(', ') : (item.category || null);
+    const naver_url = item.id ? `https://map.naver.com/p/entry/place/${item.id}` : null;
+
+    await pool.query(
+      `INSERT INTO custom_stores (name,addr,phone,category,lat,lng,kakao_url,naver_url,query_tags)
+       VALUES ($1,$2,$3,$4,$5,$6,NULL,$7,$8)`,
+      [name, addr, phone, category, lat, lng, naver_url, query_tags]
+    );
+    inserted++;
+  }
+
+  res.json({ ok: true, total: list.length, inserted, skipped, errors });
+});
+
 app.get('/api/admin/geocode', authAdmin, async (req, res) => {
   const { query } = req.query;
   if (!query) return res.status(400).json({ error: 'query 필요' });

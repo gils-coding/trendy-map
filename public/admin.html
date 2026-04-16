@@ -506,6 +506,31 @@
     </div>
   </div>
 
+  <!-- 네이버맵 JSON 일괄 등록 -->
+  <div class="card">
+    <div class="card-header">📥 네이버맵 JSON 일괄 등록</div>
+    <div class="card-body">
+      <p style="font-size:12px;color:var(--muted);margin-bottom:14px;">
+        네이버맵에서 F12 → Network 탭 → <code>allSearch</code> 요청의 응답 JSON을 그대로 붙여넣으세요.
+      </p>
+      <div class="form-grid">
+        <div class="form-group full">
+          <label>검색 태그 <span class="req">*</span> <span style="font-weight:400">(쉼표로 구분, 검색 시 이 태그로 매칭됩니다)</span></label>
+          <input id="bulk_tags" type="text" placeholder="예: 두바이초콜릿,두바이 초콜릿,피스타치오 초콜릿" />
+        </div>
+        <div class="form-group full">
+          <label>네이버맵 JSON <span class="req">*</span></label>
+          <textarea id="bulk_json" style="min-height:160px;font-family:monospace;font-size:11px;" placeholder='{"result":{"place":{"list":[...]}}}'></textarea>
+        </div>
+      </div>
+      <div style="margin-top:14px;display:flex;gap:10px;align-items:center;">
+        <button class="btn btn-primary" onclick="bulkImport()">📥 일괄 등록</button>
+        <span id="bulk_status" style="font-size:12px;color:var(--muted)"></span>
+      </div>
+      <div id="bulk_result" style="margin-top:12px;font-size:12px;display:none;"></div>
+    </div>
+  </div>
+
   </div>
 
   <div class="toast" id="toast"></div>
@@ -803,6 +828,51 @@
       await fetch(`/api/admin/food-suggestions/${id}?pw=${encodeURIComponent(adminPw)}`, { method: 'DELETE' });
       showToast('삭제됐습니다.', 'ok');
       loadFoodSuggestions();
+    }
+
+    // ── 네이버맵 JSON 일괄 등록 ──
+    async function bulkImport() {
+      const query_tags = document.getElementById('bulk_tags').value.trim();
+      const json = document.getElementById('bulk_json').value.trim();
+      const statusEl = document.getElementById('bulk_status');
+      const resultEl = document.getElementById('bulk_result');
+
+      if (!query_tags || !json) {
+        showToast('검색 태그와 JSON을 모두 입력하세요.', 'err');
+        return;
+      }
+
+      statusEl.textContent = '처리 중...';
+      resultEl.style.display = 'none';
+
+      try {
+        const res = await fetch(`/api/admin/bulk-import?pw=${encodeURIComponent(adminPw)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ json, query_tags, pw: adminPw })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          statusEl.textContent = '';
+          showToast(data.error || '오류 발생', 'err');
+          return;
+        }
+        statusEl.textContent = '';
+        resultEl.style.display = 'block';
+        resultEl.innerHTML = `
+          <div style="background:var(--card);border-radius:8px;padding:12px;line-height:2;">
+            ✅ <b>등록 완료:</b> ${data.inserted}개 &nbsp;|&nbsp;
+            ⏭ <b>중복 스킵:</b> ${data.skipped}개 &nbsp;|&nbsp;
+            📦 <b>전체:</b> ${data.total}개
+            ${data.errors.length ? `<br><span style="color:var(--red)">${data.errors.join('<br>')}</span>` : ''}
+          </div>`;
+        showToast(`${data.inserted}개 등록됐습니다.`, 'ok');
+        document.getElementById('bulk_json').value = '';
+        loadStores();
+      } catch (e) {
+        statusEl.textContent = '';
+        showToast('네트워크 오류', 'err');
+      }
     }
 
     // ── 토스트 ──
