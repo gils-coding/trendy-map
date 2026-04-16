@@ -249,14 +249,78 @@ async function getRegionName(lat, lng) {
   }
 }
 
-// 내부 API 먼저 시도, 실패 시 공개 API fallback
-async function searchNaver(query, lat, lng, radius = 5000) {
-  const mapsResult = await searchNaverMaps(query, lat, lng, radius);
-  if (mapsResult.length > 0) {
-    console.log(`✅ 네이버 지도 내부 API: ${mapsResult.length}개`);
-    return mapsResult;
+// =====================================================
+// 네이버 플레이스 목록 API (pcmap.place.naver.com)
+// allSearch에서 누락되는 메뉴 매칭 매장까지 커버
+// =====================================================
+async function searchNaverPlaceList(query, lat, lng, radius = 5000) {
+  const results = [];
+  const headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36',
+    'Accept': 'application/json, text/plain, */*',
+    'Accept-Language': 'ko-KR,ko;q=0.9',
+    'Referer': `https://map.naver.com/p/search/${encodeURIComponent(query)}`,
+  };
+
+  for (let start = 1; start <= 81; start += 20) {
+    try {
+      const res = await axios.get('https://pcmap.place.naver.com/place/list', {
+        params: { query, x: lng, y: lat, display: 20, start, sort: 'distance' },
+        headers,
+        timeout: 8000,
+      });
+      const data = res.data;
+      const list = Array.isArray(data?.list) ? data.list
+        : Array.isArray(data?.result?.place?.list) ? data.result.place.list
+        : Array.isArray(data) ? data : [];
+      if (!list.length) break;
+      results.push(...list);
+      if (list.length < 20) break;
+    } catch (err) {
+      console.error(`pcmap 오류 (start ${start}):`, err.message);
+      break;
+    }
   }
-  console.log('⚠️ 네이버 지도 내부 API 실패 → 공개 API fallback');
+
+  const mapped = results
+    .map(item => ({
+      name: item.name,
+      addr: item.roadAddress || item.address || item.fullAddress || null,
+      phone: item.tel || item.phone || null,
+      category: Array.isArray(item.category) ? item.category.join(', ') : (item.category || null),
+      lat: parseFloat(item.y || item.lat),
+      lng: parseFloat(item.x || item.lng),
+      naverUrl: item.id ? `https://map.naver.com/p/entry/place/${item.id}` : null,
+      kakaoUrl: null,
+      hours: item.bizhourInfo || null,
+      isOpen: item.businessStatus?.status?.code === 2 ? true
+            : item.businessStatus?.status?.code === 3 ? false : null,
+      source: 'naver',
+    }))
+    .filter(s => s.name && !isNaN(s.lat) && !isNaN(s.lng));
+
+  const filtered = mapped.filter(s => haversineM(lat, lng, s.lat, s.lng) <= radius);
+  console.log(`🗺️  pcmap 원본 ${mapped.length}개 → 반경 ${radius}m 필터 후 ${filtered.length}개`);
+  return filtered;
+}
+
+// allSearch + pcmap 병렬 실행 후 병합
+async function searchNaver(query, lat, lng, radius = 5000) {
+  const [allSearchResult, placeListResult] = await Promise.all([
+    searchNaverMaps(query, lat, lng, radius).catch(e => { console.error('allSearch 실패:', e.message); return []; }),
+    searchNaverPlaceList(query, lat, lng, radius).catch(e => { console.error('pcmap 실패:', e.message); return []; }),
+  ]);
+
+  const merged = [...allSearchResult];
+  let added = 0;
+  placeListResult.forEach(s => {
+    if (!isDuplicate(s, merged)) { merged.push(s); added++; }
+  });
+  console.log(`✅ 네이버 통합: allSearch ${allSearchResult.length} + pcmap 신규 ${added}개 = ${merged.length}개`);
+
+  if (merged.length > 0) return merged;
+
+  console.log('⚠️ 네이버 API 모두 실패 → 공개 API fallback');
   return searchNaverOpen(query, lat, lng, radius);
 }
 
@@ -670,7 +734,7 @@ app.post('/api/admin/bulk-import', authAdmin, async (req, res) => {
 
   for (const item of list) {
     const name = item.name;
-    const addr = item.roadAddress || item.address || item.jibunAddress || null;
+    const addr = item.roadAddress || item.jibunAddress || item.address || item.fullAddress || null;
     const lat = parseFloat(item.y);
     const lng = parseFloat(item.x);
 
