@@ -335,13 +335,11 @@ app.get('/api/stores', async (req, res) => {
   const rad = parseInt(radius);
 
   try {
-    // 지역명을 네이버 검색어에 포함시켜 로컬 결과 우선 확보
-    const regionName = await getRegionName(y, x);
-    const naverQuery = regionName ? `${regionName} ${query}` : query;
-    console.log(`🌍 지역명: "${regionName}" → 네이버 검색어: "${naverQuery}"`);
+    // 지역 접두어 없이 순수 쿼리 + searchCoord/boundary로 로컬라이즈 (네이버 지도 프론트와 동일)
+    console.log(`🔍 네이버 검색어: "${query}" (searchCoord: ${x};${y})`);
 
     const [naverRaw, customRaw] = await Promise.all([
-      searchNaver(naverQuery, y, x, rad),
+      searchNaver(query, y, x, rad),
       searchCustomDB(query, y, x, rad),
     ]);
 
@@ -370,14 +368,12 @@ if (process.env.NODE_ENV !== 'production') {
   app.get('/api/debug-search', async (req, res) => {
     const { query = '버터떡', lat = 35.1595, lng = 126.8526, radius = 10000 } = req.query;
     const x = parseFloat(lng), y = parseFloat(lat), rad = parseInt(radius);
-    const regionName = await getRegionName(y, x).catch(() => '');
-    const naverQuery = regionName ? `${regionName} ${query}` : query;
     const [naverRaw, customRaw] = await Promise.all([
-      searchNaver(naverQuery, y, x, rad).catch(e => ({ error: e.message })),
+      searchNaver(query, y, x, rad).catch(e => ({ error: e.message })),
       searchCustomDB(query, y, x, rad).catch(e => ({ error: e.message })),
     ]);
     res.json({
-      query, naverQuery, regionName, lat: y, lng: x, radius: rad,
+      query, lat: y, lng: x, radius: rad,
       naver: { count: Array.isArray(naverRaw) ? naverRaw.length : 0, data: naverRaw },
       custom: { count: Array.isArray(customRaw) ? customRaw.length : 0, data: customRaw },
     });
