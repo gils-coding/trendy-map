@@ -1560,15 +1560,15 @@
       // zoom_changed 시 재검색 안 함 → 확대해도 기존 마커 유지
 
       // 클러스터 초기화
-      if (naver.maps.MarkerClustering) {
+      if (typeof MarkerClustering !== 'undefined') {
         var clusterIcon = function (size) {
           return {
-            content: '<div style="cursor:pointer;width:' + size + 'px;height:' + size + 'px;line-height:' + size + 'px;text-align:center;background:#ff6b35;color:#fff;font-size:13px;font-weight:700;border-radius:50%;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.25);"><span></span></div>',
+            content: '<div style="cursor:pointer;width:' + size + 'px;height:' + size + 'px;line-height:' + size + 'px;text-align:center;background:#ff6b35;color:#fff;font-size:13px;font-weight:700;border-radius:50%;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.25);">' + size + '</div>',
             size: new naver.maps.Size(size, size),
             anchor: new naver.maps.Point(size / 2, size / 2),
           };
         };
-        markerCluster = new naver.maps.MarkerClustering({
+        markerCluster = new MarkerClustering({
           minClusterSize: 2,
           maxZoom: 14,
           map: naverMap,
@@ -1578,7 +1578,7 @@
           icons: [clusterIcon(36), clusterIcon(44), clusterIcon(52)],
           indexGenerator: [10, 50, 100],
           stylingFunction: function (clusterMarker, count) {
-            clusterMarker.getElement().querySelector('span').textContent = count;
+            clusterMarker.getElement().querySelector('div').textContent = count;
           },
         });
       }
@@ -2369,8 +2369,14 @@
         .then(function (cfg) {
           if (!cfg.naverMapClientId) throw new Error('키 없음');
           var script = document.createElement('script');
-          script.src = 'https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=' + cfg.naverMapClientId + '&submodules=cluster';
-          script.onload = function () { initMap(); };
+          script.src = 'https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=' + cfg.naverMapClientId;
+          script.onload = function () {
+            var clusterScript = document.createElement('script');
+            clusterScript.src = 'https://navermaps.github.io/maps.js.ncp/docs/js/MarkerClustering.js';
+            clusterScript.onload = function () { initMap(); };
+            clusterScript.onerror = function () { initMap(); }; // 실패해도 지도는 띄움
+            document.head.appendChild(clusterScript);
+          };
           script.onerror = function () { showMapError(); };
           document.head.appendChild(script);
         })
