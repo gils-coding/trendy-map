@@ -845,43 +845,42 @@
       statusEl.textContent = '처리 중...';
       resultEl.style.display = 'none';
 
+      let res, data;
       try {
-        let res, data;
-        try {
-          res = await fetch(`/api/admin/bulk-import?pw=${encodeURIComponent(adminPw)}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ json, query_tags, pw: adminPw })
-          });
-        } catch (e) {
-          statusEl.textContent = '';
-          showToast('서버 연결 실패: ' + e.message, 'err');
-          return;
-        }
-        try {
-          data = await res.json();
-        } catch (e) {
-          statusEl.textContent = '';
-          showToast(`서버 응답 파싱 실패 (HTTP ${res.status})`, 'err');
-          return;
-        }
-        if (!res.ok) {
-          statusEl.textContent = '';
-          showToast(data.error || `오류 (HTTP ${res.status})`, 'err');
-          return;
-        }
+        res = await fetch(`/api/admin/bulk-import?pw=${encodeURIComponent(adminPw)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ json, query_tags, pw: adminPw })
+        });
+      } catch (e) {
         statusEl.textContent = '';
-        resultEl.style.display = 'block';
-        resultEl.innerHTML = `
-          <div style="background:var(--card);border-radius:8px;padding:12px;line-height:2;">
-            ✅ <b>등록 완료:</b> ${data.inserted}개 &nbsp;|&nbsp;
-            ⏭ <b>중복 스킵:</b> ${data.skipped}개 &nbsp;|&nbsp;
-            📦 <b>전체:</b> ${data.total}개
-            ${data.errors.length ? `<br><span style="color:var(--red)">${data.errors.join('<br>')}</span>` : ''}
-          </div>`;
-        showToast(`${data.inserted}개 등록됐습니다.`, 'ok');
-        document.getElementById('bulk_json').value = '';
-        loadList();
+        showToast('서버 연결 실패: ' + e.message, 'err');
+        return;
+      }
+      try {
+        data = await res.json();
+      } catch (e) {
+        statusEl.textContent = '';
+        showToast(`서버 응답 파싱 실패 (HTTP ${res.status})`, 'err');
+        return;
+      }
+      if (!res.ok) {
+        statusEl.textContent = '';
+        showToast(data.error || `오류 (HTTP ${res.status})`, 'err');
+        return;
+      }
+      statusEl.textContent = '';
+      resultEl.style.display = 'block';
+      resultEl.innerHTML = `
+        <div style="background:var(--card);border-radius:8px;padding:12px;line-height:2;">
+          ✅ <b>등록 완료:</b> ${data.inserted}개 &nbsp;|&nbsp;
+          ⏭ <b>중복 스킵:</b> ${data.skipped}개 &nbsp;|&nbsp;
+          📦 <b>전체:</b> ${data.total}개
+          ${data.errors.length ? `<br><span style="color:var(--red)">${data.errors.join('<br>')}</span>` : ''}
+        </div>`;
+      showToast(`${data.inserted}개 등록됐습니다.`, 'ok');
+      document.getElementById('bulk_json').value = '';
+      loadList();
     }
 
     // ── 토스트 ──
