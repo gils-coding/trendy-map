@@ -735,11 +735,11 @@ app.post('/api/admin/bulk-import', authAdmin, async (req, res) => {
   for (const item of list) {
     const name = item.name;
     const addr = item.roadAddress || item.jibunAddress || item.address || item.fullAddress || null;
-    const lat = parseFloat(item.y);
-    const lng = parseFloat(item.x);
+    const lat = parseFloat(item.y ?? item.lat ?? item.mapy);
+    const lng = parseFloat(item.x ?? item.lng ?? item.mapx);
 
     if (!name || !addr || isNaN(lat) || isNaN(lng)) {
-      errors.push(`스킵 (필드 누락): ${name || '이름없음'}`);
+      errors.push(`스킵 (필드 누락): ${name || '이름없음'} | addr=${addr} lat=${item.y ?? item.lat} lng=${item.x ?? item.lng}`);
       skipped++;
       continue;
     }
