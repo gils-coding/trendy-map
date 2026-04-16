@@ -18,7 +18,7 @@ const { Pool } = require('pg');
 
 const app = express();
 app.use(cors({ origin: '*', methods: ['GET', 'POST', 'PUT', 'DELETE'] }));
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
 // =====================================================
 // Rate Limiting
