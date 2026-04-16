@@ -124,30 +124,6 @@ function haversineM(lat1, lng1, lat2, lng2) {
 // =====================================================
 // 카카오 로컬 키워드 검색
 // =====================================================
-async function searchKakao(query, x, y, radius = 5000) {
-  const results = [];
-  const headers = { Authorization: `KakaoAK ${KAKAO_REST_KEY}` };
-  for (let page = 1; page <= 10; page++) {
-    try {
-      const res = await axios.get('https://dapi.kakao.com/v2/local/search/keyword.json', {
-        params: { query, x, y, radius, size: 15, page, sort: 'distance' },
-        headers,
-      });
-      const items = res.data.documents || [];
-      results.push(...items);
-      if (res.data.meta.is_end) break;
-    } catch (err) {
-      console.error(`카카오 검색 오류 (page ${page}):`, err.response?.data || err.message);
-      break;
-    }
-  }
-  const seen = new Set();
-  return results.filter(item => {
-    if (seen.has(item.id)) return false;
-    seen.add(item.id);
-    return true;
-  });
-}
 
 // =====================================================
 // 네이버 지역검색 공개 API (fallback용)
@@ -318,31 +294,6 @@ async function searchCustomDB(query, lat, lng, radius) {
     .map(({ _dist, ...store }) => store);
 }
 
-// =====================================================
-// 카카오 장소 상세 (영업시간)
-// =====================================================
-async function getPlaceDetail(placeId) {
-  try {
-    const res = await axios.get(`https://place.map.kakao.com/main/v/${placeId}`, {
-      headers: { 'User-Agent': 'Mozilla/5.0' },
-      timeout: 3000,
-    });
-    const openHour = res.data?.basicInfo?.openHour;
-    if (!openHour) return {};
-    const hourLines = [];
-    for (const period of openHour.periodList || []) {
-      for (const t of period.timeList || []) {
-        hourLines.push(`${t.dayOfWeek}  ${t.timeSE}`);
-        if (t.breakTime) hourLines.push(`  브레이크  ${t.breakTime}`);
-      }
-    }
-    const isOpen = openHour.realtime?.open === 'Y' ? true
-      : openHour.realtime?.open === 'N' ? false : null;
-    return { hours: hourLines.join('\n') || null, isOpen };
-  } catch {
-    return {};
-  }
-}
 
 // =====================================================
 // 중복 제거: 이름+주소 유사 OR 좌표 50m 이내
@@ -389,45 +340,21 @@ app.get('/api/stores', async (req, res) => {
     const naverQuery = regionName ? `${regionName} ${query}` : query;
     console.log(`🌍 지역명: "${regionName}" → 네이버 검색어: "${naverQuery}"`);
 
-    const [kakaoRaw, naverRaw, customRaw] = await Promise.all([
-      searchKakao(query, x, y, rad),
+    const [naverRaw, customRaw] = await Promise.all([
       searchNaver(naverQuery, y, x, rad),
       searchCustomDB(query, y, x, rad),
     ]);
 
-    console.log(`✅ [${query}] 카카오 ${kakaoRaw.length} + 네이버 ${naverRaw.length} + DB ${customRaw.length}`);
+    console.log(`✅ [${query}] 네이버 ${naverRaw.length} + DB ${customRaw.length}`);
 
-    const kakaoStores = await Promise.all(
-      kakaoRaw.map(async (item, index) => {
-        const detail = await getPlaceDetail(item.id);
-        return {
-          id: index + 1,
-          placeId: item.id,
-          name: item.place_name,
-          addr: item.road_address_name || item.address_name,
-          phone: item.phone,
-          category: item.category_name,
-          kakaoUrl: item.place_url,
-          naverUrl: null,
-          lat: parseFloat(item.y),
-          lng: parseFloat(item.x),
-          hours: detail.hours || null,
-          isOpen: detail.isOpen !== null ? detail.isOpen : null,
-          source: 'kakao',
-        };
-      })
-    );
+    const naverStores = naverRaw.map((s, i) => ({ ...s, id: i + 1 }));
 
-    const naverUnique = naverRaw.filter(s => !isDuplicate(s, kakaoStores));
-    const naverStores = naverUnique.map((s, i) => ({ ...s, id: kakaoStores.length + i + 1 }));
+    const customUnique = customRaw.filter(s => !isDuplicate(s, naverStores));
+    const customStores = customUnique.map((s, i) => ({ ...s, id: naverStores.length + i + 1 }));
 
-    const allSoFar = [...kakaoStores, ...naverStores];
-    const customUnique = customRaw.filter(s => !isDuplicate(s, allSoFar));
-    const customStores = customUnique.map((s, i) => ({ ...s, id: allSoFar.length + i + 1 }));
-
-    const stores = [...kakaoStores, ...naverStores, ...customStores]
+    const stores = [...naverStores, ...customStores]
       .sort((a, b) => haversineM(y, x, a.lat, a.lng) - haversineM(y, x, b.lat, b.lng));
-    console.log(`📦 최종 ${stores.length}개 (카카오 ${kakaoStores.length} + 네이버 ${naverStores.length} + DB ${customStores.length})`);
+    console.log(`📦 최종 ${stores.length}개 (네이버 ${naverStores.length} + DB ${customStores.length})`);
 
     res.json({ total: stores.length, stores });
   } catch (error) {
@@ -445,14 +372,12 @@ if (process.env.NODE_ENV !== 'production') {
     const x = parseFloat(lng), y = parseFloat(lat), rad = parseInt(radius);
     const regionName = await getRegionName(y, x).catch(() => '');
     const naverQuery = regionName ? `${regionName} ${query}` : query;
-    const [kakaoRaw, naverRaw, customRaw] = await Promise.all([
-      searchKakao(query, x, y, rad).catch(e => ({ error: e.message })),
+    const [naverRaw, customRaw] = await Promise.all([
       searchNaver(naverQuery, y, x, rad).catch(e => ({ error: e.message })),
       searchCustomDB(query, y, x, rad).catch(e => ({ error: e.message })),
     ]);
     res.json({
       query, naverQuery, regionName, lat: y, lng: x, radius: rad,
-      kakao: { count: Array.isArray(kakaoRaw) ? kakaoRaw.length : 0, data: kakaoRaw },
       naver: { count: Array.isArray(naverRaw) ? naverRaw.length : 0, data: naverRaw },
       custom: { count: Array.isArray(customRaw) ? customRaw.length : 0, data: customRaw },
     });
