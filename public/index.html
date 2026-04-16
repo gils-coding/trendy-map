@@ -1571,8 +1571,8 @@
       var latM = latDiff * 111320;
       var lngM = lngDiff * 111320 * Math.cos(lat * Math.PI / 180);
       var viewportRadius = Math.round(Math.sqrt(latM * latM + lngM * lngM));
-      // 최소 10km, 최대 20km (카카오 API 한도) — 확대 시에도 충분한 결과 확보
-      var radius = Math.min(Math.max(viewportRadius, 10000), 20000);
+      // 최소 5km, 최대 20km (카카오 API 한도) — 확대 시에도 충분한 결과 확보
+      var radius = Math.min(Math.max(viewportRadius, 5000), 20000);
 
       showMapLoading(true);
       closeDetail();

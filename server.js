@@ -127,10 +127,10 @@ function haversineM(lat1, lng1, lat2, lng2) {
 async function searchKakao(query, x, y, radius = 5000) {
   const results = [];
   const headers = { Authorization: `KakaoAK ${KAKAO_REST_KEY}` };
-  for (let page = 1; page <= 5; page++) {
+  for (let page = 1; page <= 10; page++) {
     try {
       const res = await axios.get('https://dapi.kakao.com/v2/local/search/keyword.json', {
-        params: { query, x, y, radius, size: 15, page, sort: 'accuracy' },
+        params: { query, x, y, radius, size: 15, page, sort: 'distance' },
         headers,
       });
       const items = res.data.documents || [];
