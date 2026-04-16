@@ -868,7 +868,7 @@
           </div>`;
         showToast(`${data.inserted}개 등록됐습니다.`, 'ok');
         document.getElementById('bulk_json').value = '';
-        loadStores();
+        loadList();
       } catch (e) {
         statusEl.textContent = '';
         showToast('네트워크 오류', 'err');
