@@ -703,6 +703,30 @@ app.delete('/api/admin/stores/:id', authAdmin, async (req, res) => {
   res.json({ ok: true });
 });
 
+// 이름+좌표 기준 중복 제거 (좌표 50m 이내 + 이름 동일 → id 낮은 것 유지)
+app.post('/api/admin/dedup', authAdmin, async (_req, res) => {
+  const result = await pool.query('SELECT id, name, lat, lng FROM custom_stores ORDER BY id ASC');
+  const stores = result.rows;
+  const toDelete = new Set();
+
+  for (let i = 0; i < stores.length; i++) {
+    if (toDelete.has(stores[i].id)) continue;
+    for (let j = i + 1; j < stores.length; j++) {
+      if (toDelete.has(stores[j].id)) continue;
+      if (stores[i].name !== stores[j].name) continue;
+      const dlat = Number(stores[i].lat) - Number(stores[j].lat);
+      const dlng = Number(stores[i].lng) - Number(stores[j].lng);
+      const dist = Math.sqrt(dlat * dlat + dlng * dlng) * 111000;
+      if (dist < 50) toDelete.add(stores[j].id);
+    }
+  }
+
+  if (toDelete.size > 0) {
+    await pool.query('DELETE FROM custom_stores WHERE id = ANY($1)', [Array.from(toDelete)]);
+  }
+  res.json({ ok: true, deleted: toDelete.size });
+});
+
 app.get('/api/admin/suggestions', authAdmin, async (req, res) => {
   const result = await pool.query('SELECT * FROM store_suggestions ORDER BY created_at DESC');
   res.json({ total: result.rows.length, suggestions: result.rows });
@@ -789,6 +813,16 @@ const SIGUNGU_SERVER = {
     '진주시','통영시','사천시','김해시','밀양시','거제시','양산시','의령군','함안군','창녕군','고성군','남해군','하동군','산청군','함양군','거창군','합천군',
   ],
   '제주': ['제주시','서귀포시'],
+};
+
+// 시도 → 주소 내 포함 문자열 (purge 시 지역 필터용)
+const SIDO_ADDR = {
+  '서울': '서울특별시', '경기': '경기도', '인천': '인천광역시',
+  '부산': '부산광역시', '대구': '대구광역시', '대전': '대전광역시',
+  '광주': '광주광역시', '울산': '울산광역시', '세종': '세종특별자치시',
+  '강원': '강원', '충북': '충청북도', '충남': '충청남도',
+  '전북': '전라북도', '전남': '전라남도', '경북': '경상북도', '경남': '경상남도',
+  '제주': '제주특별자치도',
 };
 
 // 주소 → 좌표 (Kakao) — bulk-import + auto-collect 공용
@@ -1050,7 +1084,7 @@ app.post('/api/admin/bulk-import', authAdmin, async (req, res) => {
 
 // 자동 수집 SSE 엔드포인트
 app.get('/api/admin/auto-collect', authAdmin, async (req, res) => {
-  const { sido, categories, cookie, query_tags } = req.query;
+  const { sido, categories, cookie, query_tags, purge } = req.query;
   if (!sido || !SIGUNGU_SERVER[sido]) {
     return res.status(400).json({ error: '유효한 sido 필수' });
   }
@@ -1074,6 +1108,7 @@ app.get('/api/admin/auto-collect', authAdmin, async (req, res) => {
   send({ type: 'start', total: districts.length * catList.length, districts: districts.length, categories: catList.length });
 
   let totalInserted = 0, totalSkipped = 0;
+  const foundNaverIds = new Set();
 
   for (const gu of districts) {
     if (stopped) break;
@@ -1090,8 +1125,8 @@ app.get('/api/admin/auto-collect', authAdmin, async (req, res) => {
       send({ type: 'fetching', district: gu, category: cat });
 
       try {
-        // 최대 5페이지(350개)까지 페이지네이션 수집
-        const MAX_PAGES = 5;
+        // 최대 8페이지(560개)까지 페이지네이션 수집
+        const MAX_PAGES = 8;
         const PAGE_SIZE = 70;
         let allPlaces = [];
         let fetchError = null;
@@ -1135,12 +1170,18 @@ app.get('/api/admin/auto-collect', authAdmin, async (req, res) => {
           if (!item) { skipped++; continue; }
           const { p, addr, c } = item;
 
-          const dup = await pool.query('SELECT id FROM custom_stores WHERE name=$1 AND addr=$2', [p.name, addr]);
+          const dup = await pool.query(
+            `SELECT id FROM custom_stores WHERE name=$1 AND (addr=$2 OR (
+              lat BETWEEN $3-0.0005 AND $3+0.0005 AND lng BETWEEN $4-0.0005 AND $4+0.0005
+            ))`,
+            [p.name, addr, c.lat, c.lng]
+          );
           if (dup.rows.length > 0) { skipped++; continue; }
 
           const phone = p.virtualPhone || p.phone || null;
           const category = Array.isArray(p.category) ? p.category.join(', ') : (p.category || null);
           const naver_url = p.id ? `https://map.naver.com/p/entry/place/${p.id}` : null;
+          if (p.id) foundNaverIds.add(String(p.id));
 
           await pool.query(
             `INSERT INTO custom_stores (name,addr,phone,category,lat,lng,kakao_url,naver_url,query_tags) VALUES ($1,$2,$3,$4,$5,$6,NULL,$7,$8)`,
@@ -1162,7 +1203,27 @@ app.get('/api/admin/auto-collect', authAdmin, async (req, res) => {
   }
 
   clearInterval(keepAlive);
-  send({ type: 'done', totalInserted, totalSkipped });
+
+  let totalPurged = 0;
+  if (purge === 'true' && !stopped) {
+    const addrKeyword = SIDO_ADDR[sido] || sido;
+    for (const cat of catList) {
+      const existing = await pool.query(
+        `SELECT id, naver_url FROM custom_stores WHERE query_tags ILIKE $1 AND naver_url IS NOT NULL AND addr LIKE $2`,
+        [`%${cat}%`, `%${addrKeyword}%`]
+      );
+      const toDelete = existing.rows.filter(r => {
+        const m = r.naver_url.match(/\/place\/(\d+)/);
+        return m && !foundNaverIds.has(m[1]);
+      });
+      if (toDelete.length > 0) {
+        await pool.query('DELETE FROM custom_stores WHERE id = ANY($1)', [toDelete.map(r => r.id)]);
+        totalPurged += toDelete.length;
+      }
+    }
+  }
+
+  send({ type: 'done', totalInserted, totalSkipped, totalPurged });
   res.end();
 });
 

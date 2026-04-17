@@ -469,6 +469,7 @@
       <div class="card-header">
         📋 등록된 가게 목록
         <button class="btn btn-secondary btn-sm" style="margin-left:auto;" onclick="loadList(1)">🔄 새로고침</button>
+        <button class="btn btn-secondary btn-sm" style="margin-left:8px;" onclick="runDedup()">🧹 중복 제거</button>
       </div>
       <div class="card-body" style="padding:0; overflow-x:auto;">
         <div id="listArea">
@@ -571,6 +572,13 @@
           <textarea id="ac_cookie" style="min-height:56px;font-family:monospace;font-size:10px;" placeholder="NNB=...; NID_SES=...; (없으면 비워두세요)"></textarea>
         </div>
       </div>
+      <div style="margin-top:12px;padding:10px 12px;background:var(--card);border-radius:8px;border:1.5px solid var(--border);font-size:12px;">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;">
+          <input type="checkbox" id="ac_purge" style="width:auto;" />
+          수집 완료 후 이번에 발견되지 않은 가게 자동 삭제
+        </label>
+        <div style="color:var(--muted);margin-top:4px;font-size:11px;">⚠️ 해당 시도+카테고리에 등록된 naver_url 보유 가게 중 이번 수집에서 나오지 않은 가게를 삭제합니다. 폐업·메뉴 중단 가게 정리용.</div>
+      </div>
       <div style="margin-top:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
         <button id="ac_startBtn" class="btn btn-primary" onclick="startAutoCollect()">▶ 자동 수집 시작</button>
         <button id="ac_stopBtn" class="btn btn-secondary" onclick="stopAutoCollect()" style="display:none;">⏹ 중지</button>
@@ -580,7 +588,8 @@
         <div style="font-size:13px;padding:8px 12px;background:var(--card);border-radius:6px;margin-bottom:8px;">
           진행: <b><span id="ac_prog_cur">0</span> / <span id="ac_prog_total">?</span></b> &nbsp;|&nbsp;
           등록: <b style="color:var(--green)"><span id="ac_inserted">0</span>개</b> &nbsp;|&nbsp;
-          스킵: <b><span id="ac_skipped">0</span>개</b>
+          스킵: <b><span id="ac_skipped">0</span>개</b> &nbsp;|&nbsp;
+          삭제: <b style="color:var(--red)"><span id="ac_purged">0</span>개</b>
         </div>
         <div id="ac_log" style="height:220px;overflow-y:auto;font-size:11px;font-family:monospace;background:var(--card);border-radius:6px;padding:10px;border:1px solid var(--border);"></div>
       </div>
@@ -983,6 +992,7 @@
 
       document.getElementById('ac_inserted').textContent = '0';
       document.getElementById('ac_skipped').textContent = '0';
+      document.getElementById('ac_purged').textContent = '0';
       document.getElementById('ac_prog_cur').textContent = '0';
       document.getElementById('ac_prog_total').textContent = '?';
       document.getElementById('ac_log').innerHTML = '';
@@ -995,6 +1005,7 @@
       if (category) params.append('categories', category);
       if (tags) params.append('query_tags', tags);
       if (cookie) params.append('cookie', cookie);
+      if (document.getElementById('ac_purge').checked) params.append('purge', 'true');
 
       autoCollectSource = new EventSource(`/api/admin/auto-collect?${params}`);
       let inserted = 0, skipped = 0, cur = 0;
@@ -1021,8 +1032,10 @@
         } else if (data.type === 'error') {
           line = `<span style="color:var(--red)">❌ ${data.district || ''} ${data.category || ''}: ${data.msg}</span>`;
         } else if (data.type === 'done') {
-          document.getElementById('ac_status').textContent = `완료! 총 ${data.totalInserted}개 등록`;
-          line = `<b>🏁 완료! 등록: ${data.totalInserted}개 / 스킵: ${data.totalSkipped}개</b>`;
+          const purgedMsg = data.totalPurged ? ` / 삭제: ${data.totalPurged}개` : '';
+          document.getElementById('ac_status').textContent = `완료! 총 ${data.totalInserted}개 등록${purgedMsg}`;
+          if (data.totalPurged) document.getElementById('ac_purged').textContent = data.totalPurged;
+          line = `<b>🏁 완료! 등록: ${data.totalInserted}개 / 스킵: ${data.totalSkipped}개${purgedMsg}</b>`;
           stopAutoCollect();
           loadList(1);
         }
@@ -1035,6 +1048,15 @@
         if (log) { log.innerHTML += `<div style="color:var(--red)">❌ SSE 연결 종료</div>`; log.scrollTop = log.scrollHeight; }
         stopAutoCollect();
       };
+    }
+
+    // ── 중복 제거 ──
+    async function runDedup() {
+      if (!confirm('이름이 같고 좌표가 50m 이내인 중복 가게를 자동 제거할까요? (ID가 낮은 것 유지)')) return;
+      const res = await fetch(`/api/admin/dedup?pw=${encodeURIComponent(adminPw)}`, { method: 'POST' });
+      const data = await res.json();
+      if (data.ok) { showToast(`중복 ${data.deleted}개 삭제됐습니다.`, 'ok'); loadList(1); }
+      else showToast('오류가 발생했습니다.', 'err');
     }
 
     // ── 토스트 ──
