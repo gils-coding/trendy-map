@@ -533,6 +533,60 @@
     </div>
   </div>
 
+  <!-- 자동 수집 -->
+  <div class="card">
+    <div class="card-header">🤖 자동 수집 (Naver 순회)</div>
+    <div class="card-body">
+      <p style="font-size:12px;color:var(--muted);margin-bottom:14px;">
+        시도를 선택하면 각 시군구 × 카테고리 조합으로 <code>pcmap.place.naver.com</code>을 자동 순회하며 DB에 등록합니다.<br>
+        차단 방지를 위해 F12 → Network → <code>list?query</code> → Request Headers → <b>Cookie</b> 값을 복사해 입력하세요.
+      </p>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>시도 <span class="req">*</span></label>
+          <select id="ac_sido" onchange="acUpdateTags()">
+            <option value="">선택하세요</option>
+            <option>서울</option><option>경기</option><option>인천</option>
+            <option>부산</option><option>대구</option><option>대전</option>
+            <option>광주</option><option>울산</option><option>세종</option>
+            <option>강원</option><option>충북</option><option>충남</option>
+            <option>전북</option><option>전남</option><option>경북</option>
+            <option>경남</option><option>제주</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>카테고리</label>
+          <select id="ac_category" onchange="acUpdateTags()">
+            <option value="">전체 카테고리</option>
+            <option>버터떡</option><option>두바이 쫀득쿠키</option><option>소금빵</option>
+            <option>탕후루</option><option>크로플</option><option>마라탕</option>
+          </select>
+        </div>
+        <div class="form-group full">
+          <label>검색 태그 <span class="req">*</span> <span style="font-weight:400">(전체 카테고리 선택 시 카테고리명 자동 사용됨)</span></label>
+          <input id="ac_tags" type="text" placeholder="카테고리 선택 시 자동 입력됩니다" />
+        </div>
+        <div class="form-group full">
+          <label>Naver 쿠키 <span style="font-weight:400">(선택 — F12 → Network → list?query → Request Headers → Cookie)</span></label>
+          <textarea id="ac_cookie" style="min-height:56px;font-family:monospace;font-size:10px;" placeholder="NNB=...; NID_SES=...; (없으면 비워두세요)"></textarea>
+        </div>
+      </div>
+      <div style="margin-top:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <button id="ac_startBtn" class="btn btn-primary" onclick="startAutoCollect()">▶ 자동 수집 시작</button>
+        <button id="ac_stopBtn" class="btn btn-secondary" onclick="stopAutoCollect()" style="display:none;">⏹ 중지</button>
+        <span id="ac_status" style="font-size:13px;color:var(--muted)"></span>
+      </div>
+      <div id="ac_progress" style="margin-top:14px;display:none;">
+        <div style="font-size:13px;padding:8px 12px;background:var(--card);border-radius:6px;margin-bottom:8px;">
+          진행: <b><span id="ac_prog_cur">0</span> / <span id="ac_prog_total">?</span></b> &nbsp;|&nbsp;
+          등록: <b style="color:var(--green)"><span id="ac_inserted">0</span>개</b> &nbsp;|&nbsp;
+          스킵: <b><span id="ac_skipped">0</span>개</b>
+        </div>
+        <div id="ac_log" style="height:220px;overflow-y:auto;font-size:11px;font-family:monospace;background:var(--card);border-radius:6px;padding:10px;border:1px solid var(--border);"></div>
+      </div>
+    </div>
+  </div>
+
   </div>
 
   <div class="toast" id="toast"></div>
@@ -883,6 +937,85 @@
       showToast(`${data.inserted}개 등록됐습니다.`, 'ok');
       document.getElementById('bulk_json').value = '';
       loadList();
+    }
+
+    // ── 자동 수집 ──
+    let autoCollectSource = null;
+
+    function acUpdateTags() {
+      const cat = document.getElementById('ac_category').value;
+      document.getElementById('ac_tags').value = cat || '';
+    }
+
+    function stopAutoCollect() {
+      if (autoCollectSource) { autoCollectSource.close(); autoCollectSource = null; }
+      document.getElementById('ac_startBtn').style.display = '';
+      document.getElementById('ac_stopBtn').style.display = 'none';
+    }
+
+    function startAutoCollect() {
+      const sido = document.getElementById('ac_sido').value;
+      const category = document.getElementById('ac_category').value;
+      const tags = document.getElementById('ac_tags').value.trim();
+      const cookie = document.getElementById('ac_cookie').value.trim();
+
+      if (!sido) return showToast('시도를 선택하세요.', 'err');
+      if (category && !tags) return showToast('검색 태그를 입력하세요.', 'err');
+
+      document.getElementById('ac_inserted').textContent = '0';
+      document.getElementById('ac_skipped').textContent = '0';
+      document.getElementById('ac_prog_cur').textContent = '0';
+      document.getElementById('ac_prog_total').textContent = '?';
+      document.getElementById('ac_log').innerHTML = '';
+      document.getElementById('ac_progress').style.display = 'block';
+      document.getElementById('ac_startBtn').style.display = 'none';
+      document.getElementById('ac_stopBtn').style.display = '';
+      document.getElementById('ac_status').textContent = '수집 중...';
+
+      const params = new URLSearchParams({ pw: adminPw, sido });
+      if (category) params.append('categories', category);
+      if (tags) params.append('query_tags', tags);
+      if (cookie) params.append('cookie', cookie);
+
+      autoCollectSource = new EventSource(`/api/admin/auto-collect?${params}`);
+      let inserted = 0, skipped = 0, cur = 0;
+
+      autoCollectSource.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        const log = document.getElementById('ac_log');
+        let line = '';
+
+        if (data.type === 'start') {
+          document.getElementById('ac_prog_total').textContent = data.total;
+          line = `🚀 시작: ${data.districts}개 시군구 × ${data.categories}개 카테고리 = 총 ${data.total}건`;
+        } else if (data.type === 'fetching') {
+          line = `<span style="color:#888">🔍 ${data.district} [${data.category}] 요청 중...</span>`;
+        } else if (data.type === 'result') {
+          cur++;
+          inserted += data.inserted; skipped += data.skipped;
+          document.getElementById('ac_prog_cur').textContent = cur;
+          document.getElementById('ac_inserted').textContent = inserted;
+          document.getElementById('ac_skipped').textContent = skipped;
+          line = `✅ ${data.district} [${data.category}] 발견:${data.found} 등록:${data.inserted} 스킵:${data.skipped}`;
+        } else if (data.type === 'skip') {
+          line = `<span style="color:#f90">⚠️ ${data.district}: ${data.msg}</span>`;
+        } else if (data.type === 'error') {
+          line = `<span style="color:var(--red)">❌ ${data.district || ''} ${data.category || ''}: ${data.msg}</span>`;
+        } else if (data.type === 'done') {
+          document.getElementById('ac_status').textContent = `완료! 총 ${data.totalInserted}개 등록`;
+          line = `<b>🏁 완료! 등록: ${data.totalInserted}개 / 스킵: ${data.totalSkipped}개</b>`;
+          stopAutoCollect();
+          loadList();
+        }
+        if (line) { log.innerHTML += `<div>${line}</div>`; log.scrollTop = log.scrollHeight; }
+      };
+
+      autoCollectSource.onerror = function() {
+        document.getElementById('ac_status').textContent = '연결 종료 (완료됐거나 오류 발생)';
+        const log = document.getElementById('ac_log');
+        if (log) { log.innerHTML += `<div style="color:var(--red)">❌ SSE 연결 종료</div>`; log.scrollTop = log.scrollHeight; }
+        stopAutoCollect();
+      };
     }
 
     // ── 토스트 ──
