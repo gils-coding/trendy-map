@@ -709,15 +709,16 @@ app.post('/api/admin/dedup', authAdmin, async (_req, res) => {
   const stores = result.rows;
   const toDelete = new Set();
 
+  const normName = s => s.normalize('NFC').replace(/\s+/g, '').toLowerCase();
   for (let i = 0; i < stores.length; i++) {
     if (toDelete.has(stores[i].id)) continue;
     for (let j = i + 1; j < stores.length; j++) {
       if (toDelete.has(stores[j].id)) continue;
-      if (stores[i].name !== stores[j].name) continue;
+      if (normName(stores[i].name) !== normName(stores[j].name)) continue;
       const dlat = Number(stores[i].lat) - Number(stores[j].lat);
       const dlng = Number(stores[i].lng) - Number(stores[j].lng);
       const dist = Math.sqrt(dlat * dlat + dlng * dlng) * 111000;
-      if (dist < 50) toDelete.add(stores[j].id);
+      if (dist < 100) toDelete.add(stores[j].id);
     }
   }
 
@@ -1125,10 +1126,11 @@ app.get('/api/admin/auto-collect', authAdmin, async (req, res) => {
       send({ type: 'fetching', district: gu, category: cat });
 
       try {
-        // 최대 8페이지(560개)까지 페이지네이션 수집
+        // 최대 8페이지까지 페이지네이션 수집 — ID 중복 체크로 start 파라미터 미동작 시에도 안전
         const MAX_PAGES = 8;
         const PAGE_SIZE = 70;
         let allPlaces = [];
+        const seenPageIds = new Set();
         let fetchError = null;
 
         for (let pageNum = 1; pageNum <= MAX_PAGES; pageNum++) {
@@ -1141,8 +1143,14 @@ app.get('/api/admin/auto-collect', authAdmin, async (req, res) => {
             break;
           }
           const pagePlaces = Object.values(apolloState).filter(v => v && v.__typename === 'PlaceSummary' && v.name);
-          allPlaces.push(...pagePlaces);
-          if (pagePlaces.length < PAGE_SIZE) break; // 마지막 페이지
+          // ID 중복 체크: start 파라미터 미동작 시 동일 결과 반복 방지
+          const newPlaces = pagePlaces.filter(p => {
+            if (!p.id || seenPageIds.has(p.id)) return false;
+            seenPageIds.add(p.id);
+            return true;
+          });
+          allPlaces.push(...newPlaces);
+          if (newPlaces.length === 0 || pagePlaces.length < PAGE_SIZE) break;
           if (pageNum < MAX_PAGES) await new Promise(r => setTimeout(r, 800 + Math.random() * 700));
         }
 
@@ -1153,9 +1161,12 @@ app.get('/api/admin/auto-collect', authAdmin, async (req, res) => {
         }
 
         const places = allPlaces;
+        // 발견된 모든 place ID를 즉시 등록 (스킵되더라도 purge 대상에서 제외)
+        for (const p of places) { if (p.id) foundNaverIds.add(String(p.id)); }
+
         let inserted = 0, skipped = 0;
 
-        // 지오코딩 병렬 처리 (순차 70개 → 동시 처리로 ~14s → ~0.5s)
+        // 지오코딩 병렬 처리
         const geocoded = await Promise.all(
           places.map(async (p) => {
             const addr = p.roadAddress || p.fullAddress || p.address || null;
@@ -1181,7 +1192,6 @@ app.get('/api/admin/auto-collect', authAdmin, async (req, res) => {
           const phone = p.virtualPhone || p.phone || null;
           const category = Array.isArray(p.category) ? p.category.join(', ') : (p.category || null);
           const naver_url = p.id ? `https://map.naver.com/p/entry/place/${p.id}` : null;
-          if (p.id) foundNaverIds.add(String(p.id));
 
           await pool.query(
             `INSERT INTO custom_stores (name,addr,phone,category,lat,lng,kakao_url,naver_url,query_tags) VALUES ($1,$2,$3,$4,$5,$6,NULL,$7,$8)`,
