@@ -740,11 +740,52 @@ app.post('/api/admin/bulk-import', authAdmin, async (req, res) => {
   let raw;
   const jsonStr = typeof json === 'string' ? json.trim() : JSON.stringify(json);
 
-  // HTML 입력 처리 (Naver Place SSR 페이지 — __NEXT_DATA__ 추출)
+  // HTML 입력 처리 — __APOLLO_STATE__ (pcmap) 또는 __NEXT_DATA__ 추출
   if (jsonStr.startsWith('<!') || jsonStr.startsWith('<html') || jsonStr.startsWith('<HTML')) {
-    const match = jsonStr.match(/<script[^>]*id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/i);
-    if (!match) return res.status(400).json({ error: 'HTML에서 __NEXT_DATA__를 찾을 수 없습니다. Naver Place 페이지 HTML이 맞는지 확인하세요.' });
-    try { raw = JSON.parse(match[1]); } catch { return res.status(400).json({ error: '__NEXT_DATA__ JSON 파싱 실패' }); }
+    // 1) __APOLLO_STATE__ 시도 (pcmap SPA)
+    const apolloMatch = jsonStr.match(/window\.__APOLLO_STATE__\s*=\s*(\{[\s\S]*?\});\s*(?:window\.|<\/script>)/);
+    if (apolloMatch) {
+      try {
+        const apolloState = JSON.parse(apolloMatch[1]);
+        // PlaceSummary:* 엔트리 전부 수집
+        const places = Object.values(apolloState).filter(v => v && v.__typename === 'PlaceSummary' && v.name);
+        if (places.length === 0) return res.status(400).json({ error: '__APOLLO_STATE__에서 PlaceSummary를 찾을 수 없습니다.' });
+        // 좌표 없으므로 Kakao geocoding으로 보완
+        const geocoded = [];
+        for (const p of places) {
+          const addr = p.roadAddress || p.fullAddress || p.address || null;
+          if (!addr || !p.name) continue;
+          let lat = null, lng = null;
+          try {
+            const gr = await axios.get('https://dapi.kakao.com/v2/local/search/address.json', {
+              params: { query: addr, size: 1 },
+              headers: { Authorization: `KakaoAK ${KAKAO_REST_KEY}` },
+              timeout: 5000,
+            });
+            const doc = gr.data.documents?.[0];
+            if (doc) { lat = parseFloat(doc.y); lng = parseFloat(doc.x); }
+          } catch { /* geocoding 실패 시 스킵 */ }
+          if (!lat || !lng) continue;
+          geocoded.push({
+            name: p.name,
+            roadAddress: p.roadAddress || null,
+            address: p.address || null,
+            fullAddress: p.fullAddress || null,
+            category: p.category || null,
+            phone: p.virtualPhone || p.phone || null,
+            id: p.id || null,
+            y: String(lat), x: String(lng),
+          });
+        }
+        raw = geocoded;
+        // 이후 Array.isArray(raw) 분기에서 처리
+      } catch (e) { return res.status(400).json({ error: '__APOLLO_STATE__ 파싱 실패: ' + e.message }); }
+    } else {
+      // 2) __NEXT_DATA__ 시도
+      const nextMatch = jsonStr.match(/<script[^>]*id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/i);
+      if (!nextMatch) return res.status(400).json({ error: 'HTML에서 __APOLLO_STATE__ 또는 __NEXT_DATA__를 찾을 수 없습니다.' });
+      try { raw = JSON.parse(nextMatch[1]); } catch { return res.status(400).json({ error: '__NEXT_DATA__ JSON 파싱 실패' }); }
+    }
   } else {
     try {
       raw = typeof json === 'string' ? JSON.parse(json) : json;
