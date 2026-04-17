@@ -3,7 +3,8 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta name="description" content="트렌디맵은 소금빵, 탕후루, 크로플, 마라탕, 버터떡, 두바이 쫀득쿠키 등 SNS에서 유행 중인 음식 매장을 내 주변 지도에서 쉽게 찾을 수 있는 무료 서비스입니다.">
+  <meta name="description"
+    content="트렌디맵은 소금빵, 탕후루, 크로플, 마라탕, 버터떡, 두바이 쫀득쿠키 등 SNS에서 유행 중인 음식 매장을 내 주변 지도에서 쉽게 찾을 수 있는 무료 서비스입니다.">
   <meta name="keywords" content="유행 맛집, 트렌드 음식, 소금빵 맛집, 탕후루 매장, 크로플 맛집, 마라탕 맛집, 버터떡, 두바이 초콜릿, 맛집 지도, 내 주변 맛집, 트렌디맵">
   <link rel="canonical" href="https://trendmap.up.railway.app/">
   <!-- Google Analytics -->
@@ -1353,7 +1354,8 @@
         </div>
         <p id="sidebar-count">지도를 움직이면 해당 지역 매장이 표시됩니다</p>
       </div>
-      <div class="ad-container" id="adContainerDesktop" style="padding:6px 8px;border-bottom:1.5px solid var(--border);background:var(--card);"></div>
+      <div class="ad-container" id="adContainerDesktop"
+        style="padding:6px 8px;border-bottom:1.5px solid var(--border);background:var(--card);"></div>
       <div class="store-list" id="storeList">
         <div class="loading">
           <div class="spinner"></div>매장 검색 중...
@@ -1399,7 +1401,8 @@
       </div>
       <p id="sheetCount">지도를 움직이면 매장이 표시됩니다</p>
     </div>
-    <div class="ad-container" id="adContainerMobile" style="padding:6px 8px;border-bottom:1.5px solid var(--border);background:var(--card);"></div>
+    <div class="ad-container" id="adContainerMobile"
+      style="padding:6px 8px;border-bottom:1.5px solid var(--border);background:var(--card);"></div>
     <div class="sheet-body" id="mobileList"></div>
   </div>
 
@@ -1498,7 +1501,8 @@
       // 커피·카페 체인
       '이디야', '스타벅스', '투썸플레이스', '컴포즈커피', '할리스', '파스쿠찌', '커피빈',
       '엔제리너스', '탐앤탐스', '빽다방', '더벤티', '폴바셋', '드롭탑', '카페베네', '공차', '요거트월드',
-      '메가MGC', '메가 MGC', '카페인중독', '매머드익스프레스', '빽다방', '백억커피',
+      '메가MGC', '메가 MGC', '카페인중독', '매머드익스프레스', '빽다방', '백억커피', '디저트39', '파란만잔',
+
       // 베이커리·디저트 체인
       '파리바게뜨', '뚜레쥬르', '성심당', '던킨', '크리스피크림', '배스킨라빈스', '나뚜루',
       '설빙', '빙그레', '롯데리아', '맥도날드', '버거킹', '써브웨이', 'KFC', '노티드',
@@ -1802,7 +1806,7 @@
     }
 
     // 화면 크기 변경 시 (회전, 폴드 등) 광고를 보이는 쪽으로 이동
-    window.addEventListener('resize', function() {
+    window.addEventListener('resize', function () {
       if (_adFitIns) {
         const isMobile = window.innerWidth <= 768;
         const target = isMobile

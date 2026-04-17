@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/hellosml403user/.claude/projects/c--Users-hellosml403user-Desktop-ksj-my-codes-trendy-map/memory/**)"
+    ]
+  }
+}
