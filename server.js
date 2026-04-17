@@ -667,8 +667,13 @@ function authAdmin(req, res, next) {
 }
 
 app.get('/api/admin/stores', authAdmin, async (req, res) => {
-  const result = await pool.query('SELECT * FROM custom_stores ORDER BY created_at DESC');
-  res.json({ total: result.rows.length, stores: result.rows });
+  const page = Math.max(1, parseInt(req.query.page) || 1);
+  const limit = 50;
+  const offset = (page - 1) * limit;
+  const countResult = await pool.query('SELECT COUNT(*) FROM custom_stores');
+  const total = parseInt(countResult.rows[0].count);
+  const result = await pool.query('SELECT * FROM custom_stores ORDER BY created_at DESC LIMIT $1 OFFSET $2', [limit, offset]);
+  res.json({ total, page, limit, pages: Math.ceil(total / limit), stores: result.rows });
 });
 
 app.post('/api/admin/stores', authAdmin, async (req, res) => {

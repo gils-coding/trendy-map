@@ -468,19 +468,19 @@
     <div class="card">
       <div class="card-header">
         📋 등록된 가게 목록
-        <button class="btn btn-secondary btn-sm" style="margin-left:auto;" onclick="loadList()">🔄 새로고침</button>
+        <button class="btn btn-secondary btn-sm" style="margin-left:auto;" onclick="loadList(1)">🔄 새로고침</button>
       </div>
       <div class="card-body" style="padding:0; overflow-x:auto;">
         <div id="listArea">
           <div class="empty-msg">로딩 중...</div>
         </div>
+        <div id="paginationArea" style="display:none;padding:12px 20px;border-top:1px solid var(--border);gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;">
+        </div>
       </div>
     </div>
 
-  </div>
-
-  <!-- 매장 제안 목록 -->
-  <div class="card">
+    <!-- 매장 제안 목록 -->
+    <div class="card">
     <div class="card-header">
       🏪 매장 제안 목록
       <button class="btn btn-secondary btn-sm" style="margin-left:auto;" onclick="loadSuggestions()">🔄 새로고침</button>
@@ -610,7 +610,7 @@
       adminPw = pw;
       document.getElementById('loginWrap').style.display = 'none';
       document.getElementById('mainWrap').classList.add('show');
-      loadList();
+      loadList(1);
       loadSuggestions();
       loadFoodSuggestions();
     }
@@ -684,7 +684,7 @@
       if (data.ok) {
         showToast(editingId ? '수정됐습니다.' : '등록됐습니다.', 'ok');
         resetForm();
-        loadList();
+        loadList(1);
       } else {
         showToast(data.error || '오류가 발생했습니다.', 'err');
       }
@@ -718,7 +718,7 @@
       if (!confirm(`"${name}"을 삭제할까요?`)) return;
       const res = await fetch(`/api/admin/stores/${id}?pw=${encodeURIComponent(adminPw)}`, { method: 'DELETE' });
       const data = await res.json();
-      if (data.ok) { showToast('삭제됐습니다.', 'ok'); loadList(); }
+      if (data.ok) { showToast('삭제됐습니다.', 'ok'); loadList(currentPage); }
       else showToast(data.error || '오류', 'err');
     }
 
@@ -737,13 +737,17 @@
     }
 
     // ── 목록 로드 ──
-    async function loadList() {
+    let currentPage = 1;
+    async function loadList(page) {
+      page = page || currentPage;
+      currentPage = page;
       document.getElementById('listArea').innerHTML = '<div class="empty-msg">로딩 중...</div>';
-      const res = await fetch(`/api/admin/stores?pw=${encodeURIComponent(adminPw)}`);
+      const res = await fetch(`/api/admin/stores?pw=${encodeURIComponent(adminPw)}&page=${page}`);
       const data = await res.json();
 
       if (!data.stores || data.stores.length === 0) {
         document.getElementById('listArea').innerHTML = '<div class="empty-msg">등록된 가게가 없습니다.</div>';
+        document.getElementById('paginationArea').style.display = 'none';
         return;
       }
 
@@ -774,6 +778,21 @@
         <tbody>${rows}</tbody>
       </table>
     `;
+
+      // 페이지네이션
+      const pa = document.getElementById('paginationArea');
+      if (data.pages <= 1) { pa.style.display = 'none'; return; }
+      pa.style.display = 'flex';
+      let btns = `<span style="font-size:12px;color:var(--muted)">${data.total}개 / ${data.pages}페이지</span>`;
+      btns += `<button class="btn btn-secondary btn-sm" onclick="loadList(1)" ${page===1?'disabled':''}>처음</button>`;
+      btns += `<button class="btn btn-secondary btn-sm" onclick="loadList(${page-1})" ${page===1?'disabled':''}>◀</button>`;
+      const start = Math.max(1, page-2), end = Math.min(data.pages, page+2);
+      for (let i=start; i<=end; i++) {
+        btns += `<button class="btn btn-sm" style="${i===page?'background:var(--accent);color:#fff;':'background:var(--card);border:1.5px solid var(--border);'}" onclick="loadList(${i})">${i}</button>`;
+      }
+      btns += `<button class="btn btn-secondary btn-sm" onclick="loadList(${page+1})" ${page===data.pages?'disabled':''}>▶</button>`;
+      btns += `<button class="btn btn-secondary btn-sm" onclick="loadList(${data.pages})" ${page===data.pages?'disabled':''}>끝</button>`;
+      pa.innerHTML = btns;
     }
 
     // ── 매장 제안 목록 ──
@@ -936,7 +955,7 @@
         </div>`;
       showToast(`${data.inserted}개 등록됐습니다.`, 'ok');
       document.getElementById('bulk_json').value = '';
-      loadList();
+      loadList(1);
     }
 
     // ── 자동 수집 ──
@@ -1005,7 +1024,7 @@
           document.getElementById('ac_status').textContent = `완료! 총 ${data.totalInserted}개 등록`;
           line = `<b>🏁 완료! 등록: ${data.totalInserted}개 / 스킵: ${data.totalSkipped}개</b>`;
           stopAutoCollect();
-          loadList();
+          loadList(1);
         }
         if (line) { log.innerHTML += `<div>${line}</div>`; log.scrollTop = log.scrollHeight; }
       };
