@@ -713,19 +713,47 @@ app.delete('/api/admin/suggestions/:id', authAdmin, async (req, res) => {
   res.json({ ok: true });
 });
 
+// 객체/배열에서 매장 목록처럼 생긴 배열을 재귀 탐색
+function findPlaceArray(obj, depth = 0) {
+  if (depth > 12) return null;
+  if (Array.isArray(obj) && obj.length > 0) {
+    const first = obj[0];
+    if (first && typeof first === 'object' && first.name &&
+        (first.x || first.y || first.lat || first.lng || first.roadAddress || first.address)) {
+      return obj;
+    }
+  }
+  if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
+    for (const key of Object.keys(obj)) {
+      const found = findPlaceArray(obj[key], depth + 1);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
 // 네이버맵 JSON 일괄 등록
 app.post('/api/admin/bulk-import', authAdmin, async (req, res) => {
   const { json, query_tags } = req.body;
   if (!json || !query_tags) return res.status(400).json({ error: 'json, query_tags 필수' });
 
   let raw;
-  try {
-    raw = typeof json === 'string' ? JSON.parse(json) : json;
-  } catch {
-    return res.status(400).json({ error: 'JSON 파싱 실패 — 올바른 JSON인지 확인하세요.' });
+  const jsonStr = typeof json === 'string' ? json.trim() : JSON.stringify(json);
+
+  // HTML 입력 처리 (Naver Place SSR 페이지 — __NEXT_DATA__ 추출)
+  if (jsonStr.startsWith('<!') || jsonStr.startsWith('<html') || jsonStr.startsWith('<HTML')) {
+    const match = jsonStr.match(/<script[^>]*id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/i);
+    if (!match) return res.status(400).json({ error: 'HTML에서 __NEXT_DATA__를 찾을 수 없습니다. Naver Place 페이지 HTML이 맞는지 확인하세요.' });
+    try { raw = JSON.parse(match[1]); } catch { return res.status(400).json({ error: '__NEXT_DATA__ JSON 파싱 실패' }); }
+  } else {
+    try {
+      raw = typeof json === 'string' ? JSON.parse(json) : json;
+    } catch {
+      return res.status(400).json({ error: 'JSON 파싱 실패 — 올바른 JSON인지 확인하세요.' });
+    }
   }
 
-  // 네이버맵 allSearch 응답 구조에서 list 추출
+  // 네이버맵 응답 구조에서 list 추출 (allSearch / pcmap / __NEXT_DATA__ 모두 지원)
   let list = [];
   if (Array.isArray(raw)) {
     list = raw;
@@ -736,7 +764,10 @@ app.post('/api/admin/bulk-import', authAdmin, async (req, res) => {
   } else if (Array.isArray(raw?.list)) {
     list = raw.list;
   } else {
-    return res.status(400).json({ error: '네이버맵 JSON 구조를 인식하지 못했습니다. result.place.list 또는 list 배열이 필요합니다.' });
+    // __NEXT_DATA__ 등 중첩 구조에서 재귀 탐색
+    const found = findPlaceArray(raw);
+    if (found) { list = found; }
+    else return res.status(400).json({ error: '매장 목록 배열을 찾을 수 없습니다. 올바른 Naver Place HTML 또는 JSON인지 확인하세요.' });
   }
 
   if (list.length === 0) return res.status(400).json({ error: '매장 목록이 비어있습니다.' });
