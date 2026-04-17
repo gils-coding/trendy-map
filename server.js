@@ -781,22 +781,45 @@ async function geocodeAddress(query) {
 }
 
 // Naver pcmap list?query 페이지 가져오기
+const _UA_POOL = [
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 13_4) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.4 Safari/605.1.15',
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:125.0) Gecko/20100101 Firefox/125.0',
+  'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+];
+const _REFERER_POOL = [
+  'https://map.naver.com/',
+  'https://map.naver.com/p/',
+  'https://naver.com/',
+  'https://search.naver.com/search.naver?query=',
+];
+
 async function fetchNaverPlaceList(query, x, y, cookie) {
+  const ua = _UA_POOL[Math.floor(Math.random() * _UA_POOL.length)];
+  const referer = _REFERER_POOL[Math.floor(Math.random() * _REFERER_POOL.length)]
+    + (Math.random() < 0.5 ? encodeURIComponent(query) : '');
+
+  // clientX/Y에 미세한 랜덤 오프셋 추가 (실제 브라우저 뷰포트처럼)
+  const jitterX = (Math.random() - 0.5) * 0.002;
+  const jitterY = (Math.random() - 0.5) * 0.002;
   const bounds = `${(x - 0.05).toFixed(7)};${(y - 0.05).toFixed(7)};${(x + 0.05).toFixed(7)};${(y + 0.05).toFixed(7)}`;
+
   const params = new URLSearchParams({
     query, x: String(x), y: String(y),
-    clientX: String(x), clientY: String(y),
+    clientX: (x + jitterX).toFixed(7), clientY: (y + jitterY).toFixed(7),
     bounds, display: '70',
     ts: String(Date.now()),
-    additionalHeight: '76', locale: 'ko',
+    additionalHeight: String(70 + Math.floor(Math.random() * 20)), locale: 'ko',
     mapUrl: `https://map.naver.com/p/search/${encodeURIComponent(query)}`,
   });
   const headers = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    'User-Agent': ua,
     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
     'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8',
-    'Referer': 'https://map.naver.com/',
-    'sec-ch-ua': '"Chromium";v="124", "Google Chrome";v="124"',
+    'Referer': referer,
+    'sec-ch-ua': ua.includes('Chrome') ? `"Chromium";v="124", "Google Chrome";v="124"` : undefined,
     'sec-fetch-dest': 'document',
     'sec-fetch-mode': 'navigate',
     'sec-fetch-site': 'cross-site',
@@ -1082,7 +1105,8 @@ app.get('/api/admin/auto-collect', authAdmin, async (req, res) => {
         send({ type: 'error', district: gu, category: cat, msg: e.message });
       }
 
-      await new Promise(r => setTimeout(r, 1500));
+      // 1.5~3.5초 랜덤 딜레이 (봇 감지 우회)
+      await new Promise(r => setTimeout(r, 1500 + Math.random() * 2000));
     }
   }
 
