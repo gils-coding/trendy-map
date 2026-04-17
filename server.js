@@ -794,9 +794,18 @@ app.post('/api/admin/bulk-import', authAdmin, async (req, res) => {
     }
   }
 
-  // 네이버맵 응답 구조에서 list 추출 (allSearch / pcmap / __NEXT_DATA__ 모두 지원)
+  // 네이버맵 응답 구조에서 list 추출 (allSearch / pcmap / __NEXT_DATA__ / PlaceSummary raw JSON 모두 지원)
+  // 키가 "PlaceSummary:ID" 형태인 raw JSON 감지
+  const isPlaceSummaryFormat = !Array.isArray(raw) &&
+    raw !== null && typeof raw === 'object' &&
+    Object.keys(raw).some(k => k.startsWith('PlaceSummary:'));
   let list = [];
-  if (Array.isArray(raw)) {
+  if (isPlaceSummaryFormat) {
+    list = Object.entries(raw)
+      .filter(([k]) => k.startsWith('PlaceSummary:'))
+      .map(([, v]) => v)
+      .filter(v => v && v.name);
+  } else if (Array.isArray(raw)) {
     list = raw;
   } else if (Array.isArray(raw?.result?.place?.list)) {
     list = raw.result.place.list;
@@ -815,16 +824,48 @@ app.post('/api/admin/bulk-import', authAdmin, async (req, res) => {
 
   let inserted = 0, skipped = 0, errors = [];
 
+  async function geocodeAddress(query) {
+    try {
+      const r = await axios.get('https://dapi.kakao.com/v2/local/search/address.json', {
+        params: { query, size: 1 },
+        headers: { Authorization: `KakaoAK ${KAKAO_REST_KEY}` },
+      });
+      const doc = r.data.documents?.[0];
+      if (doc) return { lat: parseFloat(doc.y), lng: parseFloat(doc.x) };
+      const kw = await axios.get('https://dapi.kakao.com/v2/local/search/keyword.json', {
+        params: { query, size: 1 },
+        headers: { Authorization: `KakaoAK ${KAKAO_REST_KEY}` },
+      });
+      const kd = kw.data.documents?.[0];
+      if (kd) return { lat: parseFloat(kd.y), lng: parseFloat(kd.x) };
+    } catch {}
+    return null;
+  }
+
   for (const item of list) {
     const name = item.name;
-    const addr = item.roadAddress || item.jibunAddress || item.address || item.fullAddress || null;
-    const lat = parseFloat(item.y ?? item.lat ?? item.mapy);
-    const lng = parseFloat(item.x ?? item.lng ?? item.mapx);
+    // PlaceSummary는 fullAddress 우선, allSearch는 roadAddress 우선
+    const addr = item.fullAddress || item.roadAddress || item.jibunAddress || item.address || null;
 
-    if (!name || !addr || isNaN(lat) || isNaN(lng)) {
-      errors.push(`스킵 (필드 누락): ${name || '이름없음'} | addr=${addr} lat=${item.y ?? item.lat} lng=${item.x ?? item.lng}`);
+    if (!name || !addr) {
+      errors.push(`스킵 (필드 누락): ${name || '이름없음'}`);
       skipped++;
       continue;
+    }
+
+    let lat = parseFloat(item.y ?? item.lat ?? item.mapy);
+    let lng = parseFloat(item.x ?? item.lng ?? item.mapx);
+
+    // 좌표 없으면 (PlaceSummary raw JSON 등) fullAddress로 지오코딩
+    if (isNaN(lat) || isNaN(lng)) {
+      const coords = await geocodeAddress(addr);
+      if (!coords) {
+        errors.push(`좌표 못 찾음 (스킵): ${name}`);
+        skipped++;
+        continue;
+      }
+      lat = coords.lat;
+      lng = coords.lng;
     }
 
     // 중복 체크 (이름 + 주소)
@@ -837,8 +878,10 @@ app.post('/api/admin/bulk-import', authAdmin, async (req, res) => {
       continue;
     }
 
-    const phone = item.tel || null;
-    const category = Array.isArray(item.category) ? item.category.join(', ') : (item.category || null);
+    const phone = item.phone || item.tel || null;
+    const category = Array.isArray(item.category)
+      ? item.category.join(', ')
+      : (item.category || null);
     const naver_url = item.id ? `https://map.naver.com/p/entry/place/${item.id}` : null;
 
     await pool.query(

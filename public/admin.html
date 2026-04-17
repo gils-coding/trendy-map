@@ -511,7 +511,9 @@
     <div class="card-header">📥 네이버맵 JSON 일괄 등록</div>
     <div class="card-body">
       <p style="font-size:12px;color:var(--muted);margin-bottom:14px;">
-        네이버맵에서 F12 → Network 탭 → <code>allSearch</code> 요청의 응답 JSON을 그대로 붙여넣으세요.
+        아래 두 가지 형식을 지원합니다.<br>
+        ① <b>allSearch 형식</b>: 네이버맵 F12 → Network → <code>allSearch</code> 응답 JSON<br>
+        ② <b>PlaceSummary 형식</b>: 네이버맵 F12 → Network → <code>list?query</code> 응답 JSON (키가 <code>PlaceSummary:ID</code> 구조) — 좌표 없으면 주소로 자동 지오코딩합니다.
       </p>
       <div class="form-grid">
         <div class="form-group full">
@@ -520,7 +522,7 @@
         </div>
         <div class="form-group full">
           <label>네이버맵 JSON <span class="req">*</span></label>
-          <textarea id="bulk_json" style="min-height:160px;font-family:monospace;font-size:11px;" placeholder='{"result":{"place":{"list":[...]}}}'></textarea>
+          <textarea id="bulk_json" style="min-height:160px;font-family:monospace;font-size:11px;" placeholder='{"PlaceSummary:12345678": {"name": "가게명", ...}, ...} 또는 {"result":{"place":{"list":[...]}}}'></textarea>
         </div>
       </div>
       <div style="margin-top:14px;display:flex;gap:10px;align-items:center;">
