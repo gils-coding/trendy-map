@@ -1046,12 +1046,20 @@ app.get('/api/admin/auto-collect', authAdmin, async (req, res) => {
         const places = Object.values(apolloState).filter(v => v && v.__typename === 'PlaceSummary' && v.name);
         let inserted = 0, skipped = 0;
 
-        for (const p of places) {
-          const addr = p.roadAddress || p.fullAddress || p.address || null;
-          if (!p.name || !addr) { skipped++; continue; }
+        // 지오코딩 병렬 처리 (순차 70개 → 동시 처리로 ~14s → ~0.5s)
+        const geocoded = await Promise.all(
+          places.map(async (p) => {
+            const addr = p.roadAddress || p.fullAddress || p.address || null;
+            if (!p.name || !addr) return null;
+            const c = await geocodeAddress(addr).catch(() => null);
+            if (!c) return null;
+            return { p, addr, c };
+          })
+        );
 
-          const c = await geocodeAddress(addr);
-          if (!c) { skipped++; continue; }
+        for (const item of geocoded) {
+          if (!item) { skipped++; continue; }
+          const { p, addr, c } = item;
 
           const dup = await pool.query('SELECT id FROM custom_stores WHERE name=$1 AND addr=$2', [p.name, addr]);
           if (dup.rows.length > 0) { skipped++; continue; }
