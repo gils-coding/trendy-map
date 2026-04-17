@@ -17,6 +17,7 @@ const rateLimit = require('express-rate-limit');
 const { Pool } = require('pg');
 
 const app = express();
+app.set('trust proxy', 1);
 app.use(cors({ origin: '*', methods: ['GET', 'POST', 'PUT', 'DELETE'] }));
 app.use(express.json({ limit: '10mb' }));
 
@@ -256,10 +257,14 @@ async function getRegionName(lat, lng) {
 async function searchNaverPlaceList(query, lat, lng, radius = 5000) {
   const results = [];
   const headers = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36',
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
     'Accept': 'application/json, text/plain, */*',
-    'Accept-Language': 'ko-KR,ko;q=0.9',
-    'Referer': `https://map.naver.com/p/search/${encodeURIComponent(query)}`,
+    'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
+    'Referer': `https://pcmap.place.naver.com/restaurant/list?query=${encodeURIComponent(query)}&x=${lng}&y=${lat}`,
+    'Origin': 'https://pcmap.place.naver.com',
+    'sec-fetch-dest': 'empty',
+    'sec-fetch-mode': 'cors',
+    'sec-fetch-site': 'same-origin',
   };
 
   for (let start = 1; start <= 81; start += 20) {
@@ -270,6 +275,12 @@ async function searchNaverPlaceList(query, lat, lng, radius = 5000) {
         timeout: 8000,
       });
       const data = res.data;
+      const contentType = res.headers['content-type'] || '';
+      if (contentType.includes('text/html') || (typeof data === 'string' && data.trim().startsWith('<'))) {
+        console.warn(`⚠️ pcmap HTML 반환 — 인증/차단 가능성. start=${start}`);
+        break;
+      }
+      console.log(`🗺️ pcmap 응답 (start=${start}): ${JSON.stringify(data)?.slice(0, 200)}`);
       const list = Array.isArray(data?.list) ? data.list
         : Array.isArray(data?.result?.place?.list) ? data.result.place.list
         : Array.isArray(data) ? data : [];
