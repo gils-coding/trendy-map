@@ -892,10 +892,23 @@ async function fetchNaverPlaceList(query, x, y, cookie, start = 1) {
     'sec-fetch-site': 'cross-site',
   };
   if (cookie) headers['Cookie'] = cookie;
-  const resp = await axios.get(`https://pcmap.place.naver.com/place/list?${params}`, {
-    headers, timeout: 15000, maxRedirects: 5,
-  });
-  return typeof resp.data === 'string' ? resp.data : JSON.stringify(resp.data);
+
+  // 429 시 최대 3회 지수 백오프 재시도
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const resp = await axios.get(`https://pcmap.place.naver.com/place/list?${params}`, {
+        headers, timeout: 15000, maxRedirects: 5,
+      });
+      return typeof resp.data === 'string' ? resp.data : JSON.stringify(resp.data);
+    } catch (err) {
+      if (err.response?.status === 429 && attempt < 2) {
+        const wait = (attempt + 1) * 8000 + Math.random() * 4000; // 8s, 16s
+        await new Promise(r => setTimeout(r, wait));
+        continue;
+      }
+      throw err;
+    }
+  }
 }
 
 // HTML에서 window.__APOLLO_STATE__ 추출 (중괄호 균형 탐색)
@@ -1203,6 +1216,9 @@ app.get('/api/admin/auto-collect', authAdmin, async (req, res) => {
         totalInserted += inserted;
         totalSkipped += skipped;
         send({ type: 'result', district: gu, category: cat, found: places.length, inserted, skipped });
+
+        // 카테고리 간 딜레이 (429 방지)
+        if (!stopped) await new Promise(r => setTimeout(r, 2000 + Math.random() * 2000));
       } catch (e) {
         send({ type: 'error', district: gu, category: cat, msg: e.message });
       }
