@@ -1155,7 +1155,10 @@ app.get('/api/admin/auto-collect', authAdmin, async (req, res) => {
             if (pageNum === 1) fetchError = '__APOLLO_STATE__ 없음 (차단됐거나 응답 구조 변경)';
             break;
           }
-          const pagePlaces = Object.values(apolloState).filter(v => v && v.__typename === 'PlaceSummary' && v.name);
+          const pagePlaces = Object.values(apolloState).filter(v =>
+            v && typeof v === 'object' && v.id && v.name && typeof v.name === 'string' &&
+            (v.roadAddress || v.address || v.fullAddress)
+          );
           // ID 중복 체크: start 파라미터 미동작 시 동일 결과 반복 방지
           const newPlaces = pagePlaces.filter(p => {
             if (!p.id || seenPageIds.has(p.id)) return false;
