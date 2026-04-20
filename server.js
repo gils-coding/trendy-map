@@ -703,6 +703,16 @@ app.delete('/api/admin/stores/:id', authAdmin, async (req, res) => {
   res.json({ ok: true });
 });
 
+app.delete('/api/admin/stores-by-category', authAdmin, async (req, res) => {
+  const { category } = req.query;
+  if (!category) return res.status(400).json({ error: 'category 필수' });
+  const result = await pool.query(
+    `DELETE FROM custom_stores WHERE query_tags ILIKE $1 OR category ILIKE $1`,
+    [`%${category}%`]
+  );
+  res.json({ ok: true, deleted: result.rowCount });
+});
+
 // 이름+좌표 기준 중복 제거 (좌표 50m 이내 + 이름 동일 → id 낮은 것 유지)
 app.post('/api/admin/dedup', authAdmin, async (_req, res) => {
   const result = await pool.query('SELECT id, name, lat, lng FROM custom_stores ORDER BY id ASC');
