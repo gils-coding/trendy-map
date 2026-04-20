@@ -778,6 +778,12 @@ const CATEGORY_KEYWORDS = {
   '소금빵': '소금빵', '탕후루': '탕후루',
 };
 
+// 버터떡·두바이는 PlaceSummary(/place/list), 소금빵·탕후루는 RestaurantListSummary(/restaurant/list)
+const CATEGORY_ENDPOINT = {
+  '버터떡': 'place', '두바이 쫀득쿠키': 'place',
+  '소금빵': 'restaurant', '탕후루': 'restaurant',
+};
+
 // 대도시 동 단위 데이터 (구 → 행정동 목록)
 const DONG_BY_GU = {
   '서울': {
@@ -965,7 +971,7 @@ const _REFERER_POOL = [
   'https://search.naver.com/search.naver?query=',
 ];
 
-async function fetchNaverPlaceList(query, x, y, cookie, start = 1) {
+async function fetchNaverPlaceList(query, x, y, cookie, start = 1, endpointType = 'place') {
   const ua = _UA_POOL[Math.floor(Math.random() * _UA_POOL.length)];
   const referer = _REFERER_POOL[Math.floor(Math.random() * _REFERER_POOL.length)]
     + (Math.random() < 0.5 ? encodeURIComponent(query) : '');
@@ -998,7 +1004,7 @@ async function fetchNaverPlaceList(query, x, y, cookie, start = 1) {
   // 429 시 최대 3회 지수 백오프 재시도
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
-      const resp = await axios.get(`https://pcmap.place.naver.com/place/list?${params}`, {
+      const resp = await axios.get(`https://pcmap.place.naver.com/${endpointType}/list?${params}`, {
         headers, timeout: 15000, maxRedirects: 5,
       });
       return typeof resp.data === 'string' ? resp.data : JSON.stringify(resp.data);
@@ -1260,6 +1266,8 @@ app.get('/api/admin/auto-collect', authAdmin, async (req, res) => {
 
       const keyword = CATEGORY_KEYWORDS[cat] || cat;
       const tags = catList.length === 1 && query_tags ? query_tags : cat;
+      const endpointType = CATEGORY_ENDPOINT[cat] || 'place';
+      const typename = endpointType === 'restaurant' ? 'RestaurantListSummary' : 'PlaceSummary';
 
       send({ type: 'fetching', district: gu, category: cat });
 
@@ -1274,16 +1282,19 @@ app.get('/api/admin/auto-collect', authAdmin, async (req, res) => {
         for (let pageNum = 1; pageNum <= MAX_PAGES; pageNum++) {
           if (stopped) break;
           const pageStart = (pageNum - 1) * PAGE_SIZE + 1;
-          const html = await fetchNaverPlaceList(`${gu} ${keyword}`, coords.lng, coords.lat, cookie, pageStart);
+          const html = await fetchNaverPlaceList(keyword, coords.lng, coords.lat, cookie, pageStart, endpointType);
           const apolloState = extractApolloState(html);
           if (!apolloState) {
             if (pageNum === 1) fetchError = '__APOLLO_STATE__ 없음 (차단됐거나 응답 구조 변경)';
             break;
           }
-          const pagePlaces = Object.values(apolloState).filter(v =>
-            v && typeof v === 'object' && v.id && v.name && typeof v.name === 'string' &&
-            (v.roadAddress || v.address || v.fullAddress)
-          );
+          const pagePlaces = Object.entries(apolloState)
+            .filter(([, v]) =>
+              v && typeof v === 'object' && v.__typename === typename &&
+              v.name && typeof v.name === 'string' &&
+              (v.roadAddress || v.address || v.fullAddress)
+            )
+            .map(([key, v]) => ({ ...v, id: v.id || key.split(':')[1] }));
           // ID 중복 체크: start 파라미터 미동작 시 동일 결과 반복 방지
           const newPlaces = pagePlaces.filter(p => {
             if (!p.id || seenPageIds.has(p.id)) return false;
