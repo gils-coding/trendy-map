@@ -1109,7 +1109,7 @@ app.get('/api/admin/auto-collect', authAdmin, async (req, res) => {
   res.flushHeaders();
 
   let stopped = false;
-  const keepAlive = setInterval(() => { if (!res.writableEnded) res.write(': ping\n\n'); }, 25000);
+  const keepAlive = setInterval(() => { if (!res.writableEnded) res.write('event: ping\ndata: {}\n\n'); }, 10000);
   req.on('close', () => { stopped = true; clearInterval(keepAlive); });
 
   const send = (data) => { if (!res.writableEnded) res.write(`data: ${JSON.stringify(data)}\n\n`); };
