@@ -1201,7 +1201,7 @@ app.post('/api/admin/bulk-import', authAdmin, async (req, res) => {
 // 자동 수집 SSE 엔드포인트
 app.get('/api/admin/auto-collect', authAdmin, async (req, res) => {
   const { sido, categories, cookie, query_tags, purge, startIndex: startIdxStr } = req.query;
-  if (!sido || !SIGUNGU_SERVER[sido]) {
+  if (!sido || (sido !== '전국' && !SIGUNGU_SERVER[sido])) {
     return res.status(400).json({ error: '유효한 sido 필수' });
   }
   const startIndex = Math.max(0, parseInt(startIdxStr) || 0);
@@ -1217,17 +1217,28 @@ app.get('/api/admin/auto-collect', authAdmin, async (req, res) => {
 
   const send = (data) => { if (!res.writableEnded) res.write(`data: ${JSON.stringify(data)}\n\n`); };
 
-  const districts = SIGUNGU_SERVER[sido];
   const catList = categories
     ? categories.split(',').map(s => s.trim()).filter(Boolean)
     : Object.keys(CATEGORY_KEYWORDS);
 
   // 동 단위 확장: 대도시는 구→동 목록으로 펼침
-  const searchUnits = districts.flatMap(gu => {
-    const dongList = DONG_BY_GU[sido]?.[gu];
-    if (dongList) return dongList.map(dong => ({ label: `${gu} ${dong}`, addr: `${sido} ${gu} ${dong}` }));
-    return [{ label: gu, addr: `${sido} ${gu}` }];
-  });
+  let searchUnits;
+  if (sido === '전국') {
+    searchUnits = Object.entries(SIGUNGU_SERVER).flatMap(([s, guList]) =>
+      guList.flatMap(gu => {
+        const dongList = DONG_BY_GU[s]?.[gu];
+        if (dongList) return dongList.map(dong => ({ label: `${s} ${gu} ${dong}`, addr: `${s} ${gu} ${dong}` }));
+        return [{ label: `${s} ${gu}`, addr: `${s} ${gu}` }];
+      })
+    );
+  } else {
+    const districts = SIGUNGU_SERVER[sido];
+    searchUnits = districts.flatMap(gu => {
+      const dongList = DONG_BY_GU[sido]?.[gu];
+      if (dongList) return dongList.map(dong => ({ label: `${gu} ${dong}`, addr: `${sido} ${gu} ${dong}` }));
+      return [{ label: gu, addr: `${sido} ${gu}` }];
+    });
+  }
 
   const unitsToProcess = searchUnits.slice(startIndex);
   send({ type: 'start', total: searchUnits.length * catList.length, startIndex, districts: unitsToProcess.length, categories: catList.length });
@@ -1348,7 +1359,7 @@ app.get('/api/admin/auto-collect', authAdmin, async (req, res) => {
   clearInterval(keepAlive);
 
   let totalPurged = 0;
-  if (purge === 'true' && !stopped && startIndex === 0) {
+  if (purge === 'true' && !stopped && startIndex === 0 && sido !== '전국') {
     const addrKeyword = SIDO_ADDR[sido] || sido;
     for (const cat of catList) {
       const existing = await pool.query(

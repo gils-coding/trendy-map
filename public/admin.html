@@ -433,8 +433,6 @@
               <div class="tag-hint" onclick="addTag('두바이 쫀득쿠키')">🍪 두바이 쫀득쿠키</div>
               <div class="tag-hint" onclick="addTag('소금빵')">🥐 소금빵</div>
               <div class="tag-hint" onclick="addTag('탕후루')">🍡 탕후루</div>
-              <div class="tag-hint" onclick="addTag('크로플')">🧇 크로플</div>
-              <div class="tag-hint" onclick="addTag('마라탕')">🌶️ 마라탕</div>
             </div>
           </div>
 
@@ -546,8 +544,9 @@
       <div class="form-grid">
         <div class="form-group">
           <label>시도 <span class="req">*</span></label>
-          <select id="ac_sido" onchange="acUpdateTags()">
+          <select id="ac_sido" onchange="acSidoChange()">
             <option value="">선택하세요</option>
+            <option value="전국">🌏 전국</option>
             <option>서울</option><option>경기</option><option>인천</option>
             <option>부산</option><option>대구</option><option>대전</option>
             <option>광주</option><option>울산</option><option>세종</option>
@@ -560,8 +559,7 @@
           <label>카테고리</label>
           <select id="ac_category" onchange="acUpdateTags()">
             <option value="">전체 카테고리</option>
-            <option>버터떡</option><option>두바이 쫀득쿠키</option><option>소금빵</option>
-            <option>탕후루</option><option>크로플</option><option>마라탕</option>
+            <option>버터떡</option><option>두바이 쫀득쿠키</option><option>소금빵</option><option>탕후루</option>
           </select>
         </div>
         <div class="form-group full">
@@ -573,7 +571,7 @@
           <textarea id="ac_cookie" style="min-height:56px;font-family:monospace;font-size:10px;" placeholder="NNB=...; NID_SES=...; (없으면 비워두세요)"></textarea>
         </div>
       </div>
-      <div style="margin-top:12px;padding:10px 12px;background:var(--card);border-radius:8px;border:1.5px solid var(--border);font-size:12px;">
+      <div id="ac_purge_row" style="margin-top:12px;padding:10px 12px;background:var(--card);border-radius:8px;border:1.5px solid var(--border);font-size:12px;">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;">
           <input type="checkbox" id="ac_purge" style="width:auto;" />
           수집 완료 후 이번에 발견되지 않은 가게 자동 삭제
@@ -998,6 +996,13 @@
     function acUpdateTags() {
       const cat = document.getElementById('ac_category').value;
       document.getElementById('ac_tags').value = cat || '';
+    }
+
+    function acSidoChange() {
+      acUpdateTags();
+      const sido = document.getElementById('ac_sido').value;
+      document.getElementById('ac_purge_row').style.display = sido === '전국' ? 'none' : '';
+      if (sido === '전국') document.getElementById('ac_purge').checked = false;
     }
 
     function stopAutoCollect() {
