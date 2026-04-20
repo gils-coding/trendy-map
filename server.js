@@ -780,8 +780,8 @@ const CATEGORY_KEYWORDS = {
 
 // 버터떡·두바이는 PlaceSummary(/place/list), 소금빵·탕후루는 RestaurantListSummary(/restaurant/list)
 const CATEGORY_ENDPOINT = {
-  '버터떡': 'place', '두바이 쫀득쿠키': 'place',
-  '소금빵': 'restaurant', '탕후루': 'restaurant',
+  '버터떡': 'place',
+  '두바이 쫀득쿠키': 'restaurant', '소금빵': 'restaurant', '탕후루': 'restaurant',
 };
 
 // 대도시 동 단위 데이터 (구 → 행정동 목록)
