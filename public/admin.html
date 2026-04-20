@@ -583,6 +583,7 @@
       <div style="margin-top:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
         <button id="ac_startBtn" class="btn btn-primary" onclick="startAutoCollect()">▶ 자동 수집 시작</button>
         <button id="ac_stopBtn" class="btn btn-secondary" onclick="stopAutoCollect()" style="display:none;">⏹ 중지</button>
+        <button id="ac_resumeBtn" class="btn btn-primary" onclick="startAutoCollect(acState.resumeUnitIndex)" style="display:none;background:#28a745;">↩ 이어서 수집</button>
         <span id="ac_status" style="font-size:13px;color:var(--muted)"></span>
       </div>
       <div id="ac_progress" style="margin-top:14px;display:none;">
@@ -983,6 +984,13 @@
       if (autoCollectSource) { autoCollectSource.close(); autoCollectSource = null; }
       document.getElementById('ac_startBtn').style.display = '';
       document.getElementById('ac_stopBtn').style.display = 'none';
+      const resumeBtn = document.getElementById('ac_resumeBtn');
+      if (!acState.isDone && acState.resumeUnitIndex > 0) {
+        resumeBtn.textContent = `↩ 이어서 수집 (${acState.resumeUnitIndex + 1}번째부터)`;
+        resumeBtn.style.display = '';
+      } else {
+        resumeBtn.style.display = 'none';
+      }
     }
 
     function startAutoCollect(resumeFrom) {
@@ -1005,6 +1013,10 @@
         document.getElementById('ac_log').innerHTML = '';
         document.getElementById('ac_progress').style.display = 'block';
         document.getElementById('ac_startBtn').style.display = 'none';
+        document.getElementById('ac_stopBtn').style.display = '';
+        document.getElementById('ac_resumeBtn').style.display = 'none';
+      } else {
+        document.getElementById('ac_resumeBtn').style.display = 'none';
         document.getElementById('ac_stopBtn').style.display = '';
       }
       document.getElementById('ac_status').textContent = isResume ? `재연결 중...` : '수집 중...';
