@@ -970,6 +970,8 @@
 
     // ── 자동 수집 ──
     let autoCollectSource = null;
+    let acUserStopped = false;
+    let acState = { inserted: 0, skipped: 0, cur: 0, total: 0, resumeUnitIndex: 0, isDone: false };
 
     function acUpdateTags() {
       const cat = document.getElementById('ac_category').value;
@@ -977,39 +979,44 @@
     }
 
     function stopAutoCollect() {
+      acUserStopped = true;
       if (autoCollectSource) { autoCollectSource.close(); autoCollectSource = null; }
       document.getElementById('ac_startBtn').style.display = '';
       document.getElementById('ac_stopBtn').style.display = 'none';
     }
 
-    function startAutoCollect() {
+    function startAutoCollect(resumeFrom) {
+      const isResume = resumeFrom !== undefined;
       const sido = document.getElementById('ac_sido').value;
       const category = document.getElementById('ac_category').value;
       const tags = document.getElementById('ac_tags').value.trim();
       const cookie = document.getElementById('ac_cookie').value.trim();
 
-      if (!sido) return showToast('시도를 선택하세요.', 'err');
-      if (category && !tags) return showToast('검색 태그를 입력하세요.', 'err');
-
-      document.getElementById('ac_inserted').textContent = '0';
-      document.getElementById('ac_skipped').textContent = '0';
-      document.getElementById('ac_purged').textContent = '0';
-      document.getElementById('ac_prog_cur').textContent = '0';
-      document.getElementById('ac_prog_total').textContent = '?';
-      document.getElementById('ac_log').innerHTML = '';
-      document.getElementById('ac_progress').style.display = 'block';
-      document.getElementById('ac_startBtn').style.display = 'none';
-      document.getElementById('ac_stopBtn').style.display = '';
-      document.getElementById('ac_status').textContent = '수집 중...';
+      if (!isResume) {
+        if (!sido) return showToast('시도를 선택하세요.', 'err');
+        if (category && !tags) return showToast('검색 태그를 입력하세요.', 'err');
+        acUserStopped = false;
+        acState = { inserted: 0, skipped: 0, cur: 0, total: 0, resumeUnitIndex: 0, isDone: false };
+        document.getElementById('ac_inserted').textContent = '0';
+        document.getElementById('ac_skipped').textContent = '0';
+        document.getElementById('ac_purged').textContent = '0';
+        document.getElementById('ac_prog_cur').textContent = '0';
+        document.getElementById('ac_prog_total').textContent = '?';
+        document.getElementById('ac_log').innerHTML = '';
+        document.getElementById('ac_progress').style.display = 'block';
+        document.getElementById('ac_startBtn').style.display = 'none';
+        document.getElementById('ac_stopBtn').style.display = '';
+      }
+      document.getElementById('ac_status').textContent = isResume ? `재연결 중...` : '수집 중...';
 
       const params = new URLSearchParams({ pw: adminPw, sido });
       if (category) params.append('categories', category);
       if (tags) params.append('query_tags', tags);
       if (cookie) params.append('cookie', cookie);
       if (document.getElementById('ac_purge').checked) params.append('purge', 'true');
+      if (isResume) params.append('startIndex', resumeFrom);
 
       autoCollectSource = new EventSource(`/api/admin/auto-collect?${params}`);
-      let inserted = 0, skipped = 0, cur = 0;
 
       autoCollectSource.onmessage = function(e) {
         const data = JSON.parse(e.data);
@@ -1017,26 +1024,34 @@
         let line = '';
 
         if (data.type === 'start') {
-          document.getElementById('ac_prog_total').textContent = data.total;
-          line = `🚀 시작: ${data.districts}개 시군구 × ${data.categories}개 카테고리 = 총 ${data.total}건`;
+          if (!isResume) {
+            acState.total = data.total;
+            document.getElementById('ac_prog_total').textContent = data.total;
+            line = `🚀 시작: 총 ${data.total}건`;
+          } else {
+            line = `<span style="color:#aaa">🔄 재연결 완료 (unit ${resumeFrom}부터 계속)</span>`;
+          }
         } else if (data.type === 'fetching') {
           line = `<span style="color:#888">🔍 ${data.district} [${data.category}] 요청 중...</span>`;
         } else if (data.type === 'result') {
-          cur++;
-          inserted += data.inserted; skipped += data.skipped;
-          document.getElementById('ac_prog_cur').textContent = cur;
-          document.getElementById('ac_inserted').textContent = inserted;
-          document.getElementById('ac_skipped').textContent = skipped;
+          acState.cur++;
+          acState.inserted += data.inserted;
+          acState.skipped += data.skipped;
+          acState.resumeUnitIndex = data.unitIndex;
+          document.getElementById('ac_prog_cur').textContent = acState.cur;
+          document.getElementById('ac_inserted').textContent = acState.inserted;
+          document.getElementById('ac_skipped').textContent = acState.skipped;
           line = `✅ ${data.district} [${data.category}] 발견:${data.found} 등록:${data.inserted} 스킵:${data.skipped}`;
         } else if (data.type === 'skip') {
           line = `<span style="color:#f90">⚠️ ${data.district}: ${data.msg}</span>`;
         } else if (data.type === 'error') {
           line = `<span style="color:var(--red)">❌ ${data.district || ''} ${data.category || ''}: ${data.msg}</span>`;
         } else if (data.type === 'done') {
+          acState.isDone = true;
           const purgedMsg = data.totalPurged ? ` / 삭제: ${data.totalPurged}개` : '';
-          document.getElementById('ac_status').textContent = `완료! 총 ${data.totalInserted}개 등록${purgedMsg}`;
+          document.getElementById('ac_status').textContent = `완료! 총 ${acState.inserted}개 등록${purgedMsg}`;
           if (data.totalPurged) document.getElementById('ac_purged').textContent = data.totalPurged;
-          line = `<b>🏁 완료! 등록: ${data.totalInserted}개 / 스킵: ${data.totalSkipped}개${purgedMsg}</b>`;
+          line = `<b>🏁 완료! 등록: ${acState.inserted}개 / 스킵: ${acState.skipped}개${purgedMsg}</b>`;
           stopAutoCollect();
           loadList(1);
         }
@@ -1044,10 +1059,18 @@
       };
 
       autoCollectSource.onerror = function() {
-        document.getElementById('ac_status').textContent = '연결 종료 (완료됐거나 오류 발생)';
+        if (autoCollectSource) { autoCollectSource.close(); autoCollectSource = null; }
+        if (acState.isDone || acUserStopped) return;
+
         const log = document.getElementById('ac_log');
-        if (log) { log.innerHTML += `<div style="color:var(--red)">❌ SSE 연결 종료</div>`; log.scrollTop = log.scrollHeight; }
-        stopAutoCollect();
+        if (log) {
+          log.innerHTML += `<div style="color:#f90">⚠️ 연결 끊김 — 3초 후 자동 재연결...</div>`;
+          log.scrollTop = log.scrollHeight;
+        }
+        document.getElementById('ac_status').textContent = '재연결 대기 중...';
+        setTimeout(() => {
+          if (!acState.isDone && !acUserStopped) startAutoCollect(acState.resumeUnitIndex);
+        }, 3000);
       };
     }
 

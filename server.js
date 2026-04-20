@@ -1190,10 +1190,11 @@ app.post('/api/admin/bulk-import', authAdmin, async (req, res) => {
 
 // 자동 수집 SSE 엔드포인트
 app.get('/api/admin/auto-collect', authAdmin, async (req, res) => {
-  const { sido, categories, cookie, query_tags, purge } = req.query;
+  const { sido, categories, cookie, query_tags, purge, startIndex: startIdxStr } = req.query;
   if (!sido || !SIGUNGU_SERVER[sido]) {
     return res.status(400).json({ error: '유효한 sido 필수' });
   }
+  const startIndex = Math.max(0, parseInt(startIdxStr) || 0);
 
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
@@ -1218,12 +1219,15 @@ app.get('/api/admin/auto-collect', authAdmin, async (req, res) => {
     return [{ label: gu, addr: `${sido} ${gu}` }];
   });
 
-  send({ type: 'start', total: searchUnits.length * catList.length, districts: searchUnits.length, categories: catList.length });
+  const unitsToProcess = searchUnits.slice(startIndex);
+  send({ type: 'start', total: searchUnits.length * catList.length, startIndex, districts: unitsToProcess.length, categories: catList.length });
 
   let totalInserted = 0, totalSkipped = 0;
   const foundNaverIds = new Set();
 
-  for (const unit of searchUnits) {
+  for (let ui = 0; ui < unitsToProcess.length; ui++) {
+    const unit = unitsToProcess[ui];
+    const absoluteUnitIdx = startIndex + ui;
     if (stopped) break;
     const gu = unit.label;
 
@@ -1318,7 +1322,7 @@ app.get('/api/admin/auto-collect', authAdmin, async (req, res) => {
 
         totalInserted += inserted;
         totalSkipped += skipped;
-        send({ type: 'result', district: gu, category: cat, found: places.length, inserted, skipped });
+        send({ type: 'result', district: gu, category: cat, found: places.length, inserted, skipped, unitIndex: absoluteUnitIdx });
 
         // 카테고리 간 딜레이 (429 방지)
         if (!stopped) await new Promise(r => setTimeout(r, 2000 + Math.random() * 2000));
@@ -1334,7 +1338,7 @@ app.get('/api/admin/auto-collect', authAdmin, async (req, res) => {
   clearInterval(keepAlive);
 
   let totalPurged = 0;
-  if (purge === 'true' && !stopped) {
+  if (purge === 'true' && !stopped && startIndex === 0) {
     const addrKeyword = SIDO_ADDR[sido] || sido;
     for (const cat of catList) {
       const existing = await pool.query(
