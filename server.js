@@ -1272,72 +1272,52 @@ app.get('/api/admin/auto-collect', authAdmin, async (req, res) => {
       send({ type: 'fetching', district: gu, category: cat });
 
       try {
-        // 최대 8페이지까지 페이지네이션 수집 — ID 중복 체크로 start 파라미터 미동작 시에도 안전
-        const MAX_PAGES = 8;
-        const PAGE_SIZE = 70;
-        let allPlaces = [];
-        const seenPageIds = new Set();
-        let fetchError = null;
-
-        for (let pageNum = 1; pageNum <= MAX_PAGES; pageNum++) {
-          if (stopped) break;
-          const pageStart = (pageNum - 1) * PAGE_SIZE + 1;
-          const html = await fetchNaverPlaceList(keyword, coords.lng, coords.lat, cookie, pageStart, endpointType);
-          const apolloState = extractApolloState(html);
-          if (!apolloState) {
-            if (pageNum === 1) fetchError = '__APOLLO_STATE__ 없음 (차단됐거나 응답 구조 변경)';
-            break;
-          }
-          const pagePlaces = Object.entries(apolloState)
-            .filter(([, v]) =>
-              v && typeof v === 'object' && v.__typename === typename &&
-              v.name && typeof v.name === 'string' &&
-              (v.roadAddress || v.address || v.fullAddress)
-            )
-            .map(([key, v]) => ({ ...v, id: v.id || key.split(':')[1] }));
-          // ID 중복 체크: start 파라미터 미동작 시 동일 결과 반복 방지
-          const newPlaces = pagePlaces.filter(p => {
-            if (!p.id || seenPageIds.has(p.id)) return false;
-            seenPageIds.add(p.id);
-            return true;
-          });
-          allPlaces.push(...newPlaces);
-          if (newPlaces.length === 0 || pagePlaces.length < PAGE_SIZE) break;
-          if (pageNum < MAX_PAGES) await new Promise(r => setTimeout(r, 800 + Math.random() * 700));
-        }
-
-        if (fetchError && allPlaces.length === 0) {
-          send({ type: 'error', district: gu, category: cat, msg: fetchError });
+        const html = await fetchNaverPlaceList(keyword, coords.lng, coords.lat, cookie, 1, endpointType);
+        const apolloState = extractApolloState(html);
+        if (!apolloState) {
+          send({ type: 'error', district: gu, category: cat, msg: '__APOLLO_STATE__ 없음 (차단됐거나 응답 구조 변경)' });
           await new Promise(r => setTimeout(r, 2000));
           continue;
         }
 
-        const places = allPlaces;
-        // 발견된 모든 place ID를 즉시 등록 (스킵되더라도 purge 대상에서 제외)
+        const isDongLevel = unit.addr.trim().split(/\s+/).length >= 3;
+        const seenIds = new Set();
+        const places = Object.entries(apolloState)
+          .filter(([, v]) =>
+            v && typeof v === 'object' && v.__typename === typename &&
+            v.name && typeof v.name === 'string' &&
+            (v.roadAddress || v.address || v.fullAddress) &&
+            v.x && v.y
+          )
+          .map(([key, v]) => ({ ...v, id: v.id || key.split(':')[1] }))
+          .filter(p => {
+            if (!p.id || seenIds.has(p.id)) return false;
+            seenIds.add(p.id);
+            // 동 단위 검색일 때만 1.5km 필터 적용 (구/군 단위는 필터 없음)
+            if (isDongLevel) {
+              const dlat = parseFloat(p.y) - coords.lat;
+              const dlng = parseFloat(p.x) - coords.lng;
+              const dist = Math.sqrt(dlat * dlat + dlng * dlng) * 111000;
+              if (dist > 1500) return false;
+            }
+            return true;
+          });
+
+        // 발견된 모든 place ID를 즉시 등록 (purge 대상에서 제외)
         for (const p of places) { if (p.id) foundNaverIds.add(String(p.id)); }
 
         let inserted = 0, skipped = 0;
 
-        // 지오코딩 병렬 처리
-        const geocoded = await Promise.all(
-          places.map(async (p) => {
-            const addr = p.roadAddress || p.fullAddress || p.address || null;
-            if (!p.name || !addr) return null;
-            const c = await geocodeAddress(addr).catch(() => null);
-            if (!c) return null;
-            return { p, addr, c };
-          })
-        );
-
-        for (const item of geocoded) {
-          if (!item) { skipped++; continue; }
-          const { p, addr, c } = item;
+        for (const p of places) {
+          const addr = p.roadAddress || p.fullAddress || p.address;
+          const lat = parseFloat(p.y);
+          const lng = parseFloat(p.x);
 
           const dup = await pool.query(
             `SELECT id FROM custom_stores WHERE name=$1 AND (addr=$2 OR (
               lat BETWEEN $3-0.0005 AND $3+0.0005 AND lng BETWEEN $4-0.0005 AND $4+0.0005
             ))`,
-            [p.name, addr, c.lat, c.lng]
+            [p.name, addr, lat, lng]
           );
           if (dup.rows.length > 0) { skipped++; continue; }
 
@@ -1347,7 +1327,7 @@ app.get('/api/admin/auto-collect', authAdmin, async (req, res) => {
 
           await pool.query(
             `INSERT INTO custom_stores (name,addr,phone,category,lat,lng,kakao_url,naver_url,query_tags) VALUES ($1,$2,$3,$4,$5,$6,NULL,$7,$8)`,
-            [p.name, addr, phone, category, c.lat, c.lng, naver_url, tags]
+            [p.name, addr, phone, category, lat, lng, naver_url, tags]
           );
           inserted++;
         }
