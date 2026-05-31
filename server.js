@@ -652,6 +652,22 @@ app.delete('/api/admin/food-suggestions/:id', authAdmin, async (req, res) => {
 // =====================================================
 // 관리자 API
 // =====================================================
+
+// Short-lived server-side store for Naver session cookies used by auto-collect.
+// Avoids passing the cookie as a URL query parameter (which would be logged).
+const collectCookieTokens = new Map(); // token → { cookie, expiresAt }
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of collectCookieTokens) if (v.expiresAt < now) collectCookieTokens.delete(k);
+}, 60_000);
+
+app.post('/api/admin/collect-token', authAdmin, (req, res) => {
+  const cookie = (req.body?.cookie || '').trim();
+  const token = crypto.randomUUID();
+  collectCookieTokens.set(token, { cookie, expiresAt: Date.now() + 5 * 60_000 });
+  res.json({ token });
+});
+
 function authAdmin(req, res, next) {
   const pw = req.query.pw || req.body?.pw || '';
   try {
@@ -1206,7 +1222,10 @@ app.post('/api/admin/bulk-import', authAdmin, async (req, res) => {
 
 // 자동 수집 SSE 엔드포인트
 app.get('/api/admin/auto-collect', authAdmin, async (req, res) => {
-  const { sido, categories, cookie, query_tags, purge, startIndex: startIdxStr } = req.query;
+  const { sido, categories, cookieToken, query_tags, purge, startIndex: startIdxStr } = req.query;
+  const cookieEntry = cookieToken ? collectCookieTokens.get(cookieToken) : null;
+  if (cookieToken) collectCookieTokens.delete(cookieToken); // single-use
+  const cookie = cookieEntry?.cookie || '';
   if (!sido || (sido !== '전국' && !SIGUNGU_SERVER[sido])) {
     return res.status(400).json({ error: '유효한 sido 필수' });
   }
@@ -1258,7 +1277,13 @@ app.get('/api/admin/auto-collect', authAdmin, async (req, res) => {
     if (stopped) break;
     const gu = unit.label;
 
-    const coords = await geocodeAddress(unit.addr);
+    let coords = await geocodeAddress(unit.addr);
+    if (!coords) {
+      // 동 단위 주소 실패 시 구 단위로 폴백 (예: "인천 계양구 오류왕길동" → "인천 계양구")
+      const parts = unit.addr.trim().split(/\s+/);
+      const fallbackAddr = parts.length >= 3 ? parts.slice(0, 2).join(' ') : null;
+      if (fallbackAddr) coords = await geocodeAddress(fallbackAddr);
+    }
     if (!coords) { send({ type: 'skip', district: gu, msg: '좌표 조회 실패' }); continue; }
 
     for (const cat of catList) {

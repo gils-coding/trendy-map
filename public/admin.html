@@ -622,6 +622,11 @@
   <div class="toast" id="toast"></div>
 
   <script>
+    function escapeHtml(str) {
+      if (str == null) return '';
+      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    }
+
     let adminPw = '';
     let editingId = null;
 
@@ -837,10 +842,10 @@
       const rows = data.suggestions.map(s => `
       <tr>
         <td>${s.id}</td>
-        <td><strong>${s.name}</strong></td>
-        <td>${s.region}</td>
-        <td>${s.category || '—'}</td>
-        <td style="max-width:160px;color:var(--muted);font-size:11px;">${s.memo || '—'}</td>
+        <td><strong>${escapeHtml(s.name)}</strong></td>
+        <td>${escapeHtml(s.region)}</td>
+        <td>${escapeHtml(s.category) || '—'}</td>
+        <td style="max-width:160px;color:var(--muted);font-size:11px;">${escapeHtml(s.memo) || '—'}</td>
         <td>
           <span style="font-size:10px;padding:2px 8px;border-radius:8px;background:${s.status === 'done' ? '#e8f5e9' : '#fff3e0'};color:${s.status === 'done' ? 'var(--green)' : 'var(--accent2)'};">
             ${s.status === 'done' ? '완료' : '대기'}
@@ -888,15 +893,17 @@
         document.getElementById('foodSuggestionArea').innerHTML = '<div class="empty-msg">제안된 음식이 없습니다.</div>';
         return;
       }
-      const rows = data.suggestions.map(s => `
+      const rows = data.suggestions.map(s => {
+        const safeLink = s.sns_link && /^https?:\/\//i.test(s.sns_link)
+          ? `<a href="${escapeHtml(s.sns_link)}" target="_blank" rel="noopener noreferrer" style="color:var(--accent);word-break:break-all;">링크</a>`
+          : '—';
+        return `
       <tr>
         <td>${s.id}</td>
-        <td><strong>${s.food_name}</strong></td>
-        <td style="max-width:200px;color:var(--muted);font-size:11px;">${s.reason || '—'}</td>
-        <td style="max-width:160px;font-size:11px;">
-          ${s.sns_link ? `<a href="${s.sns_link}" target="_blank" style="color:var(--accent);word-break:break-all;">링크</a>` : '—'}
-        </td>
-        <td style="font-size:11px;color:var(--muted);">${s.contact || '—'}</td>
+        <td><strong>${escapeHtml(s.food_name)}</strong></td>
+        <td style="max-width:200px;color:var(--muted);font-size:11px;">${escapeHtml(s.reason) || '—'}</td>
+        <td style="max-width:160px;font-size:11px;">${safeLink}</td>
+        <td style="font-size:11px;color:var(--muted);">${escapeHtml(s.contact) || '—'}</td>
         <td>
           <span style="font-size:10px;padding:2px 8px;border-radius:8px;background:${s.status === 'done' ? '#e8f5e9' : '#fff3e0'};color:${s.status === 'done' ? 'var(--green)' : 'var(--accent2)'};">
             ${s.status === 'done' ? '완료' : '대기'}
@@ -910,7 +917,8 @@
           </div>
         </td>
       </tr>
-    `).join('');
+    `;
+      }).join('');
       document.getElementById('foodSuggestionArea').innerHTML = `
       <table class="store-table">
         <thead><tr><th>ID</th><th>음식명</th><th>이유</th><th>SNS</th><th>연락처</th><th>상태</th><th>일자</th><th>관리</th></tr></thead>
@@ -1019,7 +1027,7 @@
       }
     }
 
-    function startAutoCollect(resumeFrom) {
+    async function startAutoCollect(resumeFrom) {
       const isResume = resumeFrom !== undefined;
       const sido = document.getElementById('ac_sido').value;
       const category = document.getElementById('ac_category').value;
@@ -1047,10 +1055,22 @@
       }
       document.getElementById('ac_status').textContent = isResume ? `재연결 중...` : '수집 중...';
 
+      // Exchange cookie for a short-lived server-side token so it never appears in the SSE URL/logs
+      let cookieToken = '';
+      if (cookie) {
+        const tokenRes = await fetch(`/api/admin/collect-token?pw=${encodeURIComponent(adminPw)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pw: adminPw, cookie })
+        });
+        const tokenData = await tokenRes.json();
+        cookieToken = tokenData.token || '';
+      }
+
       const params = new URLSearchParams({ pw: adminPw, sido });
       if (category) params.append('categories', category);
       if (tags) params.append('query_tags', tags);
-      if (cookie) params.append('cookie', cookie);
+      if (cookieToken) params.append('cookieToken', cookieToken);
       if (document.getElementById('ac_purge').checked) params.append('purge', 'true');
       if (isResume) params.append('startIndex', resumeFrom);
 
