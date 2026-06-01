@@ -168,7 +168,7 @@
     .tab-icon-ube img         { transform: scale(1.25); }
     .tab-icon-butterddeok img { transform: translate(-8%, -5%) scale(1.15); }
     .tab-icon-dubai img       { transform: scale(1.4); }
-    .tab-icon-sogeumbang img  { transform: scale(0.55); }
+    .tab-icon-sogeumbang img  { transform: scale(0.42); }
     .tab-icon-tanghuru img    { transform: scale(1.6); }
 
     .suggest-btn {
@@ -511,7 +511,7 @@
     .sidebar-icon-ube img         { transform: scale(1.25); }
     .sidebar-icon-butterddeok img { transform: translate(-8%, -5%) scale(1.15); }
     .sidebar-icon-dubai img       { transform: scale(1.4); }
-    .sidebar-icon-sogeumbang img  { transform: scale(0.55); }
+    .sidebar-icon-sogeumbang img  { transform: scale(0.42); }
     .sidebar-icon-tanghuru img    { transform: scale(1.6); }
     .store-item-body {
       flex: 1;
@@ -1920,7 +1920,8 @@
       const existKeys = new Set(markers.map(m => m._storeKey));
       const color = COLORS[currentQuery] || '#ff6b35';
       const markerImgStyle = currentIconClass === 'butterddeok'
-        ? 'transform:translate(-8%,-5%) scale(1.15);' : '';
+        ? 'transform:translate(-8%,-5%) scale(1.15);'
+        : currentIconClass === 'sogeumbang' ? 'transform:scale(0.42);' : '';
 
       stores.forEach(store => {
         if (!store.lat || !store.lng) return;
@@ -1959,7 +1960,8 @@
     function renderMarkers(stores) {
       const color = COLORS[currentQuery] || '#CCFFCC';
       const markerImgStyle = currentIconClass === 'butterddeok'
-        ? 'transform:translate(-8%,-5%) scale(1.15);' : '';
+        ? 'transform:translate(-8%,-5%) scale(1.15);'
+        : currentIconClass === 'sogeumbang' ? 'transform:scale(0.42);' : '';
       stores.forEach((store) => {
         if (!store.lat || !store.lng) return;
         const lat = store.lat, lng = store.lng;
