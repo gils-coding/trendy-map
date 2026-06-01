@@ -498,6 +498,21 @@
     .store-item-icon.dubai img       { transform: scale(1.2); }
     .store-item-icon.sogeumbang img  { transform: scale(0.75); }
     .store-item-icon.tanghuru img    { transform: scale(1.2); }
+    .sidebar-icon {
+      width: 28px; height: 28px; border-radius: 50%;
+      overflow: hidden; flex-shrink: 0;
+      display: inline-flex; align-items: center; justify-content: center;
+      vertical-align: middle;
+    }
+    .sidebar-icon img {
+      width: 100%; height: 100%; object-fit: cover;
+      transform-origin: center; display: block;
+    }
+    .sidebar-icon.ube img         { transform: scale(1.25); }
+    .sidebar-icon.butterddeok img { transform: translate(-8%, -5%); }
+    .sidebar-icon.dubai img       { transform: scale(1.4); }
+    .sidebar-icon.sogeumbang img  { transform: scale(0.65); }
+    .sidebar-icon.tanghuru img    { transform: scale(1.4); }
     .store-item-body {
       flex: 1;
       min-width: 0;
@@ -1783,8 +1798,8 @@
         : `${displayCount}곳`;
 
       document.getElementById('sidebar-title').innerHTML = totalCount > 0
-        ? `${currentEmoji} ${currentQuery} <span style="font-size:13px;font-weight:400;color:var(--muted)">${countLabel}</span>`
-        : `${currentEmoji} ${currentQuery}`;
+        ? `<span class="sidebar-icon sidebar-icon-${currentIconClass}"><img src="${currentIcon}" alt=""></span> ${currentQuery} <span style="font-size:13px;font-weight:400;color:var(--muted)">${countLabel}</span>`
+        : `<span class="sidebar-icon sidebar-icon-${currentIconClass}"><img src="${currentIcon}" alt=""></span> ${currentQuery}`;
       document.getElementById('sidebar-count').style.display = 'none';
 
       // 체크박스 표시/숨김
@@ -1810,8 +1825,8 @@
         const sheetTitle = document.getElementById('sheetTitle');
         const sheetCount = document.getElementById('sheetCount');
         if (sheetTitle) sheetTitle.innerHTML = totalCount > 0
-          ? `${currentEmoji} ${currentQuery} <span style="font-size:13px;font-weight:400;color:var(--muted)">${countLabel}</span>`
-          : `${currentEmoji} ${currentQuery}`;
+          ? `<span class="sidebar-icon sidebar-icon-${currentIconClass}"><img src="${currentIcon}" alt=""></span> ${currentQuery} <span style="font-size:13px;font-weight:400;color:var(--muted)">${countLabel}</span>`
+          : `<span class="sidebar-icon sidebar-icon-${currentIconClass}"><img src="${currentIcon}" alt=""></span> ${currentQuery}`;
         if (sheetCount) sheetCount.style.display = 'none';
         return;
       }
@@ -1819,8 +1834,8 @@
       const sheetTitle = document.getElementById('sheetTitle');
       const sheetCount = document.getElementById('sheetCount');
       if (sheetTitle) sheetTitle.innerHTML = totalCount > 0
-        ? `${currentEmoji} ${currentQuery} <span style="font-size:13px;font-weight:400;color:var(--muted)">${countLabel}</span>`
-        : `${currentEmoji} ${currentQuery}`;
+        ? `<span class="sidebar-icon sidebar-icon-${currentIconClass}"><img src="${currentIcon}" alt=""></span> ${currentQuery} <span style="font-size:13px;font-weight:400;color:var(--muted)">${countLabel}</span>`
+        : `<span class="sidebar-icon sidebar-icon-${currentIconClass}"><img src="${currentIcon}" alt=""></span> ${currentQuery}`;
       if (sheetCount) sheetCount.style.display = 'none';
 
       // 매장 목록 HTML
