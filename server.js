@@ -794,10 +794,10 @@ const CATEGORY_KEYWORDS = {
   '소금빵': '소금빵', '탕후루': '탕후루', '우베': '우베',
 };
 
-// 버터떡·두바이는 PlaceSummary(/place/list), 소금빵·탕후루·우베는 RestaurantListSummary(/restaurant/list)
+// 버터떡·우베는 PlaceSummary(/place/list), 두바이·소금빵·탕후루는 RestaurantListSummary(/restaurant/list)
 const CATEGORY_ENDPOINT = {
-  '버터떡': 'place',
-  '두바이 쫀득쿠키': 'restaurant', '소금빵': 'restaurant', '탕후루': 'restaurant', '우베': 'restaurant',
+  '버터떡': 'place', '우베': 'place',
+  '두바이 쫀득쿠키': 'restaurant', '소금빵': 'restaurant', '탕후루': 'restaurant',
 };
 
 // 대도시 동 단위 데이터 (구 → 행정동 목록)
