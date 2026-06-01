@@ -15,11 +15,22 @@ const path = require('path');
 const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
 const { Pool } = require('pg');
+const session = require('express-session');
+const passport = require('passport');
+const { Strategy: GoogleStrategy } = require('passport-google-oauth20');
 
 const app = express();
 app.set('trust proxy', 1);
 app.use(cors({ origin: '*', methods: ['GET', 'POST', 'PUT', 'DELETE'] }));
 app.use(express.json({ limit: '10mb' }));
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'trendy-map-dev-secret',
+  resave: false,
+  saveUninitialized: false,
+  cookie: { secure: process.env.NODE_ENV === 'production', maxAge: 7 * 24 * 60 * 60 * 1000 },
+}));
+app.use(passport.initialize());
+app.use(passport.session());
 
 // =====================================================
 // Rate Limiting
@@ -94,6 +105,16 @@ async function initDB() {
       created_at  TIMESTAMP DEFAULT NOW()
     )
   `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS store_recommendations (
+      id                SERIAL PRIMARY KEY,
+      user_google_id    TEXT NOT NULL,
+      store_identifier  TEXT NOT NULL,
+      category_context  TEXT NOT NULL,
+      created_at        TIMESTAMP DEFAULT NOW(),
+      UNIQUE(user_google_id, store_identifier, category_context)
+    )
+  `);
   console.log('✅ PostgreSQL 테이블 준비 완료');
 }
 
@@ -108,6 +129,27 @@ if (!ADMIN_PASSWORD) {
   console.error('⚠️  ADMIN_PASSWORD 환경변수가 설정되지 않았습니다. 서버를 종료합니다.');
   process.exit(1);
 }
+
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
+const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
+const BASE_URL = process.env.BASE_URL || 'http://localhost:8080';
+
+if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
+  passport.use(new GoogleStrategy({
+    clientID: GOOGLE_CLIENT_ID,
+    clientSecret: GOOGLE_CLIENT_SECRET,
+    callbackURL: `${BASE_URL}/auth/google/callback`,
+  }, (accessToken, refreshToken, profile, done) => {
+    done(null, {
+      id: profile.id,
+      name: profile.displayName,
+      email: profile.emails?.[0]?.value || null,
+      picture: profile.photos?.[0]?.value || null,
+    });
+  }));
+}
+passport.serializeUser((user, done) => done(null, user));
+passport.deserializeUser((user, done) => done(null, user));
 
 // =====================================================
 // 유틸: Haversine 거리(m)
@@ -1420,6 +1462,100 @@ app.get('/api/admin/geocode', authAdmin, async (req, res) => {
     res.json({ lat: parseFloat(doc.y), lng: parseFloat(doc.x) });
   } catch {
     res.status(500).json({ error: 'Geocoding 실패' });
+  }
+});
+
+// =====================================================
+// 인증 라우트 (Google OAuth)
+// =====================================================
+app.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+
+app.get('/auth/google/callback',
+  passport.authenticate('google', { failureRedirect: '/?login=failed' }),
+  (req, res) => {
+    res.send('<script>if(window.opener){window.opener.postMessage("login-success","*");}window.close();</script>');
+  }
+);
+
+app.get('/auth/me', (req, res) => {
+  res.json(req.isAuthenticated() ? { loggedIn: true, user: req.user } : { loggedIn: false });
+});
+
+app.post('/auth/logout', (req, res) => {
+  req.logout((err) => { res.json({ ok: !err }); });
+});
+
+// =====================================================
+// 추천 라우트
+// =====================================================
+function normalizeStoreId(name, addr) {
+  return ((name || '').toLowerCase().trim() + '||' + (addr || '').toLowerCase().trim());
+}
+
+app.post('/api/recommend', async (req, res) => {
+  if (!req.isAuthenticated()) return res.status(401).json({ error: '로그인이 필요합니다.' });
+  const { store_identifier, category_context } = req.body;
+  if (!store_identifier || !category_context) return res.status(400).json({ error: 'store_identifier, category_context 필수' });
+  try {
+    const existing = await pool.query(
+      'SELECT id FROM store_recommendations WHERE user_google_id=$1 AND store_identifier=$2 AND category_context=$3',
+      [req.user.id, store_identifier, category_context]
+    );
+    let recommended;
+    if (existing.rows.length > 0) {
+      await pool.query(
+        'DELETE FROM store_recommendations WHERE user_google_id=$1 AND store_identifier=$2 AND category_context=$3',
+        [req.user.id, store_identifier, category_context]
+      );
+      recommended = false;
+    } else {
+      await pool.query(
+        'INSERT INTO store_recommendations (user_google_id, store_identifier, category_context) VALUES ($1,$2,$3)',
+        [req.user.id, store_identifier, category_context]
+      );
+      recommended = true;
+    }
+    const countRes = await pool.query(
+      'SELECT COUNT(*) FROM store_recommendations WHERE store_identifier=$1 AND category_context=$2',
+      [store_identifier, category_context]
+    );
+    res.json({ recommended, count: parseInt(countRes.rows[0].count) });
+  } catch (err) {
+    console.error('추천 오류:', err.message);
+    res.status(500).json({ error: '오류가 발생했습니다.' });
+  }
+});
+
+app.get('/api/recommend/counts', async (req, res) => {
+  let identifiers = req.query['store_identifiers[]'] || req.query.store_identifiers;
+  const { category_context } = req.query;
+  if (!identifiers || !category_context) return res.json({});
+  if (!Array.isArray(identifiers)) identifiers = [identifiers];
+  try {
+    const countRes = await pool.query(
+      `SELECT store_identifier, COUNT(*) as count FROM store_recommendations
+       WHERE store_identifier = ANY($1) AND category_context=$2
+       GROUP BY store_identifier`,
+      [identifiers, category_context]
+    );
+    const map = {};
+    countRes.rows.forEach(r => { map[r.store_identifier] = { count: parseInt(r.count), recommended_by_me: false }; });
+    if (req.isAuthenticated()) {
+      const myRes = await pool.query(
+        `SELECT store_identifier FROM store_recommendations
+         WHERE user_google_id=$1 AND store_identifier = ANY($2) AND category_context=$3`,
+        [req.user.id, identifiers, category_context]
+      );
+      myRes.rows.forEach(r => {
+        if (!map[r.store_identifier]) map[r.store_identifier] = { count: 0, recommended_by_me: false };
+        map[r.store_identifier].recommended_by_me = true;
+      });
+    }
+    identifiers.forEach(id => { if (!map[id]) map[id] = { count: 0, recommended_by_me: false }; });
+    res.json(map);
+  } catch (err) {
+    console.error('추천 수 조회 오류:', err.message);
+    res.json({});
   }
 });
 

@@ -579,6 +579,31 @@
       border: 1px solid var(--border);
     }
 
+    .recommend-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      padding: 2px 8px;
+      border-radius: 12px;
+      border: 1.5px solid var(--border);
+      background: var(--surface);
+      color: var(--muted);
+      font-size: 11px;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.18s;
+      line-height: 1.4;
+    }
+    .recommend-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .recommend-btn.recommended {
+      background: #fff3ee;
+      border-color: var(--accent);
+      color: var(--accent);
+      font-weight: 600;
+    }
 
     /* 지도 */
     .map-area {
@@ -1855,6 +1880,7 @@
             <div class="store-meta">
               ${s.category ? `<span class="badge">${s.category.split('>').pop()}</span>` : ''}
               ${s.phone ? `<span class="badge">📞 ${s.phone}</span>` : ''}
+              <button class="recommend-btn" data-store-id="${escAttr(normalizeStoreId(s.name, s.addr))}" data-category="${escAttr(currentQuery)}" onclick="handleRecommend(event, this)">👍 <span class="rec-count">0</span></button>
             </div>
           </div>
         </div>`;
@@ -1864,8 +1890,92 @@
       const mobileList = document.getElementById('mobileList');
       if (mobileList) mobileList.innerHTML = listHTML;
 
+      fetchRecommendCounts(filteredStores, currentQuery);
+
       // 카카오 애드핏 광고 배치 (최초 1회만 생성, 이후 화면 변경 시 이동)
       initAdFit();
+    }
+
+    // ── 추천 기능 ──
+    function escAttr(s) { return (s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;'); }
+
+    function normalizeStoreId(name, addr) {
+      return ((name || '').toLowerCase().trim() + '||' + (addr || '').toLowerCase().trim());
+    }
+
+    async function fetchRecommendCounts(stores, categoryCtx) {
+      if (!stores || stores.length === 0) return;
+      try {
+        const params = new URLSearchParams({ category_context: categoryCtx });
+        stores.forEach(s => params.append('store_identifiers[]', normalizeStoreId(s.name, s.addr)));
+        const res = await fetch('/api/recommend/counts?' + params.toString());
+        const data = await res.json();
+        document.querySelectorAll('.recommend-btn').forEach(function(btn) {
+          const sid = btn.dataset.storeId;
+          if (data[sid]) {
+            btn.querySelector('.rec-count').textContent = data[sid].count;
+            if (data[sid].recommended_by_me) btn.classList.add('recommended');
+          }
+        });
+      } catch (e) { /* 카운트 조회 실패는 무시 */ }
+    }
+
+    function handleRecommend(event, btn) {
+      event.stopPropagation();
+      if (!window.currentUser || !window.currentUser.loggedIn) {
+        const popup = window.open('/auth/google', 'google-login', 'width=500,height=600,scrollbars=yes');
+        const timer = setInterval(function() {
+          if (popup && popup.closed) {
+            clearInterval(timer);
+            fetch('/auth/me').then(function(r){ return r.json(); }).then(function(d) {
+              window.currentUser = d;
+              if (d.loggedIn) doRecommend(btn);
+            });
+          }
+        }, 500);
+        return;
+      }
+      doRecommend(btn);
+    }
+
+    async function doRecommend(btn) {
+      const storeId = btn.dataset.storeId;
+      const category = btn.dataset.category;
+      const countEl = btn.querySelector('.rec-count');
+      const currentCount = parseInt(countEl.textContent) || 0;
+      const wasRecommended = btn.classList.contains('recommended');
+
+      if (wasRecommended) {
+        btn.classList.remove('recommended');
+        countEl.textContent = Math.max(0, currentCount - 1);
+      } else {
+        btn.classList.add('recommended');
+        countEl.textContent = currentCount + 1;
+      }
+
+      try {
+        const res = await fetch('/api/recommend', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ store_identifier: storeId, category_context: category }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          document.querySelectorAll('.recommend-btn').forEach(function(b) {
+            if (b.dataset.storeId === storeId && b.dataset.category === category) {
+              b.querySelector('.rec-count').textContent = data.count;
+              data.recommended ? b.classList.add('recommended') : b.classList.remove('recommended');
+            }
+          });
+        } else {
+          wasRecommended ? btn.classList.add('recommended') : btn.classList.remove('recommended');
+          countEl.textContent = currentCount;
+          if (data.error) alert(data.error);
+        }
+      } catch (e) {
+        wasRecommended ? btn.classList.add('recommended') : btn.classList.remove('recommended');
+        countEl.textContent = currentCount;
+      }
     }
 
     // 카카오 애드핏: ins 요소 1개를 만들어 화면에 보이는 컨테이너로 이동
@@ -2367,6 +2477,17 @@
     }
 
     window.addEventListener('load', function () {
+      // ── 구글 로그인 상태 초기화 ──
+      window.currentUser = { loggedIn: false };
+      fetch('/auth/me').then(function(r){ return r.json(); }).then(function(d){ window.currentUser = d; }).catch(function(){});
+
+      // popup에서 로그인 성공 메시지 수신
+      window.addEventListener('message', function(e) {
+        if (e.data === 'login-success') {
+          fetch('/auth/me').then(function(r){ return r.json(); }).then(function(d){ window.currentUser = d; }).catch(function(){});
+        }
+      });
+
       // ── 위치 모달 닫기 ──
       document.getElementById('locationModalClose').addEventListener('click', function () {
         document.getElementById('locationModal').classList.remove('show');
