@@ -152,14 +152,22 @@
       width: 22px;
       height: 22px;
       border-radius: 50%;
-      object-fit: cover;
+      overflow: hidden;
       flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
     }
-    .tab-icon-ube        { object-position: 50% 40%; }
-    .tab-icon-butterddeok{ object-position: 35% 65%; }
-    .tab-icon-dubai      { object-position: 50% 50%; }
-    .tab-icon-sogeumbang { object-position: 50% 50%; }
-    .tab-icon-tanghuru   { object-position: 50% 30%; }
+    .tab-icon img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform-origin: center;
+      display: block;
+    }
+    .tab-icon-ube img         { transform: scale(1.25); }
+    .tab-icon-butterddeok img { transform: translate(-8%, 5%); }
+    .tab-icon-sogeumbang img  { transform: scale(0.85); }
 
     .suggest-btn {
       padding: 6px 12px;
@@ -470,9 +478,22 @@
       width: 36px;
       height: 36px;
       border-radius: 50%;
-      object-fit: cover;
+      overflow: hidden;
       flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
     }
+    .store-item-icon img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform-origin: center;
+      display: block;
+    }
+    .store-item-icon.ube img         { transform: scale(1.25); }
+    .store-item-icon.butterddeok img { transform: translate(-8%, 5%); }
+    .store-item-icon.sogeumbang img  { transform: scale(0.85); }
     .store-item-body {
       flex: 1;
       min-width: 0;
@@ -1281,11 +1302,11 @@
         style="height:28px;width:28px;vertical-align:middle;margin-right:4px;object-fit:contain;"
         alt="마스코트">트렌디<span>맵</span></div>
     <div class="tabs">
-      <div class="tab active" data-query="우베" data-emoji="🟣"><img src="/icons/icon-ube.png" class="tab-icon tab-icon-ube" alt="우베"> 우베</div>
-      <div class="tab" data-query="버터떡" data-emoji="🥮"><img src="/icons/icon-butterddeok.png" class="tab-icon tab-icon-butterddeok" alt="버터떡"> 버터떡</div>
-      <div class="tab" data-query="두바이 쫀득쿠키" data-emoji="🍪"><img src="/icons/icon-dubai.png" class="tab-icon tab-icon-dubai" alt="두바이 쫀득쿠키"> 두바이 쫀득쿠키</div>
-      <div class="tab" data-query="소금빵" data-emoji="🥐"><img src="/icons/icon-sogeumbang.png" class="tab-icon tab-icon-sogeumbang" alt="소금빵"> 소금빵</div>
-      <div class="tab" data-query="탕후루" data-emoji="🍡"><img src="/icons/icon-tanghuru.png" class="tab-icon tab-icon-tanghuru" alt="탕후루"> 탕후루</div>
+      <div class="tab active" data-query="우베" data-emoji="🟣"><span class="tab-icon tab-icon-ube"><img src="/icons/icon-ube.png" alt="우베"></span> 우베</div>
+      <div class="tab" data-query="버터떡" data-emoji="🥮"><span class="tab-icon tab-icon-butterddeok"><img src="/icons/icon-butterddeok.png" alt="버터떡"></span> 버터떡</div>
+      <div class="tab" data-query="두바이 쫀득쿠키" data-emoji="🍪"><span class="tab-icon tab-icon-dubai"><img src="/icons/icon-dubai.png" alt="두바이 쫀득쿠키"></span> 두바이 쫀득쿠키</div>
+      <div class="tab" data-query="소금빵" data-emoji="🥐"><span class="tab-icon tab-icon-sogeumbang"><img src="/icons/icon-sogeumbang.png" alt="소금빵"></span> 소금빵</div>
+      <div class="tab" data-query="탕후루" data-emoji="🍡"><span class="tab-icon tab-icon-tanghuru"><img src="/icons/icon-tanghuru.png" alt="탕후루"></span> 탕후루</div>
     </div>
     <a href="/suggest.html" class="store-suggest-btn">🏪 매장/음식 제안</a>
     <a href="https://litt.ly/trendymap" target="_blank" class="donate-btn">☕ 커피 후원</a>
@@ -1529,9 +1550,14 @@
       '소금빵': '/icons/icon-sogeumbang.png',
       '탕후루': '/icons/icon-tanghuru.png',
     };
+    const ICON_CLASS_MAP = {
+      '우베': 'ube', '버터떡': 'butterddeok', '두바이 쫀득쿠키': 'dubai',
+      '소금빵': 'sogeumbang', '탕후루': 'tanghuru',
+    };
     let currentQuery = '우베';
     let currentEmoji = '🟣';
     let currentIcon = ICON_MAP['우베'];
+    let currentIconClass = 'ube';
     let searchTimer = null;
     let isSearching = false;
 
@@ -1800,7 +1826,7 @@
         const originalIndex = stores.indexOf(s);
         listHTML += `
         <div class="store-item" id="store-${originalIndex}" onclick="selectStore(${originalIndex})">
-          <img src="${currentIcon}" class="store-item-icon" alt="">
+          <span class="store-item-icon ${currentIconClass}"><img src="${currentIcon}" alt=""></span>
           <div class="store-item-body">
             <div class="store-name-row">
               <span class="store-name">${s.name}</span>
@@ -2103,6 +2129,7 @@
       currentQuery = tabEl.dataset.query;
       currentEmoji = tabEl.dataset.emoji;
       currentIcon = ICON_MAP[currentQuery] || '';
+      currentIconClass = ICON_CLASS_MAP[currentQuery] || '';
       updateCoupangBanner(currentQuery);
       clearMarkers(); // 탭 전환 시 이전 카테고리 마커 전부 제거
       loadStores();
