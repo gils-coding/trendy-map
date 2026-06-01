@@ -1292,7 +1292,9 @@ app.get('/api/admin/auto-collect', authAdmin, async (req, res) => {
       const keyword = CATEGORY_KEYWORDS[cat] || cat;
       const tags = catList.length === 1 && query_tags ? query_tags : cat;
       const endpointType = CATEGORY_ENDPOINT[cat] || 'place';
-      const typename = endpointType === 'restaurant' ? 'RestaurantListSummary' : 'PlaceSummary';
+      const validTypenames = endpointType === 'restaurant'
+        ? new Set(['RestaurantListSummary'])
+        : new Set(['PlaceSummary', 'PlaceListBusinessesItem']);
 
       send({ type: 'fetching', district: gu, category: cat });
 
@@ -1309,9 +1311,9 @@ app.get('/api/admin/auto-collect', authAdmin, async (req, res) => {
         const seenIds = new Set();
         const places = Object.entries(apolloState)
           .filter(([, v]) =>
-            v && typeof v === 'object' && v.__typename === typename &&
+            v && typeof v === 'object' && validTypenames.has(v.__typename) &&
             v.name && typeof v.name === 'string' &&
-            (v.roadAddress || v.address || v.fullAddress) &&
+            (v.roadAddress || v.address || v.fullAddress || v.__typename === 'PlaceListBusinessesItem') &&
             v.x && v.y
           )
           .map(([key, v]) => ({ ...v, id: v.id || key.split(':')[1] }))
