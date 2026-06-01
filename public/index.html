@@ -166,7 +166,7 @@
       display: block;
     }
     .tab-icon-ube img         { transform: scale(1.25); }
-    .tab-icon-butterddeok img { transform: translate(-8%, -5%); }
+    .tab-icon-butterddeok img { transform: translate(-8%, -5%) scale(1.15); }
     .tab-icon-dubai img       { transform: scale(1.4); }
     .tab-icon-sogeumbang img  { transform: scale(0.55); }
     .tab-icon-tanghuru img    { transform: scale(1.6); }
@@ -494,7 +494,7 @@
       display: block;
     }
     .store-item-icon.ube img         { transform: scale(1.25); }
-    .store-item-icon.butterddeok img { transform: translate(-8%, -5%); }
+    .store-item-icon.butterddeok img { transform: translate(-8%, -5%) scale(1.15); }
     .store-item-icon.dubai img       { transform: scale(1.2); }
     .store-item-icon.sogeumbang img  { transform: scale(0.75); }
     .store-item-icon.tanghuru img    { transform: scale(1.2); }
@@ -509,7 +509,7 @@
       transform-origin: center; display: block;
     }
     .sidebar-icon.ube img         { transform: scale(1.25); }
-    .sidebar-icon.butterddeok img { transform: translate(-8%, -5%); }
+    .sidebar-icon.butterddeok img { transform: translate(-8%, -5%) scale(1.15); }
     .sidebar-icon.dubai img       { transform: scale(1.4); }
     .sidebar-icon.sogeumbang img  { transform: scale(0.55); }
     .sidebar-icon.tanghuru img    { transform: scale(1.6); }
@@ -1919,13 +1919,15 @@
     function updateMarkers(stores) {
       const existKeys = new Set(markers.map(m => m._storeKey));
       const color = COLORS[currentQuery] || '#ff6b35';
+      const markerImgTransform = currentIconClass === 'butterddeok'
+        ? 'rotate(45deg) translate(-8%, -5%) scale(1.15)' : 'rotate(45deg)';
 
       stores.forEach(store => {
         if (!store.lat || !store.lng) return;
         const key = store.name + '|' + store.addr;
         if (existKeys.has(key)) return;
         const lat = store.lat, lng = store.lng;
-        const content = `<div onclick="selectStoreByLatLng(${lat},${lng})" style="background:${color};width:34px;height:34px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(0,0,0,0.2);cursor:pointer;border:2px solid rgba(0,0,0,0.15)"><img src="${currentIcon}" style="transform:rotate(45deg);width:22px;height:22px;border-radius:50%;object-fit:cover;pointer-events:none;"></div>`;
+        const content = `<div onclick="selectStoreByLatLng(${lat},${lng})" style="background:${color};width:34px;height:34px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(0,0,0,0.2);cursor:pointer;border:2px solid rgba(0,0,0,0.15)"><img src="${currentIcon}" style="transform:${markerImgTransform};width:26px;height:26px;border-radius:50%;object-fit:cover;pointer-events:none;"></div>`;
         const marker = new naver.maps.Marker({
           position: new naver.maps.LatLng(lat, lng),
           icon: { content, anchor: new naver.maps.Point(17, 34) },
@@ -1956,6 +1958,8 @@
 
     function renderMarkers(stores) {
       const color = COLORS[currentQuery] || '#CCFFCC';
+      const markerImgTransform = currentIconClass === 'butterddeok'
+        ? 'rotate(45deg) translate(-8%, -5%) scale(1.15)' : 'rotate(45deg)';
       stores.forEach((store) => {
         if (!store.lat || !store.lng) return;
         const lat = store.lat, lng = store.lng;
@@ -1963,7 +1967,7 @@
           position: new naver.maps.LatLng(lat, lng),
           map: naverMap,
           icon: {
-            content: `<div onclick="selectStoreByLatLng(${lat},${lng})" style="background:${color};width:34px;height:34px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(0,0,0,0.2);cursor:pointer;border:2px solid rgba(0,0,0,0.15)"><img src="${currentIcon}" style="transform:rotate(45deg);width:22px;height:22px;border-radius:50%;object-fit:cover;pointer-events:none;"></div>`,
+            content: `<div onclick="selectStoreByLatLng(${lat},${lng})" style="background:${color};width:34px;height:34px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(0,0,0,0.2);cursor:pointer;border:2px solid rgba(0,0,0,0.15)"><img src="${currentIcon}" style="transform:${markerImgTransform};width:26px;height:26px;border-radius:50%;object-fit:cover;pointer-events:none;"></div>`,
             anchor: new naver.maps.Point(17, 34),
           },
         });
