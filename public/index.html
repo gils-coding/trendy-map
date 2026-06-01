@@ -168,7 +168,8 @@
     .tab-icon-ube img         { transform: scale(1.25); }
     .tab-icon-butterddeok img { transform: translate(-8%, -5%) scale(1.15); }
     .tab-icon-dubai img       { transform: scale(1.4); }
-    .tab-icon-sogeumbang img  { transform: scale(0.30); }
+    .tab-icon-sogeumbang      { background: #fff; }
+    .tab-icon-sogeumbang img  { transform: scale(1.0); }
     .tab-icon-tanghuru img    { transform: scale(1.6); }
 
     .suggest-btn {
@@ -511,7 +512,8 @@
     .sidebar-icon-ube img         { transform: scale(1.25); }
     .sidebar-icon-butterddeok img { transform: translate(-8%, -5%) scale(1.15); }
     .sidebar-icon-dubai img       { transform: scale(1.4); }
-    .sidebar-icon-sogeumbang img  { transform: scale(0.30); }
+    .sidebar-icon-sogeumbang      { background: #fff; }
+    .sidebar-icon-sogeumbang img  { transform: scale(1.0); }
     .sidebar-icon-tanghuru img    { transform: scale(1.6); }
     .store-item-body {
       flex: 1;
@@ -1921,14 +1923,15 @@
       const color = COLORS[currentQuery] || '#ff6b35';
       const markerImgStyle = currentIconClass === 'butterddeok'
         ? 'transform:translate(-8%,-5%) scale(1.15);'
-        : currentIconClass === 'sogeumbang' ? 'transform:scale(0.30);' : '';
+        : '';
+      const markerSpanBg = currentIconClass === 'sogeumbang' ? 'background:#fff;' : '';
 
       stores.forEach(store => {
         if (!store.lat || !store.lng) return;
         const key = store.name + '|' + store.addr;
         if (existKeys.has(key)) return;
         const lat = store.lat, lng = store.lng;
-        const content = `<div onclick="selectStoreByLatLng(${lat},${lng})" style="background:${color};width:34px;height:34px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(0,0,0,0.2);cursor:pointer;border:2px solid rgba(0,0,0,0.15)"><span style="display:block;width:26px;height:26px;border-radius:50%;overflow:hidden;flex-shrink:0;transform:rotate(45deg)"><img src="${currentIcon}" style="${markerImgStyle}width:100%;height:100%;object-fit:cover;display:block;pointer-events:none;"></span></div>`;
+        const content = `<div onclick="selectStoreByLatLng(${lat},${lng})" style="background:${color};width:34px;height:34px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(0,0,0,0.2);cursor:pointer;border:2px solid rgba(0,0,0,0.15)"><span style="display:block;width:26px;height:26px;border-radius:50%;overflow:hidden;flex-shrink:0;transform:rotate(45deg);${markerSpanBg}"><img src="${currentIcon}" style="${markerImgStyle}width:100%;height:100%;object-fit:cover;display:block;pointer-events:none;"></span></div>`;
         const marker = new naver.maps.Marker({
           position: new naver.maps.LatLng(lat, lng),
           icon: { content, anchor: new naver.maps.Point(17, 34) },
@@ -1961,7 +1964,8 @@
       const color = COLORS[currentQuery] || '#CCFFCC';
       const markerImgStyle = currentIconClass === 'butterddeok'
         ? 'transform:translate(-8%,-5%) scale(1.15);'
-        : currentIconClass === 'sogeumbang' ? 'transform:scale(0.30);' : '';
+        : '';
+      const markerSpanBg = currentIconClass === 'sogeumbang' ? 'background:#fff;' : '';
       stores.forEach((store) => {
         if (!store.lat || !store.lng) return;
         const lat = store.lat, lng = store.lng;
@@ -1969,7 +1973,7 @@
           position: new naver.maps.LatLng(lat, lng),
           map: naverMap,
           icon: {
-            content: `<div onclick="selectStoreByLatLng(${lat},${lng})" style="background:${color};width:34px;height:34px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(0,0,0,0.2);cursor:pointer;border:2px solid rgba(0,0,0,0.15)"><span style="display:block;width:26px;height:26px;border-radius:50%;overflow:hidden;flex-shrink:0;transform:rotate(45deg)"><img src="${currentIcon}" style="${markerImgStyle}width:100%;height:100%;object-fit:cover;display:block;pointer-events:none;"></span></div>`,
+            content: `<div onclick="selectStoreByLatLng(${lat},${lng})" style="background:${color};width:34px;height:34px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(0,0,0,0.2);cursor:pointer;border:2px solid rgba(0,0,0,0.15)"><span style="display:block;width:26px;height:26px;border-radius:50%;overflow:hidden;flex-shrink:0;transform:rotate(45deg);${markerSpanBg}"><img src="${currentIcon}" style="${markerImgStyle}width:100%;height:100%;object-fit:cover;display:block;pointer-events:none;"></span></div>`,
             anchor: new naver.maps.Point(17, 34),
           },
         });
