@@ -462,6 +462,20 @@
       border-bottom: 1.5px solid var(--border);
       cursor: pointer;
       transition: background 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .store-item-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      object-fit: cover;
+      flex-shrink: 0;
+    }
+    .store-item-body {
+      flex: 1;
+      min-width: 0;
     }
 
     .store-item:hover,
@@ -1786,13 +1800,16 @@
         const originalIndex = stores.indexOf(s);
         listHTML += `
         <div class="store-item" id="store-${originalIndex}" onclick="selectStore(${originalIndex})">
-          <div class="store-name-row">
-            <span class="store-name">${s.name}</span>
-            <span class="store-addr-inline">📍 ${s.addr || ''}</span>
-          </div>
-          <div class="store-meta">
-            ${s.category ? `<span class="badge">${s.category.split('>').pop()}</span>` : ''}
-            ${s.phone ? `<span class="badge">📞 ${s.phone}</span>` : ''}
+          <img src="${currentIcon}" class="store-item-icon" alt="">
+          <div class="store-item-body">
+            <div class="store-name-row">
+              <span class="store-name">${s.name}</span>
+              <span class="store-addr-inline">📍 ${s.addr || ''}</span>
+            </div>
+            <div class="store-meta">
+              ${s.category ? `<span class="badge">${s.category.split('>').pop()}</span>` : ''}
+              ${s.phone ? `<span class="badge">📞 ${s.phone}</span>` : ''}
+            </div>
           </div>
         </div>`;
       });
