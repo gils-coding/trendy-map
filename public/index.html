@@ -1214,6 +1214,57 @@
       font-family: inherit;
     }
 
+    /* ── 로그인 확인 모달 ── */
+    .login-confirm-modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 9000;
+      align-items: center;
+      justify-content: center;
+    }
+    .login-confirm-modal.show {
+      display: flex;
+    }
+    .login-confirm-box {
+      background: #fff;
+      border-radius: 14px;
+      padding: 24px 20px;
+      max-width: 300px;
+      width: 90%;
+      text-align: center;
+    }
+    .login-confirm-title {
+      font-size: 14px;
+      color: var(--text);
+      margin-bottom: 18px;
+      line-height: 1.6;
+    }
+    .login-confirm-btns {
+      display: flex;
+      gap: 8px;
+    }
+    .login-confirm-btns button {
+      flex: 1;
+      padding: 10px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+      border: none;
+    }
+    .login-confirm-google {
+      background: var(--accent);
+      color: #fff;
+    }
+    .login-confirm-cancel {
+      background: var(--surface);
+      color: var(--muted);
+      border: 1.5px solid var(--border) !important;
+    }
+
     /* ── 매장 제안 버튼 (PC 헤더) ── */
     .store-suggest-btn {
       padding: 6px 12px;
@@ -1339,6 +1390,16 @@
       </div>
       <button class="location-modal-close" id="locationModalClose"
         onclick="document.getElementById('locationModal').classList.remove('show')">확인</button>
+    </div>
+  </div>
+
+  <div class="login-confirm-modal" id="loginConfirmModal" onclick="if(event.target===this)hideLoginModal()">
+    <div class="login-confirm-box">
+      <div class="login-confirm-title">로그인이 필요합니다.<br>로그인 하시겠습니까?</div>
+      <div class="login-confirm-btns">
+        <button class="login-confirm-google" onclick="doGoogleLogin()">구글 로그인</button>
+        <button class="login-confirm-cancel" onclick="hideLoginModal()">아니오</button>
+      </div>
     </div>
   </div>
 
@@ -1920,19 +1981,37 @@
       } catch (e) { /* 카운트 조회 실패는 무시 */ }
     }
 
+    var _pendingRecommendBtn = null;
+
+    function showLoginModal(btn) {
+      _pendingRecommendBtn = btn;
+      document.getElementById('loginConfirmModal').classList.add('show');
+    }
+
+    function hideLoginModal() {
+      document.getElementById('loginConfirmModal').classList.remove('show');
+      _pendingRecommendBtn = null;
+    }
+
+    function doGoogleLogin() {
+      hideLoginModal();
+      var btn = _pendingRecommendBtn;
+      var popup = window.open('/auth/google', 'google-login', 'width=500,height=600,scrollbars=yes');
+      var timer = setInterval(function() {
+        if (popup && popup.closed) {
+          clearInterval(timer);
+          fetch('/auth/me').then(function(r){ return r.json(); }).then(function(d) {
+            window.currentUser = d;
+            if (d.loggedIn && btn) doRecommend(btn);
+          });
+        }
+      }, 500);
+    }
+
     function handleRecommend(event, btn) {
       event.stopPropagation();
       if (!window.currentUser || !window.currentUser.loggedIn) {
-        const popup = window.open('/auth/google', 'google-login', 'width=500,height=600,scrollbars=yes');
-        const timer = setInterval(function() {
-          if (popup && popup.closed) {
-            clearInterval(timer);
-            fetch('/auth/me').then(function(r){ return r.json(); }).then(function(d) {
-              window.currentUser = d;
-              if (d.loggedIn) doRecommend(btn);
-            });
-          }
-        }, 500);
+        showLoginModal(btn);
         return;
       }
       doRecommend(btn);
