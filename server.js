@@ -495,6 +495,22 @@ app.get('/api/stores', async (req, res) => {
       .sort((a, b) => haversineM(y, x, a.lat, a.lng) - haversineM(y, x, b.lat, b.lng));
     console.log(`📦 최종 ${stores.length}개 (네이버 ${naverStores.length} + DB ${customStores.length})`);
 
+    // rec_count 일괄 조회
+    const identifiers = stores.map(s => normalizeStoreId(s.name, s.addr));
+    if (identifiers.length > 0) {
+      const countRes = await pool.query(
+        `SELECT store_identifier, COUNT(*) as count FROM store_recommendations
+         WHERE store_identifier = ANY($1) AND category_context = $2
+         GROUP BY store_identifier`,
+        [identifiers, query]
+      );
+      const countMap = {};
+      countRes.rows.forEach(r => { countMap[r.store_identifier] = parseInt(r.count); });
+      stores.forEach(s => { s.rec_count = countMap[normalizeStoreId(s.name, s.addr)] || 0; });
+    } else {
+      stores.forEach(s => { s.rec_count = 0; });
+    }
+
     res.json({ total: stores.length, stores });
   } catch (error) {
     console.error('오류:', error.response?.data || error.message);

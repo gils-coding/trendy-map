@@ -605,6 +605,15 @@
       font-weight: 600;
     }
 
+    .rec-hot-badge {
+      display: inline-flex; align-items: center;
+      font-size: 11px; font-weight: 600;
+      color: #d97706; background: #fff7ed;
+      border: 1px solid #fed7aa;
+      border-radius: 10px; padding: 1px 6px;
+      flex-shrink: 0;
+    }
+
     .save-btn {
       display: inline-flex; align-items: center; gap: 3px;
       padding: 2px 8px; border-radius: 12px;
@@ -1943,10 +1952,17 @@
           if (!allSeen.has(key)) { allSeen.add(key); window._allStores.push(s); }
         });
 
-        // 사이드바는 현재 중심에서 가까운 순으로 정렬
+        // 가중치 점수: 거리 70% + 추천수 30% (내림차순)
         var curLat = lat, curLng = lng;
+        var MAX_DIST_SCORE = 5000, MAX_REC_SCORE = 50;
         var sorted = window._allStores.slice().sort(function (a, b) {
-          return haversineClientM(curLat, curLng, a.lat, a.lng) - haversineClientM(curLat, curLng, b.lat, b.lng);
+          function score(s) {
+            var dist = haversineClientM(curLat, curLng, s.lat, s.lng);
+            var distScore = 1 - Math.min(dist, MAX_DIST_SCORE) / MAX_DIST_SCORE;
+            var recScore = Math.log1p(s.rec_count || 0) / Math.log1p(MAX_REC_SCORE);
+            return 0.7 * distScore + 0.3 * recScore;
+          }
+          return score(b) - score(a);
         });
         window._stores = sorted;
         renderStoreList(sorted);
@@ -2035,6 +2051,7 @@
           <div class="store-item-body">
             <div class="store-name-row">
               <span class="store-name">${s.name}</span>
+              ${s.rec_count > 0 ? `<span class="rec-hot-badge">🔥 ${s.rec_count}</span>` : ''}
               <span class="store-addr-inline">📍 ${s.addr || ''}</span>
             </div>
             <div class="store-meta">
