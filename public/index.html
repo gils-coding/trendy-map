@@ -1507,11 +1507,11 @@
         style="height:28px;width:28px;vertical-align:middle;margin-right:4px;object-fit:contain;"
         alt="마스코트">트렌디<span>맵</span></div>
     <div class="tabs">
-      <div class="tab active" data-query="우베" data-emoji="🟣"><span class="tab-icon tab-icon-ube"><img src="/icons/icon-ube.png" alt="우베"></span> 우베</div>
-      <div class="tab" data-query="버터떡" data-emoji="🥮"><span class="tab-icon tab-icon-butterddeok"><img src="/icons/icon-butterddeok.png" alt="버터떡"></span> 버터떡</div>
-      <div class="tab" data-query="두바이 쫀득쿠키" data-emoji="🍪"><span class="tab-icon tab-icon-dubai"><img src="/icons/icon-dubai.png" alt="두바이 쫀득쿠키"></span> 두바이 쫀득쿠키</div>
-      <div class="tab" data-query="소금빵" data-emoji="🥐"><span class="tab-icon tab-icon-sogeumbang"><img src="/icons/icon-sogeumbang.png" alt="소금빵"></span> 소금빵</div>
-      <div class="tab" data-query="탕후루" data-emoji="🍡"><span class="tab-icon tab-icon-tanghuru"><img src="/icons/icon-tanghuru.png" alt="탕후루"></span> 탕후루</div>
+      <div class="tab active" data-query="우베"><span class="tab-icon tab-icon-ube"><img src="/icons/icon-ube.png" alt="우베"></span> 우베</div>
+      <div class="tab" data-query="버터떡"><span class="tab-icon tab-icon-butterddeok"><img src="/icons/icon-butterddeok.png" alt="버터떡"></span> 버터떡</div>
+      <div class="tab" data-query="두바이 쫀득쿠키"><span class="tab-icon tab-icon-dubai"><img src="/icons/icon-dubai.png" alt="두바이 쫀득쿠키"></span> 두바이 쫀득쿠키</div>
+      <div class="tab" data-query="소금빵"><span class="tab-icon tab-icon-sogeumbang"><img src="/icons/icon-sogeumbang.png" alt="소금빵"></span> 소금빵</div>
+      <div class="tab" data-query="탕후루"><span class="tab-icon tab-icon-tanghuru"><img src="/icons/icon-tanghuru.png" alt="탕후루"></span> 탕후루</div>
     </div>
     <a href="/suggest.html" class="store-suggest-btn">🏪 매장/음식 제안</a>
     <a href="https://litt.ly/trendymap" target="_blank" class="donate-btn">☕ 커피 후원</a>
@@ -1762,7 +1762,6 @@
       '소금빵': 'sogeumbang', '탕후루': 'tanghuru',
     };
     let currentQuery = '우베';
-    let currentEmoji = '🟣';
     let currentIcon = ICON_MAP['우베'];
     let currentIconClass = 'ube';
     let searchTimer = null;
@@ -2766,7 +2765,6 @@
       document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
       tabEl.classList.add('active');
       currentQuery = tabEl.dataset.query;
-      currentEmoji = tabEl.dataset.emoji;
       currentIcon = ICON_MAP[currentQuery] || '';
       currentIconClass = ICON_CLASS_MAP[currentQuery] || '';
       updateCoupangBanner(currentQuery);
