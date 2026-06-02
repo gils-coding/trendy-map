@@ -169,7 +169,7 @@
     .tab-icon-butterddeok img { transform: translate(-8%, -5%) scale(1.15); }
     .tab-icon-dubai img       { transform: scale(1.4); }
     .tab-icon-sogeumbang      { background: #fff; }
-    .tab-icon-sogeumbang img  { transform: scale(1.0); }
+    .tab-icon-sogeumbang img  { transform: scale(1.5); }
     .tab-icon-tanghuru img    { transform: scale(1.6); }
 
     .suggest-btn {
@@ -497,7 +497,7 @@
     .store-item-icon.ube img         { transform: scale(1.25); }
     .store-item-icon.butterddeok img { transform: translate(-8%, -5%) scale(1.15); }
     .store-item-icon.dubai img       { transform: scale(1.2); }
-    .store-item-icon.sogeumbang img  { transform: scale(0.75); }
+    .store-item-icon.sogeumbang img  { transform: scale(1.4); }
     .store-item-icon.tanghuru img    { transform: scale(1.2); }
     .sidebar-icon {
       width: 28px; height: 28px; border-radius: 50%;
@@ -513,7 +513,7 @@
     .sidebar-icon-butterddeok img { transform: translate(-8%, -5%) scale(1.15); }
     .sidebar-icon-dubai img       { transform: scale(1.4); }
     .sidebar-icon-sogeumbang      { background: #fff; }
-    .sidebar-icon-sogeumbang img  { transform: scale(1.0); }
+    .sidebar-icon-sogeumbang img  { transform: scale(1.5); }
     .sidebar-icon-tanghuru img    { transform: scale(1.6); }
     .store-item-body {
       flex: 1;
@@ -2112,6 +2112,8 @@
       const color = COLORS[currentQuery] || '#ff6b35';
       const markerImgStyle = currentIconClass === 'butterddeok'
         ? 'transform:translate(-8%,-5%) scale(1.15);'
+        : currentIconClass === 'sogeumbang'
+        ? 'transform:scale(1.5);'
         : '';
       const markerSpanBg = currentIconClass === 'sogeumbang' ? 'background:#fff;' : '';
 
@@ -2153,6 +2155,8 @@
       const color = COLORS[currentQuery] || '#CCFFCC';
       const markerImgStyle = currentIconClass === 'butterddeok'
         ? 'transform:translate(-8%,-5%) scale(1.15);'
+        : currentIconClass === 'sogeumbang'
+        ? 'transform:scale(1.5);'
         : '';
       const markerSpanBg = currentIconClass === 'sogeumbang' ? 'background:#fff;' : '';
       stores.forEach((store) => {
