@@ -1927,22 +1927,28 @@
 
         var results = await Promise.all(fetchPromises);
 
-        function storeKey(s) {
-          var normName = (s.name || '').replace(/\s/g, '').toLowerCase();
-          var normAddr = (s.addr || '').replace(/\s/g, '').toLowerCase().slice(0, 15);
-          return normName + '|' + normAddr;
+        function normStoreName(s) {
+          return (s.name || '').replace(/\s/g, '').toLowerCase();
+        }
+        function isSameStore(a, b) {
+          if (normStoreName(a) !== normStoreName(b)) return false;
+          if (a.lat && a.lng && b.lat && b.lng) {
+            return haversineClientM(a.lat, a.lng, b.lat, b.lng) <= 100;
+          }
+          // 좌표 없으면 주소 앞 10자 비교
+          var addrA = (a.addr || '').replace(/\s/g, '').toLowerCase();
+          var addrB = (b.addr || '').replace(/\s/g, '').toLowerCase();
+          return addrA.slice(0, 10) === addrB.slice(0, 10);
         }
 
-        var seen = {};
         var merged = [];
         results.forEach(function (data) {
           if (!data.stores) return;
           data.stores.forEach(function (store) {
-            var key = store.place_url || storeKey(store);
-            if (!seen[key]) {
-              seen[key] = true;
-              merged.push(store);
-            }
+            var dup = store.place_url
+              ? merged.some(function (m) { return m.place_url === store.place_url; })
+              : merged.some(function (m) { return isSameStore(m, store); });
+            if (!dup) merged.push(store);
           });
         });
 
@@ -1952,10 +1958,9 @@
 
         // 결과 누적 (탭 전환 전까지 이전 지역 마커 유지)
         if (!window._allStores) window._allStores = [];
-        var allSeen = new Set(window._allStores.map(function (s) { return storeKey(s); }));
         merged.forEach(function (s) {
-          var key = storeKey(s);
-          if (!allSeen.has(key)) { allSeen.add(key); window._allStores.push(s); }
+          var dup = window._allStores.some(function (m) { return isSameStore(m, s); });
+          if (!dup) window._allStores.push(s);
         });
 
         // 가중치 점수: 거리 70% + 추천수 30% (내림차순)
