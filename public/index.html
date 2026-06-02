@@ -624,11 +624,17 @@
     .save-btn:hover { border-color: #3b82f6; color: #3b82f6; }
     .save-btn.saved { background: #eff6ff; border-color: #3b82f6; color: #3b82f6; font-weight: 600; }
 
+    .sidebar-header-main-wrap {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+    }
+    .sidebar-header-main {
+      display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; min-width: 0;
+    }
     .my-lists-btn {
       padding: 3px 10px; border-radius: 12px;
       border: 1.5px solid var(--border); background: var(--surface);
       color: var(--muted); font-size: 11px; font-family: inherit;
-      cursor: pointer; transition: all 0.18s; margin-left: 8px; white-space: nowrap;
+      cursor: pointer; transition: all 0.18s; white-space: nowrap; flex-shrink: 0;
     }
     .my-lists-btn:hover { border-color: var(--accent); color: var(--accent); }
 
@@ -1607,12 +1613,14 @@
         <div class="handle-bar"></div>
       </div>
       <div class="sidebar-header">
-        <div style="display:flex;align-items:center;gap:0;flex-wrap:wrap;">
-          <h2 id="sidebar-title" style="margin:0;">🟣 우베</h2>
-          <label class="franchise-filter" id="franchiseFilterLabel" style="display:none;margin-left:8px;">
-            <input type="checkbox" id="franchiseFilterCheck" onchange="onFranchiseFilterChange()">
-            프랜차이즈 제외
-          </label>
+        <div class="sidebar-header-main-wrap">
+          <div class="sidebar-header-main">
+            <h2 id="sidebar-title" style="margin:0;">🟣 우베</h2>
+            <label class="franchise-filter" id="franchiseFilterLabel" style="display:none;">
+              <input type="checkbox" id="franchiseFilterCheck" onchange="onFranchiseFilterChange()">
+              프랜차이즈 제외
+            </label>
+          </div>
           <button class="my-lists-btn" onclick="openMyListsPanel()">🔖 내 리스트</button>
         </div>
         <p id="sidebar-count">지도를 움직이면 해당 지역 매장이 표시됩니다</p>
@@ -1655,12 +1663,14 @@
   <div class="mobile-sheet" id="mobileSheet">
     <div class="sheet-drag"></div>
     <div class="sheet-header">
-      <div style="display:flex;align-items:center;gap:0;flex-wrap:wrap;">
-        <h2 id="sheetTitle" style="margin:0;">🟣 우베</h2>
-        <label class="franchise-filter" id="franchiseFilterLabelMobile" style="display:none;margin-left:8px;">
-          <input type="checkbox" id="franchiseFilterCheckMobile" onchange="onFranchiseFilterChangeMobile()">
-          프랜차이즈 제외
-        </label>
+      <div class="sidebar-header-main-wrap">
+        <div class="sidebar-header-main">
+          <h2 id="sheetTitle" style="margin:0;">🟣 우베</h2>
+          <label class="franchise-filter" id="franchiseFilterLabelMobile" style="display:none;">
+            <input type="checkbox" id="franchiseFilterCheckMobile" onchange="onFranchiseFilterChangeMobile()">
+            프랜차이즈 제외
+          </label>
+        </div>
         <button class="my-lists-btn" onclick="openMyListsPanel()">🔖 내 리스트</button>
       </div>
       <p id="sheetCount">지도를 움직이면 매장이 표시됩니다</p>
