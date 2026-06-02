@@ -627,9 +627,6 @@
     .sidebar-header-main-wrap {
       display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
     }
-    .sidebar-header-main {
-      display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; min-width: 0;
-    }
     .my-lists-btn {
       padding: 3px 10px; border-radius: 12px;
       border: 1.5px solid var(--border); background: var(--surface);
@@ -1614,13 +1611,11 @@
       </div>
       <div class="sidebar-header">
         <div class="sidebar-header-main-wrap">
-          <div class="sidebar-header-main">
-            <h2 id="sidebar-title" style="margin:0;">🟣 우베</h2>
-            <label class="franchise-filter" id="franchiseFilterLabel" style="display:none;">
-              <input type="checkbox" id="franchiseFilterCheck" onchange="onFranchiseFilterChange()">
-              프랜차이즈 제외
-            </label>
-          </div>
+          <h2 id="sidebar-title" style="margin:0;">🟣 우베</h2>
+          <label class="franchise-filter" id="franchiseFilterLabel" style="display:none;">
+            <input type="checkbox" id="franchiseFilterCheck" onchange="onFranchiseFilterChange()">
+            프랜차이즈 제외
+          </label>
           <button class="my-lists-btn" onclick="openMyListsPanel()">🔖 내 리스트</button>
         </div>
         <p id="sidebar-count">지도를 움직이면 해당 지역 매장이 표시됩니다</p>
@@ -1664,13 +1659,11 @@
     <div class="sheet-drag"></div>
     <div class="sheet-header">
       <div class="sidebar-header-main-wrap">
-        <div class="sidebar-header-main">
-          <h2 id="sheetTitle" style="margin:0;">🟣 우베</h2>
-          <label class="franchise-filter" id="franchiseFilterLabelMobile" style="display:none;">
-            <input type="checkbox" id="franchiseFilterCheckMobile" onchange="onFranchiseFilterChangeMobile()">
-            프랜차이즈 제외
-          </label>
-        </div>
+        <h2 id="sheetTitle" style="margin:0;">🟣 우베</h2>
+        <label class="franchise-filter" id="franchiseFilterLabelMobile" style="display:none;">
+          <input type="checkbox" id="franchiseFilterCheckMobile" onchange="onFranchiseFilterChangeMobile()">
+          프랜차이즈 제외
+        </label>
         <button class="my-lists-btn" onclick="openMyListsPanel()">🔖 내 리스트</button>
       </div>
       <p id="sheetCount">지도를 움직이면 매장이 표시됩니다</p>
