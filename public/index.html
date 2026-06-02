@@ -605,6 +605,56 @@
       font-weight: 600;
     }
 
+    .save-btn {
+      display: inline-flex; align-items: center; gap: 3px;
+      padding: 2px 8px; border-radius: 12px;
+      border: 1.5px solid var(--border); background: var(--surface);
+      color: var(--muted); font-size: 11px; font-family: inherit;
+      cursor: pointer; transition: all 0.18s; line-height: 1.4;
+    }
+    .save-btn:hover { border-color: #3b82f6; color: #3b82f6; }
+    .save-btn.saved { background: #eff6ff; border-color: #3b82f6; color: #3b82f6; font-weight: 600; }
+
+    .my-lists-btn {
+      padding: 3px 10px; border-radius: 12px;
+      border: 1.5px solid var(--border); background: var(--surface);
+      color: var(--muted); font-size: 11px; font-family: inherit;
+      cursor: pointer; transition: all 0.18s; margin-left: 8px; white-space: nowrap;
+    }
+    .my-lists-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    .save-modal, .my-lists-modal {
+      display: none; position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5); z-index: 9100;
+      align-items: center; justify-content: center;
+    }
+    .save-modal.show, .my-lists-modal.show { display: flex; }
+    .save-modal-box {
+      background: #fff; border-radius: 14px; padding: 20px;
+      max-width: 340px; width: 92%; max-height: 80vh; overflow-y: auto;
+    }
+    .my-lists-modal-box {
+      background: #fff; border-radius: 14px; padding: 20px;
+      max-width: 380px; width: 92%; max-height: 85vh; overflow-y: auto;
+    }
+    .save-list-row { display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:8px; border:1.5px solid var(--border); cursor:pointer; transition:all 0.15s; }
+    .save-list-row:hover { border-color:#3b82f6; }
+    .save-list-row.selected { border-color:#3b82f6; background:#eff6ff; }
+    .cat-chip { padding:4px 10px; border-radius:12px; border:1.5px solid var(--border); background:var(--surface); color:var(--muted); font-size:12px; cursor:pointer; transition:all 0.15s; font-family:inherit; }
+    .cat-chip.selected { background:#fff3ee; border-color:var(--accent); color:var(--accent); font-weight:600; }
+    .color-swatch { width:22px; height:22px; border-radius:50%; cursor:pointer; border:2px solid transparent; transition:border-color 0.15s; flex-shrink:0; }
+    .color-swatch.selected { border-color:#222; box-shadow:0 0 0 2px #fff inset; }
+    .my-list-row { border:1.5px solid var(--border); border-radius:10px; overflow:hidden; }
+    .my-list-row-header { display:flex; align-items:center; gap:8px; padding:10px 12px; cursor:pointer; }
+    .my-list-row-header:hover { background:var(--surface); }
+    .my-list-items { display:none; border-top:1px solid var(--border); }
+    .my-list-items.open { display:block; }
+    .my-list-item-row { display:flex; align-items:center; gap:8px; padding:8px 12px; border-bottom:1px solid var(--border); font-size:12px; }
+    .my-list-item-row:last-child { border-bottom:none; }
+    .save-toast { position:fixed; bottom:80px; left:50%; transform:translateX(-50%); background:#333; color:#fff; padding:8px 18px; border-radius:20px; font-size:13px; z-index:9999; opacity:0; transition:opacity 0.3s; pointer-events:none; white-space:nowrap; }
+    .save-toast.show { opacity:1; }
+
     /* 지도 */
     .map-area {
       flex: 1;
@@ -1403,6 +1453,54 @@
     </div>
   </div>
 
+  <div class="save-modal" id="saveModal" onclick="if(event.target===this)hideSaveModal()">
+    <div class="save-modal-box">
+      <div style="font-weight:700;font-size:15px;margin-bottom:4px;">리스트에 저장</div>
+      <div id="saveModalStoreName" style="font-size:12px;color:var(--muted);margin-bottom:14px;"></div>
+      <div style="margin-bottom:14px;">
+        <div style="font-size:12px;font-weight:600;margin-bottom:6px;">카테고리</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;" id="saveCatChips"></div>
+      </div>
+      <div id="saveListSection">
+        <div style="font-size:12px;font-weight:600;margin-bottom:6px;">저장할 리스트</div>
+        <div id="saveListItems" style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;"></div>
+        <button onclick="toggleNewListForm()" style="width:100%;padding:8px;border:1.5px dashed var(--border);border-radius:8px;background:none;color:var(--muted);font-size:12px;cursor:pointer;font-family:inherit;">+ 새 리스트 만들기</button>
+        <div id="newListForm" style="display:none;margin-top:10px;">
+          <input type="text" id="newListName" placeholder="리스트 이름" style="width:100%;box-sizing:border-box;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;margin-bottom:4px;">
+          <div id="newListNameWarning" style="display:none;color:#ef4444;font-size:11px;margin-bottom:6px;">이름은 25자 이하로 입력해주세요.</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;margin-top:6px;" id="newListColorSwatches"></div>
+          <div style="display:flex;gap:6px;">
+            <button onclick="confirmNewList()" style="flex:1;padding:8px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">확인</button>
+            <button onclick="toggleNewListForm()" style="flex:1;padding:8px;background:var(--surface);color:var(--muted);border:1.5px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit;">취소</button>
+          </div>
+        </div>
+      </div>
+      <button onclick="hideSaveModal()" style="width:100%;margin-top:14px;padding:9px;border:1.5px solid var(--border);border-radius:8px;background:none;color:var(--muted);font-size:13px;cursor:pointer;font-family:inherit;">닫기</button>
+    </div>
+  </div>
+
+  <div class="my-lists-modal" id="myListsModal" onclick="if(event.target===this)hideMyListsPanel()">
+    <div class="my-lists-modal-box">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <div style="font-weight:700;font-size:15px;">🔖 내 리스트</div>
+        <button onclick="hideMyListsPanel()" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--muted);line-height:1;">✕</button>
+      </div>
+      <button onclick="toggleMyListNewForm()" style="width:100%;margin-bottom:12px;padding:8px;border:1.5px dashed var(--border);border-radius:8px;background:none;color:var(--muted);font-size:12px;cursor:pointer;font-family:inherit;">+ 새 리스트 만들기</button>
+      <div id="myListNewForm" style="display:none;margin-bottom:12px;padding:12px;border:1.5px solid var(--border);border-radius:10px;">
+        <input type="text" id="myListNewName" placeholder="리스트 이름" style="width:100%;box-sizing:border-box;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;margin-bottom:4px;">
+        <div id="myListNewNameWarning" style="display:none;color:#ef4444;font-size:11px;margin-bottom:6px;">이름은 25자 이하로 입력해주세요.</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;margin-top:6px;" id="myListNewColorSwatches"></div>
+        <div style="display:flex;gap:6px;">
+          <button onclick="confirmMyListNew()" style="flex:1;padding:8px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">확인</button>
+          <button onclick="toggleMyListNewForm()" style="flex:1;padding:8px;background:var(--surface);color:var(--muted);border:1.5px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit;">취소</button>
+        </div>
+      </div>
+      <div id="myListsContainer" style="display:flex;flex-direction:column;gap:8px;"></div>
+    </div>
+  </div>
+
+  <div class="save-toast" id="saveToast"></div>
+
   <header>
     <div class="logo"><img
         src="data:image/png;base64,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"
@@ -1506,6 +1604,7 @@
             <input type="checkbox" id="franchiseFilterCheck" onchange="onFranchiseFilterChange()">
             프랜차이즈 제외
           </label>
+          <button class="my-lists-btn" onclick="openMyListsPanel()">🔖 내 리스트</button>
         </div>
         <p id="sidebar-count">지도를 움직이면 해당 지역 매장이 표시됩니다</p>
       </div>
@@ -1553,6 +1652,7 @@
           <input type="checkbox" id="franchiseFilterCheckMobile" onchange="onFranchiseFilterChangeMobile()">
           프랜차이즈 제외
         </label>
+        <button class="my-lists-btn" onclick="openMyListsPanel()">🔖 내 리스트</button>
       </div>
       <p id="sheetCount">지도를 움직이면 매장이 표시됩니다</p>
     </div>
@@ -1942,6 +2042,7 @@
               ${s.category ? `<span class="badge">${s.category.split('>').pop()}</span>` : ''}
               ${s.phone ? `<span class="badge">📞 ${s.phone}</span>` : ''}
               <button class="recommend-btn" data-store-id="${escAttr(normalizeStoreId(s.name, s.addr))}" data-category="${escAttr(currentQuery)}" onclick="handleRecommend(event, this)">👍 <span class="rec-count">0</span></button>
+              <button class="save-btn" data-store-name="${escAttr(s.name)}" data-store-addr="${escAttr(s.addr||'')}" data-store-id="${escAttr(normalizeStoreId(s.name, s.addr))}" data-lat="${s.lat||''}" data-lng="${s.lng||''}" data-category="${escAttr(currentQuery)}" onclick="handleSave(event, this)">🔖</button>
             </div>
           </div>
         </div>`;
@@ -1981,28 +2082,31 @@
       } catch (e) { /* 카운트 조회 실패는 무시 */ }
     }
 
-    var _pendingRecommendBtn = null;
+    var _pendingAction = null; // { mode: 'recommend'|'save', btn }
 
-    function showLoginModal(btn) {
-      _pendingRecommendBtn = btn;
+    function showLoginModal(btn, mode) {
+      _pendingAction = { btn: btn, mode: mode || 'recommend' };
       document.getElementById('loginConfirmModal').classList.add('show');
     }
 
     function hideLoginModal() {
       document.getElementById('loginConfirmModal').classList.remove('show');
-      _pendingRecommendBtn = null;
+      _pendingAction = null;
     }
 
     function doGoogleLogin() {
+      var action = _pendingAction;
       hideLoginModal();
-      var btn = _pendingRecommendBtn;
       var popup = window.open('/auth/google', 'google-login', 'width=500,height=600,scrollbars=yes');
       var timer = setInterval(function() {
         if (popup && popup.closed) {
           clearInterval(timer);
           fetch('/auth/me').then(function(r){ return r.json(); }).then(function(d) {
             window.currentUser = d;
-            if (d.loggedIn && btn) doRecommend(btn);
+            if (d.loggedIn && action) {
+              if (action.mode === 'save') showSaveModal(action.btn);
+              else doRecommend(action.btn);
+            }
           });
         }
       }, 500);
@@ -2011,10 +2115,324 @@
     function handleRecommend(event, btn) {
       event.stopPropagation();
       if (!window.currentUser || !window.currentUser.loggedIn) {
-        showLoginModal(btn);
+        showLoginModal(btn, 'recommend');
         return;
       }
       doRecommend(btn);
+    }
+
+    // ── 저장 기능 ──
+    var SAVE_COLORS = ['#ff6b35','#f59e0b','#10b981','#3b82f6','#8b5cf6','#ec4899','#ef4444','#14b8a6','#64748b','#000000'];
+    var SAVE_CATEGORIES = ['우베','버터떡','두바이 쫀득쿠키','소금빵','탕후루'];
+    var _savePendingBtn = null;
+    var _savePendingListId = null;
+    var _saveNewColor = '#ff6b35';
+    var _myListNewColor = '#ff6b35';
+
+    function handleSave(event, btn) {
+      event.stopPropagation();
+      if (!window.currentUser || !window.currentUser.loggedIn) {
+        showLoginModal(btn, 'save');
+        return;
+      }
+      showSaveModal(btn);
+    }
+
+    function renderColorSwatches(containerId, selectedColor, onClickFn) {
+      var html = SAVE_COLORS.map(function(c) {
+        var sel = c === selectedColor ? 'selected' : '';
+        return '<span class="color-swatch ' + sel + '" style="background:' + c + ';" onclick="' + onClickFn + '(this,\'' + c + '\')"></span>';
+      }).join('');
+      document.getElementById(containerId).innerHTML = html;
+    }
+
+    function setSaveNewColor(el, color) {
+      _saveNewColor = color;
+      el.closest('[id]').querySelectorAll('.color-swatch').forEach(function(s){ s.classList.remove('selected'); });
+      el.classList.add('selected');
+    }
+
+    function setMyListNewColor(el, color) {
+      _myListNewColor = color;
+      el.closest('[id]').querySelectorAll('.color-swatch').forEach(function(s){ s.classList.remove('selected'); });
+      el.classList.add('selected');
+    }
+
+    function renderSaveListItems(lists) {
+      var html = '';
+      if (!lists || lists.length === 0) {
+        html = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:8px;">아직 리스트가 없습니다.</div>';
+      } else {
+        lists.forEach(function(list) {
+          var sel = _savePendingListId === list.id ? 'selected' : '';
+          html += '<div class="save-list-row ' + sel + '" onclick="selectSaveList(this,' + list.id + ')">'
+            + '<span style="width:14px;height:14px;border-radius:50%;background:' + list.color + ';flex-shrink:0;display:inline-block;"></span>'
+            + '<span style="flex:1;font-size:13px;">' + list.name + '</span>'
+            + '<span style="font-size:11px;color:var(--muted);">' + list.item_count + '개</span>'
+            + '</div>';
+        });
+      }
+      document.getElementById('saveListItems').innerHTML = html;
+    }
+
+    function selectSaveList(el, listId) {
+      _savePendingListId = listId;
+      document.querySelectorAll('.save-list-row').forEach(function(r){ r.classList.remove('selected'); });
+      el.classList.add('selected');
+    }
+
+    function selectSaveCat(el, cat) {
+      document.querySelectorAll('#saveCatChips .cat-chip').forEach(function(c){ c.classList.remove('selected'); });
+      el.classList.add('selected');
+    }
+
+    function toggleNewListForm() {
+      var form = document.getElementById('newListForm');
+      var isOpen = form.style.display !== 'none';
+      form.style.display = isOpen ? 'none' : 'block';
+      if (!isOpen) {
+        document.getElementById('newListName').value = '';
+        document.getElementById('newListNameWarning').style.display = 'none';
+        _saveNewColor = '#ff6b35';
+        renderColorSwatches('newListColorSwatches', _saveNewColor, 'setSaveNewColor');
+      }
+    }
+
+    async function confirmNewList() {
+      var name = document.getElementById('newListName').value.trim();
+      var warning = document.getElementById('newListNameWarning');
+      if (!name) { warning.style.display = 'block'; warning.textContent = '이름을 입력해주세요.'; return; }
+      if (name.length > 25) { warning.style.display = 'block'; warning.textContent = '이름은 25자 이하로 입력해주세요.'; return; }
+      warning.style.display = 'none';
+      try {
+        var r = await fetch('/api/lists', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: name, color: _saveNewColor }),
+        });
+        var data = await r.json();
+        if (!r.ok) { alert(data.error || '오류가 발생했습니다.'); return; }
+        _savePendingListId = data.id;
+        toggleNewListForm();
+        var listRes = await fetch('/api/lists');
+        renderSaveListItems(await listRes.json());
+      } catch(e) { alert('오류가 발생했습니다.'); }
+    }
+
+    async function showSaveModal(btn) {
+      _savePendingBtn = btn;
+      _savePendingListId = null;
+      _saveNewColor = '#ff6b35';
+      var storeItem = btn.closest('.store-item');
+      var storeName = storeItem ? (storeItem.querySelector('.store-name') || {}).textContent || '' : '';
+      document.getElementById('saveModalStoreName').textContent = storeName;
+      var currentCat = btn.dataset.category || '';
+      var chipsHTML = SAVE_CATEGORIES.map(function(c) {
+        var sel = c === currentCat ? 'selected' : '';
+        return '<button class="cat-chip ' + sel + '" onclick="selectSaveCat(this,\'' + escAttr(c) + '\')">' + c + '</button>';
+      }).join('');
+      document.getElementById('saveCatChips').innerHTML = chipsHTML;
+      renderColorSwatches('newListColorSwatches', _saveNewColor, 'setSaveNewColor');
+      document.getElementById('newListForm').style.display = 'none';
+      document.getElementById('newListName').value = '';
+      document.getElementById('newListNameWarning').style.display = 'none';
+      try {
+        var r = await fetch('/api/lists');
+        renderSaveListItems(await r.json());
+      } catch(e) {
+        document.getElementById('saveListItems').innerHTML = '<div style="color:var(--muted);font-size:12px;">리스트를 불러오지 못했습니다.</div>';
+      }
+      document.getElementById('saveModal').classList.add('show');
+      // Wire up save action on list row click
+      document.getElementById('saveListItems').onclick = null;
+    }
+
+    function hideSaveModal() {
+      document.getElementById('saveModal').classList.remove('show');
+      _savePendingBtn = null;
+      _savePendingListId = null;
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      // Save: clicking a selected list row triggers save
+    });
+
+    // Override selectSaveList to also save when list is clicked
+    var _origSelectSaveList = selectSaveList;
+    function selectSaveList(el, listId) {
+      _savePendingListId = listId;
+      document.querySelectorAll('.save-list-row').forEach(function(r){ r.classList.remove('selected'); });
+      el.classList.add('selected');
+      // Auto-save on selection
+      doSaveToList();
+    }
+
+    async function doSaveToList() {
+      if (!_savePendingListId || !_savePendingBtn) return;
+      var selectedCatEl = document.querySelector('#saveCatChips .cat-chip.selected');
+      var cat = selectedCatEl ? selectedCatEl.textContent : (_savePendingBtn.dataset.category || '');
+      var btn = _savePendingBtn;
+      var listId = _savePendingListId;
+      try {
+        var r = await fetch('/api/lists/' + listId + '/items', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            store_name: btn.dataset.storeName,
+            store_addr: btn.dataset.storeAddr,
+            store_identifier: btn.dataset.storeId,
+            category_context: cat,
+            lat: btn.dataset.lat ? parseFloat(btn.dataset.lat) : null,
+            lng: btn.dataset.lng ? parseFloat(btn.dataset.lng) : null,
+          }),
+        });
+        if (r.ok) {
+          btn.classList.add('saved');
+          hideSaveModal();
+          showToast('리스트에 저장되었습니다 🔖');
+        } else {
+          var d = await r.json();
+          alert(d.error || '오류가 발생했습니다.');
+        }
+      } catch(e) { alert('오류가 발생했습니다.'); }
+    }
+
+    function showToast(msg) {
+      var t = document.getElementById('saveToast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(function(){ t.classList.remove('show'); }, 2200);
+    }
+
+    // ── 내 리스트 패널 ──
+    function openMyListsPanel() {
+      if (!window.currentUser || !window.currentUser.loggedIn) {
+        showLoginModal(null, 'lists');
+        return;
+      }
+      _myListNewColor = '#ff6b35';
+      renderColorSwatches('myListNewColorSwatches', _myListNewColor, 'setMyListNewColor');
+      document.getElementById('myListNewForm').style.display = 'none';
+      document.getElementById('myListNewName').value = '';
+      document.getElementById('myListNewNameWarning').style.display = 'none';
+      loadMyLists();
+      document.getElementById('myListsModal').classList.add('show');
+    }
+
+    function hideMyListsPanel() {
+      document.getElementById('myListsModal').classList.remove('show');
+    }
+
+    async function loadMyLists() {
+      var container = document.getElementById('myListsContainer');
+      container.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">불러오는 중...</div>';
+      try {
+        var r = await fetch('/api/lists');
+        var lists = await r.json();
+        renderMyLists(lists);
+      } catch(e) {
+        container.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">불러오지 못했습니다.</div>';
+      }
+    }
+
+    function renderMyLists(lists) {
+      var container = document.getElementById('myListsContainer');
+      if (!lists || lists.length === 0) {
+        container.innerHTML = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:16px;">저장된 리스트가 없습니다.</div>';
+        return;
+      }
+      var html = lists.map(function(list) {
+        return '<div class="my-list-row" id="mylist-' + list.id + '">'
+          + '<div class="my-list-row-header" onclick="toggleMyListItems(' + list.id + ')">'
+            + '<span style="width:14px;height:14px;border-radius:50%;background:' + list.color + ';flex-shrink:0;display:inline-block;"></span>'
+            + '<span style="flex:1;font-size:13px;font-weight:600;">' + list.name + '</span>'
+            + '<span style="font-size:11px;color:var(--muted);margin-right:8px;">' + list.item_count + '개</span>'
+            + '<button onclick="event.stopPropagation();confirmDeleteList(' + list.id + ')" style="background:none;border:none;color:#ef4444;font-size:12px;cursor:pointer;padding:2px 4px;" title="리스트 삭제">🗑</button>'
+            + '<span style="color:var(--muted);font-size:12px;margin-left:4px;">▾</span>'
+          + '</div>'
+          + '<div class="my-list-items" id="mylist-items-' + list.id + '"></div>'
+          + '</div>';
+      }).join('');
+      container.innerHTML = html;
+    }
+
+    async function toggleMyListItems(listId) {
+      var el = document.getElementById('mylist-items-' + listId);
+      var isOpen = el.classList.contains('open');
+      if (isOpen) { el.classList.remove('open'); return; }
+      el.innerHTML = '<div style="padding:10px 12px;font-size:12px;color:var(--muted);">불러오는 중...</div>';
+      el.classList.add('open');
+      try {
+        var r = await fetch('/api/lists/' + listId + '/items');
+        var items = await r.json();
+        if (!items || items.length === 0) {
+          el.innerHTML = '<div style="padding:10px 12px;font-size:12px;color:var(--muted);">저장된 매장이 없습니다.</div>';
+          return;
+        }
+        var html = items.map(function(item) {
+          return '<div class="my-list-item-row">'
+            + '<span style="flex:1;">' + item.store_name + '</span>'
+            + '<span style="padding:2px 7px;border-radius:8px;background:var(--tag-bg);color:var(--muted);border:1px solid var(--border);font-size:10px;margin-right:6px;">' + item.category_context + '</span>'
+            + '<button onclick="removeListItem(' + listId + ',\'' + escAttr(item.store_identifier) + '\')" style="background:none;border:none;color:#ef4444;font-size:12px;cursor:pointer;padding:2px 4px;">🗑</button>'
+            + '</div>';
+        }).join('');
+        el.innerHTML = html;
+      } catch(e) {
+        el.innerHTML = '<div style="padding:10px 12px;font-size:12px;color:#ef4444;">오류가 발생했습니다.</div>';
+      }
+    }
+
+    async function confirmDeleteList(listId) {
+      if (!confirm('리스트를 삭제하시겠습니까? 저장된 매장 정보도 모두 삭제됩니다.')) return;
+      try {
+        var r = await fetch('/api/lists/' + listId, { method: 'DELETE' });
+        if (r.ok) { loadMyLists(); showToast('리스트가 삭제되었습니다.'); }
+        else { var d = await r.json(); alert(d.error || '오류가 발생했습니다.'); }
+      } catch(e) { alert('오류가 발생했습니다.'); }
+    }
+
+    async function removeListItem(listId, storeIdentifier) {
+      try {
+        var r = await fetch('/api/lists/' + listId + '/items/' + encodeURIComponent(storeIdentifier), { method: 'DELETE' });
+        if (r.ok) {
+          var el = document.getElementById('mylist-items-' + listId);
+          el.classList.remove('open');
+          loadMyLists();
+          showToast('매장이 삭제되었습니다.');
+        }
+      } catch(e) { alert('오류가 발생했습니다.'); }
+    }
+
+    function toggleMyListNewForm() {
+      var form = document.getElementById('myListNewForm');
+      var isOpen = form.style.display !== 'none';
+      form.style.display = isOpen ? 'none' : 'block';
+      if (!isOpen) {
+        document.getElementById('myListNewName').value = '';
+        document.getElementById('myListNewNameWarning').style.display = 'none';
+        _myListNewColor = '#ff6b35';
+        renderColorSwatches('myListNewColorSwatches', _myListNewColor, 'setMyListNewColor');
+      }
+    }
+
+    async function confirmMyListNew() {
+      var name = document.getElementById('myListNewName').value.trim();
+      var warning = document.getElementById('myListNewNameWarning');
+      if (!name) { warning.style.display = 'block'; warning.textContent = '이름을 입력해주세요.'; return; }
+      if (name.length > 25) { warning.style.display = 'block'; warning.textContent = '이름은 25자 이하로 입력해주세요.'; return; }
+      warning.style.display = 'none';
+      try {
+        var r = await fetch('/api/lists', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: name, color: _myListNewColor }),
+        });
+        var data = await r.json();
+        if (!r.ok) { alert(data.error || '오류가 발생했습니다.'); return; }
+        toggleMyListNewForm();
+        loadMyLists();
+        showToast('리스트가 만들어졌습니다 🔖');
+      } catch(e) { alert('오류가 발생했습니다.'); }
     }
 
     async function doRecommend(btn) {

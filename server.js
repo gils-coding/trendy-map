@@ -115,6 +115,30 @@ async function initDB() {
       UNIQUE(user_google_id, store_identifier, category_context)
     )
   `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS store_lists (
+      id             SERIAL PRIMARY KEY,
+      user_google_id TEXT NOT NULL,
+      name           TEXT NOT NULL,
+      color          TEXT NOT NULL DEFAULT '#ff6b35',
+      created_at     TIMESTAMP DEFAULT NOW()
+    )
+  `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS store_list_items (
+      id               SERIAL PRIMARY KEY,
+      list_id          INTEGER NOT NULL REFERENCES store_lists(id) ON DELETE CASCADE,
+      user_google_id   TEXT NOT NULL,
+      store_name       TEXT NOT NULL,
+      store_addr       TEXT NOT NULL,
+      store_identifier TEXT NOT NULL,
+      category_context TEXT NOT NULL,
+      lat              NUMERIC,
+      lng              NUMERIC,
+      saved_at         TIMESTAMP DEFAULT NOW(),
+      UNIQUE(list_id, store_identifier)
+    )
+  `);
   console.log('✅ PostgreSQL 테이블 준비 완료');
 }
 
@@ -1556,6 +1580,121 @@ app.get('/api/recommend/counts', async (req, res) => {
   } catch (err) {
     console.error('추천 수 조회 오류:', err.message);
     res.json({});
+  }
+});
+
+// =====================================================
+// 리스트 (북마크) 라우트
+// =====================================================
+function authUser(req, res, next) {
+  if (req.isAuthenticated()) return next();
+  res.status(401).json({ error: '로그인이 필요합니다.' });
+}
+
+const LIST_COLORS = ['#ff6b35','#f59e0b','#10b981','#3b82f6','#8b5cf6','#ec4899','#ef4444','#14b8a6','#64748b','#000000'];
+
+app.get('/api/lists', authUser, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT sl.*, COUNT(sli.id)::int AS item_count
+       FROM store_lists sl
+       LEFT JOIN store_list_items sli ON sli.list_id = sl.id
+       WHERE sl.user_google_id = $1
+       GROUP BY sl.id
+       ORDER BY sl.created_at DESC`,
+      [req.user.id]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error('리스트 조회 오류:', err.message);
+    res.status(500).json({ error: '오류가 발생했습니다.' });
+  }
+});
+
+app.post('/api/lists', authUser, async (req, res) => {
+  const { name, color } = req.body;
+  if (!name || name.trim().length === 0) return res.status(400).json({ error: '이름을 입력해주세요.' });
+  if (name.trim().length > 25) return res.status(400).json({ error: '이름은 25자 이하로 입력해주세요.' });
+  const safeColor = LIST_COLORS.includes(color) ? color : '#ff6b35';
+  try {
+    const result = await pool.query(
+      'INSERT INTO store_lists (user_google_id, name, color) VALUES ($1,$2,$3) RETURNING *',
+      [req.user.id, name.trim(), safeColor]
+    );
+    res.json({ ...result.rows[0], item_count: 0 });
+  } catch (err) {
+    console.error('리스트 생성 오류:', err.message);
+    res.status(500).json({ error: '오류가 발생했습니다.' });
+  }
+});
+
+app.delete('/api/lists/:id', authUser, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'DELETE FROM store_lists WHERE id=$1 AND user_google_id=$2 RETURNING id',
+      [req.params.id, req.user.id]
+    );
+    if (result.rowCount === 0) return res.status(404).json({ error: '리스트를 찾을 수 없습니다.' });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('리스트 삭제 오류:', err.message);
+    res.status(500).json({ error: '오류가 발생했습니다.' });
+  }
+});
+
+app.get('/api/lists/:id/items', authUser, async (req, res) => {
+  try {
+    const listCheck = await pool.query(
+      'SELECT id FROM store_lists WHERE id=$1 AND user_google_id=$2',
+      [req.params.id, req.user.id]
+    );
+    if (listCheck.rowCount === 0) return res.status(404).json({ error: '리스트를 찾을 수 없습니다.' });
+    const result = await pool.query(
+      'SELECT * FROM store_list_items WHERE list_id=$1 ORDER BY saved_at DESC',
+      [req.params.id]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error('리스트 아이템 조회 오류:', err.message);
+    res.status(500).json({ error: '오류가 발생했습니다.' });
+  }
+});
+
+app.post('/api/lists/:id/items', authUser, async (req, res) => {
+  const { store_name, store_addr, store_identifier, category_context, lat, lng } = req.body;
+  if (!store_name || !store_addr || !store_identifier || !category_context) {
+    return res.status(400).json({ error: '필수 항목이 누락되었습니다.' });
+  }
+  try {
+    const listCheck = await pool.query(
+      'SELECT id FROM store_lists WHERE id=$1 AND user_google_id=$2',
+      [req.params.id, req.user.id]
+    );
+    if (listCheck.rowCount === 0) return res.status(404).json({ error: '리스트를 찾을 수 없습니다.' });
+    await pool.query(
+      `INSERT INTO store_list_items (list_id, user_google_id, store_name, store_addr, store_identifier, category_context, lat, lng)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+       ON CONFLICT (list_id, store_identifier) DO NOTHING`,
+      [req.params.id, req.user.id, store_name, store_addr, store_identifier, category_context, lat || null, lng || null]
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('아이템 저장 오류:', err.message);
+    res.status(500).json({ error: '오류가 발생했습니다.' });
+  }
+});
+
+app.delete('/api/lists/:id/items/:store_identifier', authUser, async (req, res) => {
+  try {
+    const storeId = decodeURIComponent(req.params.store_identifier);
+    await pool.query(
+      'DELETE FROM store_list_items WHERE list_id=$1 AND store_identifier=$2 AND user_google_id=$3',
+      [req.params.id, storeId, req.user.id]
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('아이템 삭제 오류:', err.message);
+    res.status(500).json({ error: '오류가 발생했습니다.' });
   }
 });
 
