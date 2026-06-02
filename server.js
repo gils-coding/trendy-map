@@ -439,18 +439,30 @@ async function searchCustomDB(query, lat, lng, radius) {
 // =====================================================
 // 중복 제거: 이름+주소 유사 OR 좌표 50m 이내
 // =====================================================
+function normalizeName(s) {
+  return (s || '').replace(/\s/g, '').toLowerCase();
+}
+function normalizeAddr(s) {
+  return (s || '').replace(/\s/g, '').toLowerCase();
+}
 function isDuplicate(store, referenceList) {
   const name = store.name.trim();
+  const normName = normalizeName(name);
   const addr = (store.addr || '').trim();
+  const normAddr = normalizeAddr(addr);
   return referenceList.some(ref => {
-    const sameName = ref.name.trim() === name
-      || ref.name.trim().includes(name)
-      || name.includes(ref.name.trim());
-    const sameAddr = addr && ref.addr &&
-      addr.substring(0, 10) === (ref.addr || '').trim().substring(0, 10);
+    const refName = ref.name.trim();
+    const refNormName = normalizeName(refName);
+    const sameName = refName === name
+      || refNormName === normName
+      || refNormName.includes(normName)
+      || normName.includes(refNormName);
+    const refNormAddr = normalizeAddr(ref.addr || '');
+    const sameAddr = normAddr && refNormAddr &&
+      normAddr.substring(0, 15) === refNormAddr.substring(0, 15);
     if (sameName && sameAddr) return true;
     if (store.lat && store.lng && ref.lat && ref.lng) {
-      if (haversineM(store.lat, store.lng, ref.lat, ref.lng) <= 50) return true;
+      if (sameName && haversineM(store.lat, store.lng, ref.lat, ref.lng) <= 100) return true;
     }
     return false;
   });

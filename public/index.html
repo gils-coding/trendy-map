@@ -1927,12 +1927,18 @@
 
         var results = await Promise.all(fetchPromises);
 
+        function storeKey(s) {
+          var normName = (s.name || '').replace(/\s/g, '').toLowerCase();
+          var normAddr = (s.addr || '').replace(/\s/g, '').toLowerCase().slice(0, 15);
+          return normName + '|' + normAddr;
+        }
+
         var seen = {};
         var merged = [];
         results.forEach(function (data) {
           if (!data.stores) return;
           data.stores.forEach(function (store) {
-            var key = store.place_url || (store.name + '|' + store.addr);
+            var key = store.place_url || storeKey(store);
             if (!seen[key]) {
               seen[key] = true;
               merged.push(store);
@@ -1946,9 +1952,9 @@
 
         // 결과 누적 (탭 전환 전까지 이전 지역 마커 유지)
         if (!window._allStores) window._allStores = [];
-        var allSeen = new Set(window._allStores.map(function (s) { return s.name + '|' + s.addr; }));
+        var allSeen = new Set(window._allStores.map(function (s) { return storeKey(s); }));
         merged.forEach(function (s) {
-          var key = s.name + '|' + s.addr;
+          var key = storeKey(s);
           if (!allSeen.has(key)) { allSeen.add(key); window._allStores.push(s); }
         });
 
