@@ -667,6 +667,10 @@
     .save-toast { position:fixed; bottom:80px; left:50%; transform:translateX(-50%); background:#333; color:#fff; padding:8px 18px; border-radius:20px; font-size:13px; z-index:9999; opacity:0; transition:opacity 0.3s; pointer-events:none; white-space:nowrap; }
     .save-toast.show { opacity:1; }
 
+    /* ── 로그아웃 버튼 ── */
+    .user-logout-btn { display:inline-flex; align-items:center; gap:4px; padding:5px 10px; border-radius:14px; border:1.5px solid var(--border); background:var(--surface); color:var(--muted); font-size:11px; font-family:inherit; cursor:pointer; white-space:nowrap; transition:all 0.15s; flex-shrink:0; }
+    .user-logout-btn:hover { border-color:#ef4444; color:#ef4444; background:#fff5f5; }
+
     /* ── 웰컴 모달 ── */
     .welcome-backdrop { position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:10000; display:flex; align-items:center; justify-content:center; padding:16px; }
     .welcome-modal { background:var(--surface); border-radius:20px; width:100%; max-width:360px; box-shadow:0 8px 40px rgba(0,0,0,0.18); overflow:hidden; animation:wm-in 0.28s cubic-bezier(.22,1,.36,1); }
@@ -1585,6 +1589,7 @@
     </div>
     <a href="/suggest.html" class="store-suggest-btn">🏪 매장/음식 제안</a>
     <a href="https://litt.ly/trendymap" target="_blank" class="donate-btn">☕ 커피 후원</a>
+    <button class="user-logout-btn" id="logoutBtn" style="display:none;" onclick="doLogout()">👤 로그아웃</button>
   </header>
 
   <div class="region-bar">
@@ -3064,15 +3069,26 @@
       } catch { alert('지역 검색 중 오류가 발생했습니다.'); }
     }
 
+    function updateLoginUI(user) {
+      window.currentUser = user;
+      var btn = document.getElementById('logoutBtn');
+      if (btn) btn.style.display = user.loggedIn ? 'inline-flex' : 'none';
+    }
+
+    function doLogout() {
+      fetch('/auth/logout', { method: 'POST' })
+        .then(function() { updateLoginUI({ loggedIn: false }); });
+    }
+
     window.addEventListener('load', function () {
       // ── 구글 로그인 상태 초기화 ──
       window.currentUser = { loggedIn: false };
-      fetch('/auth/me').then(function(r){ return r.json(); }).then(function(d){ window.currentUser = d; }).catch(function(){});
+      fetch('/auth/me').then(function(r){ return r.json(); }).then(function(d){ updateLoginUI(d); }).catch(function(){});
 
       // popup에서 로그인 성공 메시지 수신
       window.addEventListener('message', function(e) {
         if (e.data === 'login-success') {
-          fetch('/auth/me').then(function(r){ return r.json(); }).then(function(d){ window.currentUser = d; }).catch(function(){});
+          fetch('/auth/me').then(function(r){ return r.json(); }).then(function(d){ updateLoginUI(d); }).catch(function(){});
         }
       });
 
