@@ -1831,7 +1831,7 @@ initDB().then(() => {
 
     try {
       await runAutoCollectJob(
-        { sido: '전국', catList: Object.keys(CATEGORY_KEYWORDS), cookie, purge: false, startIndex: 0 },
+        { sido: '전국', catList: ['우베', '버터떡', '두바이 쫀득쿠키'], cookie, purge: false, startIndex: 0 },
         send,
         () => false  // cron은 외부 중단 신호 없음
       );
