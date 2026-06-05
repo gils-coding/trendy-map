@@ -667,6 +667,26 @@
     .save-toast { position:fixed; bottom:80px; left:50%; transform:translateX(-50%); background:#333; color:#fff; padding:8px 18px; border-radius:20px; font-size:13px; z-index:9999; opacity:0; transition:opacity 0.3s; pointer-events:none; white-space:nowrap; }
     .save-toast.show { opacity:1; }
 
+    /* ── 웰컴 모달 ── */
+    .welcome-backdrop { position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:10000; display:flex; align-items:center; justify-content:center; padding:16px; }
+    .welcome-modal { background:var(--surface); border-radius:20px; width:100%; max-width:360px; box-shadow:0 8px 40px rgba(0,0,0,0.18); overflow:hidden; animation:wm-in 0.28s cubic-bezier(.22,1,.36,1); }
+    @keyframes wm-in { from { opacity:0; transform:translateY(18px) scale(0.97); } to { opacity:1; transform:none; } }
+    .welcome-header { background:linear-gradient(135deg,#ff6b35,#ff9500); padding:22px 20px 18px; position:relative; text-align:center; }
+    .welcome-header h2 { font-family:'Black Han Sans',sans-serif; font-size:22px; color:#fff; margin-bottom:4px; }
+    .welcome-header p { font-size:12px; color:rgba(255,255,255,0.88); line-height:1.5; }
+    .welcome-close { position:absolute; top:12px; right:14px; background:rgba(255,255,255,0.2); border:none; color:#fff; width:28px; height:28px; border-radius:50%; font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; line-height:1; }
+    .welcome-close:hover { background:rgba(255,255,255,0.35); }
+    .welcome-features { padding:16px; display:flex; flex-direction:column; gap:10px; }
+    .wf-item { display:flex; align-items:flex-start; gap:12px; background:var(--card); border-radius:12px; padding:12px 14px; }
+    .wf-icon { font-size:22px; flex-shrink:0; margin-top:1px; }
+    .wf-text strong { display:block; font-size:13px; font-weight:700; color:var(--text); margin-bottom:2px; }
+    .wf-text span { font-size:12px; color:var(--muted); line-height:1.5; }
+    .welcome-footer { padding:12px 16px 18px; display:flex; flex-direction:column; gap:8px; }
+    .welcome-dismiss-btn { width:100%; padding:11px; border-radius:10px; border:none; background:var(--accent); color:#fff; font-size:14px; font-weight:700; font-family:inherit; cursor:pointer; transition:opacity 0.15s; }
+    .welcome-dismiss-btn:hover { opacity:0.88; }
+    .welcome-close-text { text-align:center; font-size:12px; color:var(--muted); cursor:pointer; }
+    .welcome-close-text:hover { text-decoration:underline; }
+
     /* 지도 */
     .map-area {
       flex: 1;
@@ -1512,6 +1532,44 @@
   </div>
 
   <div class="save-toast" id="saveToast"></div>
+
+  <!-- 웰컴 모달 -->
+  <div class="welcome-backdrop" id="welcomeBackdrop" style="display:none;" onclick="onWelcomeBackdropClick(event)">
+    <div class="welcome-modal">
+      <div class="welcome-header">
+        <button class="welcome-close" onclick="closeWelcome()">✕</button>
+        <h2>트렌디<span style="color:#fff3cd;">맵</span></h2>
+        <p>SNS에서 지금 뜨는 음식 맛집을<br>지도로 한눈에 찾아보세요</p>
+      </div>
+      <div class="welcome-features">
+        <div class="wf-item">
+          <div class="wf-icon">🍠</div>
+          <div class="wf-text">
+            <strong>유행 음식 맛집 탐색</strong>
+            <span>우베, 버터떡, 두바이 쫀득쿠키 등<br>지금 핫한 음식 매장을 지도에서 확인하세요.</span>
+          </div>
+        </div>
+        <div class="wf-item">
+          <div class="wf-icon">📍</div>
+          <div class="wf-text">
+            <strong>지역별 매장 검색</strong>
+            <span>시/도, 시/군/구 선택 또는 동네 이름 검색으로<br>원하는 지역의 맛집을 바로 찾을 수 있어요.</span>
+          </div>
+        </div>
+        <div class="wf-item">
+          <div class="wf-icon">👍</div>
+          <div class="wf-text">
+            <strong>추천 & 내 리스트 저장</strong>
+            <span>마음에 드는 매장에 추천을 남기고,<br>🔖 내 리스트에 저장해 나중에 다시 찾아보세요.</span>
+          </div>
+        </div>
+      </div>
+      <div class="welcome-footer">
+        <button class="welcome-dismiss-btn" onclick="dismissWelcomeToday()">오늘은 더 이상 보지 않음</button>
+        <div class="welcome-close-text" onclick="closeWelcome()">닫기</div>
+      </div>
+    </div>
+  </div>
 
   <header>
     <div class="logo"><img
@@ -3148,6 +3206,29 @@
         mapEl.appendChild(msg);
       }
     });
+
+    // ── 웰컴 모달 ──
+    (function() {
+      var KEY = 'trendy_welcome_dismissed';
+      var today = new Date().toISOString().slice(0, 10);
+      if (localStorage.getItem(KEY) !== today) {
+        document.getElementById('welcomeBackdrop').style.display = 'flex';
+      }
+    })();
+
+    function closeWelcome() {
+      document.getElementById('welcomeBackdrop').style.display = 'none';
+    }
+
+    function dismissWelcomeToday() {
+      var today = new Date().toISOString().slice(0, 10);
+      localStorage.setItem('trendy_welcome_dismissed', today);
+      closeWelcome();
+    }
+
+    function onWelcomeBackdropClick(e) {
+      if (e.target === document.getElementById('welcomeBackdrop')) closeWelcome();
+    }
   </script>
 </body>
 
