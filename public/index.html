@@ -683,6 +683,10 @@
     .welcome-features { padding:16px; display:flex; flex-direction:column; gap:10px; }
     .wf-item { display:flex; align-items:flex-start; gap:12px; background:var(--card); border-radius:12px; padding:12px 14px; }
     .wf-icon { font-size:22px; flex-shrink:0; margin-top:1px; }
+    .wf-icon-img { width:32px; height:32px; border-radius:50%; overflow:hidden; flex-shrink:0; display:flex; align-items:center; justify-content:center; background:#fff; border:1.5px solid var(--border); }
+    .wf-icon-img img { width:100%; height:100%; object-fit:cover; transform-origin:center; display:block; }
+    .wf-icon-img.ube img { transform:scale(1.25); }
+    .wf-icon-badge { width:32px; height:32px; border-radius:50%; background:var(--accent); color:#fff; font-size:11px; font-weight:700; font-family:inherit; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
     .wf-text strong { display:block; font-size:13px; font-weight:700; color:var(--text); margin-bottom:2px; }
     .wf-text span { font-size:12px; color:var(--muted); line-height:1.5; }
     .welcome-footer { padding:12px 16px 18px; display:flex; flex-direction:column; gap:8px; }
@@ -1547,24 +1551,24 @@
       </div>
       <div class="welcome-features">
         <div class="wf-item">
-          <div class="wf-icon">🍠</div>
+          <div class="wf-icon-img ube"><img src="/icons/icon-ube.png" alt="우베"></div>
           <div class="wf-text">
             <strong>유행 음식 맛집 탐색</strong>
             <span>우베, 버터떡, 두바이 쫀득쿠키 등<br>지금 핫한 음식 매장을 지도에서 확인하세요.</span>
           </div>
         </div>
         <div class="wf-item">
-          <div class="wf-icon">📍</div>
+          <div class="wf-icon-badge">지역</div>
           <div class="wf-text">
             <strong>지역별 매장 검색</strong>
             <span>시/도, 시/군/구 선택 또는 동네 이름 검색으로<br>원하는 지역의 맛집을 바로 찾을 수 있어요.</span>
           </div>
         </div>
         <div class="wf-item">
-          <div class="wf-icon">👍</div>
+          <div class="wf-icon-badge">추천</div>
           <div class="wf-text">
             <strong>추천 & 내 리스트 저장</strong>
-            <span>마음에 드는 매장에 추천을 남기고,<br>🔖 내 리스트에 저장해 나중에 다시 찾아보세요.</span>
+            <span>마음에 드는 매장에 추천을 남기고,<br>내 리스트에 저장해 나중에 다시 찾아보세요.</span>
           </div>
         </div>
       </div>
