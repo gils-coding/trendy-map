@@ -9,6 +9,8 @@ if (process.env.NODE_ENV !== 'production') {
   process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 }
 const express = require('express');
+const cron = require('node-cron');
+const { chromium } = require('playwright');
 const axios = require('axios');
 const cors = require('cors');
 const path = require('path');
@@ -1178,6 +1180,173 @@ async function fetchNaverPlaceList(query, x, y, cookie, start = 1, endpointType 
   }
 }
 
+// =====================================================
+// 네이버 쿠키 자동 취득 (headless Chrome → map.naver.com)
+// =====================================================
+async function getFreshNaverCookie() {
+  const browser = await chromium.launch({
+    headless: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+  });
+  try {
+    const context = await browser.newContext({
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    });
+    const page = await context.newPage();
+    await page.goto('https://map.naver.com', { waitUntil: 'networkidle', timeout: 30000 });
+    const cookies = await context.cookies('https://map.naver.com');
+    return cookies.map(c => `${c.name}=${c.value}`).join('; ');
+  } finally {
+    await browser.close();
+  }
+}
+
+// =====================================================
+// 자동수집 핵심 루프 — SSE 라우트와 cron 양쪽에서 재사용
+// send(data): 이벤트 콜백 / isStopped(): 중단 여부 반환
+// =====================================================
+async function runAutoCollectJob({ sido, catList, cookie, purge, startIndex = 0, queryTags }, send, isStopped) {
+  let searchUnits;
+  if (sido === '전국') {
+    searchUnits = Object.entries(SIGUNGU_SERVER).flatMap(([s, guList]) =>
+      guList.flatMap(gu => {
+        const dongList = DONG_BY_GU[s]?.[gu];
+        if (dongList) return dongList.map(dong => ({ label: `${s} ${gu} ${dong}`, addr: `${s} ${gu} ${dong}` }));
+        return [{ label: `${s} ${gu}`, addr: `${s} ${gu}` }];
+      })
+    );
+  } else {
+    const districts = SIGUNGU_SERVER[sido];
+    searchUnits = districts.flatMap(gu => {
+      const dongList = DONG_BY_GU[sido]?.[gu];
+      if (dongList) return dongList.map(dong => ({ label: `${gu} ${dong}`, addr: `${sido} ${gu} ${dong}` }));
+      return [{ label: gu, addr: `${sido} ${gu}` }];
+    });
+  }
+
+  const unitsToProcess = searchUnits.slice(startIndex);
+  send({ type: 'start', total: searchUnits.length * catList.length, startIndex, districts: unitsToProcess.length, categories: catList.length });
+
+  let totalInserted = 0, totalSkipped = 0;
+  const foundNaverIds = new Set();
+
+  for (let ui = 0; ui < unitsToProcess.length; ui++) {
+    const unit = unitsToProcess[ui];
+    const absoluteUnitIdx = startIndex + ui;
+    if (isStopped()) break;
+    const gu = unit.label;
+
+    let coords = await geocodeAddress(unit.addr);
+    if (!coords) {
+      const parts = unit.addr.trim().split(/\s+/);
+      const fallbackAddr = parts.length >= 3 ? parts.slice(0, 2).join(' ') : null;
+      if (fallbackAddr) coords = await geocodeAddress(fallbackAddr);
+    }
+    if (!coords) { send({ type: 'skip', district: gu, msg: '좌표 조회 실패' }); continue; }
+
+    for (const cat of catList) {
+      if (isStopped()) break;
+
+      const keyword = CATEGORY_KEYWORDS[cat] || cat;
+      const tags = catList.length === 1 && queryTags ? queryTags : cat;
+      const endpointType = CATEGORY_ENDPOINT[cat] || 'place';
+      const validTypenames = endpointType === 'restaurant'
+        ? new Set(['RestaurantListSummary'])
+        : new Set(['PlaceSummary', 'PlaceListBusinessesItem']);
+
+      send({ type: 'fetching', district: gu, category: cat });
+
+      try {
+        const html = await fetchNaverPlaceList(keyword, coords.lng, coords.lat, cookie, 1, endpointType);
+        const apolloState = extractApolloState(html);
+        if (!apolloState) {
+          send({ type: 'error', district: gu, category: cat, msg: '__APOLLO_STATE__ 없음 (차단됐거나 응답 구조 변경)' });
+          await new Promise(r => setTimeout(r, 2000));
+          continue;
+        }
+
+        const isDongLevel = unit.addr.trim().split(/\s+/).length >= 3;
+        const seenIds = new Set();
+        const places = Object.entries(apolloState)
+          .filter(([, v]) =>
+            v && typeof v === 'object' && validTypenames.has(v.__typename) &&
+            v.name && typeof v.name === 'string' &&
+            (v.roadAddress || v.address || v.fullAddress || v.__typename === 'PlaceListBusinessesItem') &&
+            v.x && v.y
+          )
+          .map(([key, v]) => ({ ...v, id: v.id || key.split(':')[1] }))
+          .filter(p => {
+            if (!p.id || seenIds.has(p.id)) return false;
+            seenIds.add(p.id);
+            if (isDongLevel) {
+              const dlat = parseFloat(p.y) - coords.lat;
+              const dlng = parseFloat(p.x) - coords.lng;
+              const dist = Math.sqrt(dlat * dlat + dlng * dlng) * 111000;
+              if (dist > 1500) return false;
+            }
+            return true;
+          });
+
+        for (const p of places) { if (p.id) foundNaverIds.add(String(p.id)); }
+
+        let inserted = 0, skipped = 0;
+        for (const p of places) {
+          const addr = p.roadAddress || p.fullAddress || p.address;
+          const lat = parseFloat(p.y);
+          const lng = parseFloat(p.x);
+          const dup = await pool.query(
+            `SELECT id FROM custom_stores WHERE name=$1 AND (addr=$2 OR (
+              lat BETWEEN $3-0.0005 AND $3+0.0005 AND lng BETWEEN $4-0.0005 AND $4+0.0005
+            ))`,
+            [p.name, addr, lat, lng]
+          );
+          if (dup.rows.length > 0) { skipped++; continue; }
+          const phone = p.virtualPhone || p.phone || null;
+          const category = Array.isArray(p.category) ? p.category.join(', ') : (p.category || null);
+          const naver_url = p.id ? `https://map.naver.com/p/entry/place/${p.id}` : null;
+          await pool.query(
+            `INSERT INTO custom_stores (name,addr,phone,category,lat,lng,kakao_url,naver_url,query_tags) VALUES ($1,$2,$3,$4,$5,$6,NULL,$7,$8)`,
+            [p.name, addr, phone, category, lat, lng, naver_url, tags]
+          );
+          inserted++;
+        }
+
+        totalInserted += inserted;
+        totalSkipped += skipped;
+        send({ type: 'result', district: gu, category: cat, found: places.length, inserted, skipped, unitIndex: absoluteUnitIdx });
+
+        if (!isStopped()) await new Promise(r => setTimeout(r, 2000 + Math.random() * 2000));
+      } catch (e) {
+        send({ type: 'error', district: gu, category: cat, msg: e.message });
+      }
+
+      await new Promise(r => setTimeout(r, 1500 + Math.random() * 2000));
+    }
+  }
+
+  let totalPurged = 0;
+  if (purge && !isStopped() && startIndex === 0 && sido !== '전국') {
+    const addrKeyword = SIDO_ADDR[sido] || sido;
+    for (const cat of catList) {
+      const existing = await pool.query(
+        `SELECT id, naver_url FROM custom_stores WHERE query_tags ILIKE $1 AND naver_url IS NOT NULL AND addr LIKE $2`,
+        [`%${cat}%`, `%${addrKeyword}%`]
+      );
+      const toDelete = existing.rows.filter(r => {
+        const m = r.naver_url.match(/\/place\/(\d+)/);
+        return m && !foundNaverIds.has(m[1]);
+      });
+      if (toDelete.length > 0) {
+        await pool.query('DELETE FROM custom_stores WHERE id = ANY($1)', [toDelete.map(r => r.id)]);
+        totalPurged += toDelete.length;
+      }
+    }
+  }
+
+  send({ type: 'done', totalInserted, totalSkipped, totalPurged });
+  return { totalInserted, totalSkipped, totalPurged };
+}
+
 // HTML에서 window.__APOLLO_STATE__ 추출 (중괄호 균형 탐색)
 function extractApolloState(html) {
   const marker = html.includes('window.__APOLLO_STATE__=')
@@ -1366,162 +1535,18 @@ app.get('/api/admin/auto-collect', authAdminOrToken, async (req, res) => {
   req.on('close', () => { stopped = true; clearInterval(keepAlive); });
 
   const send = (data) => { if (!res.writableEnded) res.write(`data: ${JSON.stringify(data)}\n\n`); };
-
   const catList = categories
     ? categories.split(',').map(s => s.trim()).filter(Boolean)
     : Object.keys(CATEGORY_KEYWORDS);
 
-  // 동 단위 확장: 대도시는 구→동 목록으로 펼침
-  let searchUnits;
-  if (sido === '전국') {
-    searchUnits = Object.entries(SIGUNGU_SERVER).flatMap(([s, guList]) =>
-      guList.flatMap(gu => {
-        const dongList = DONG_BY_GU[s]?.[gu];
-        if (dongList) return dongList.map(dong => ({ label: `${s} ${gu} ${dong}`, addr: `${s} ${gu} ${dong}` }));
-        return [{ label: `${s} ${gu}`, addr: `${s} ${gu}` }];
-      })
-    );
-  } else {
-    const districts = SIGUNGU_SERVER[sido];
-    searchUnits = districts.flatMap(gu => {
-      const dongList = DONG_BY_GU[sido]?.[gu];
-      if (dongList) return dongList.map(dong => ({ label: `${gu} ${dong}`, addr: `${sido} ${gu} ${dong}` }));
-      return [{ label: gu, addr: `${sido} ${gu}` }];
-    });
-  }
-
-  const unitsToProcess = searchUnits.slice(startIndex);
-  send({ type: 'start', total: searchUnits.length * catList.length, startIndex, districts: unitsToProcess.length, categories: catList.length });
-
-  let totalInserted = 0, totalSkipped = 0;
-  const foundNaverIds = new Set();
-
-  for (let ui = 0; ui < unitsToProcess.length; ui++) {
-    const unit = unitsToProcess[ui];
-    const absoluteUnitIdx = startIndex + ui;
-    if (stopped) break;
-    const gu = unit.label;
-
-    let coords = await geocodeAddress(unit.addr);
-    if (!coords) {
-      // 동 단위 주소 실패 시 구 단위로 폴백 (예: "인천 계양구 오류왕길동" → "인천 계양구")
-      const parts = unit.addr.trim().split(/\s+/);
-      const fallbackAddr = parts.length >= 3 ? parts.slice(0, 2).join(' ') : null;
-      if (fallbackAddr) coords = await geocodeAddress(fallbackAddr);
-    }
-    if (!coords) { send({ type: 'skip', district: gu, msg: '좌표 조회 실패' }); continue; }
-
-    for (const cat of catList) {
-      if (stopped) break;
-
-      const keyword = CATEGORY_KEYWORDS[cat] || cat;
-      const tags = catList.length === 1 && query_tags ? query_tags : cat;
-      const endpointType = CATEGORY_ENDPOINT[cat] || 'place';
-      const validTypenames = endpointType === 'restaurant'
-        ? new Set(['RestaurantListSummary'])
-        : new Set(['PlaceSummary', 'PlaceListBusinessesItem']);
-
-      send({ type: 'fetching', district: gu, category: cat });
-
-      try {
-        const html = await fetchNaverPlaceList(keyword, coords.lng, coords.lat, cookie, 1, endpointType);
-        const apolloState = extractApolloState(html);
-        if (!apolloState) {
-          send({ type: 'error', district: gu, category: cat, msg: '__APOLLO_STATE__ 없음 (차단됐거나 응답 구조 변경)' });
-          await new Promise(r => setTimeout(r, 2000));
-          continue;
-        }
-
-        const isDongLevel = unit.addr.trim().split(/\s+/).length >= 3;
-        const seenIds = new Set();
-        const places = Object.entries(apolloState)
-          .filter(([, v]) =>
-            v && typeof v === 'object' && validTypenames.has(v.__typename) &&
-            v.name && typeof v.name === 'string' &&
-            (v.roadAddress || v.address || v.fullAddress || v.__typename === 'PlaceListBusinessesItem') &&
-            v.x && v.y
-          )
-          .map(([key, v]) => ({ ...v, id: v.id || key.split(':')[1] }))
-          .filter(p => {
-            if (!p.id || seenIds.has(p.id)) return false;
-            seenIds.add(p.id);
-            // 동 단위 검색일 때만 1.5km 필터 적용 (구/군 단위는 필터 없음)
-            if (isDongLevel) {
-              const dlat = parseFloat(p.y) - coords.lat;
-              const dlng = parseFloat(p.x) - coords.lng;
-              const dist = Math.sqrt(dlat * dlat + dlng * dlng) * 111000;
-              if (dist > 1500) return false;
-            }
-            return true;
-          });
-
-        // 발견된 모든 place ID를 즉시 등록 (purge 대상에서 제외)
-        for (const p of places) { if (p.id) foundNaverIds.add(String(p.id)); }
-
-        let inserted = 0, skipped = 0;
-
-        for (const p of places) {
-          const addr = p.roadAddress || p.fullAddress || p.address;
-          const lat = parseFloat(p.y);
-          const lng = parseFloat(p.x);
-
-          const dup = await pool.query(
-            `SELECT id FROM custom_stores WHERE name=$1 AND (addr=$2 OR (
-              lat BETWEEN $3-0.0005 AND $3+0.0005 AND lng BETWEEN $4-0.0005 AND $4+0.0005
-            ))`,
-            [p.name, addr, lat, lng]
-          );
-          if (dup.rows.length > 0) { skipped++; continue; }
-
-          const phone = p.virtualPhone || p.phone || null;
-          const category = Array.isArray(p.category) ? p.category.join(', ') : (p.category || null);
-          const naver_url = p.id ? `https://map.naver.com/p/entry/place/${p.id}` : null;
-
-          await pool.query(
-            `INSERT INTO custom_stores (name,addr,phone,category,lat,lng,kakao_url,naver_url,query_tags) VALUES ($1,$2,$3,$4,$5,$6,NULL,$7,$8)`,
-            [p.name, addr, phone, category, lat, lng, naver_url, tags]
-          );
-          inserted++;
-        }
-
-        totalInserted += inserted;
-        totalSkipped += skipped;
-        send({ type: 'result', district: gu, category: cat, found: places.length, inserted, skipped, unitIndex: absoluteUnitIdx });
-
-        // 카테고리 간 딜레이 (429 방지)
-        if (!stopped) await new Promise(r => setTimeout(r, 2000 + Math.random() * 2000));
-      } catch (e) {
-        send({ type: 'error', district: gu, category: cat, msg: e.message });
-      }
-
-      // 1.5~3.5초 랜덤 딜레이 (봇 감지 우회)
-      await new Promise(r => setTimeout(r, 1500 + Math.random() * 2000));
-    }
-  }
+  await runAutoCollectJob(
+    { sido, catList, cookie, purge: purge === 'true', startIndex, queryTags: query_tags },
+    send,
+    () => stopped
+  );
 
   clearInterval(keepAlive);
-
-  let totalPurged = 0;
-  if (purge === 'true' && !stopped && startIndex === 0 && sido !== '전국') {
-    const addrKeyword = SIDO_ADDR[sido] || sido;
-    for (const cat of catList) {
-      const existing = await pool.query(
-        `SELECT id, naver_url FROM custom_stores WHERE query_tags ILIKE $1 AND naver_url IS NOT NULL AND addr LIKE $2`,
-        [`%${cat}%`, `%${addrKeyword}%`]
-      );
-      const toDelete = existing.rows.filter(r => {
-        const m = r.naver_url.match(/\/place\/(\d+)/);
-        return m && !foundNaverIds.has(m[1]);
-      });
-      if (toDelete.length > 0) {
-        await pool.query('DELETE FROM custom_stores WHERE id = ANY($1)', [toDelete.map(r => r.id)]);
-        totalPurged += toDelete.length;
-      }
-    }
-  }
-
-  send({ type: 'done', totalInserted, totalSkipped, totalPurged });
-  res.end();
+  if (!res.writableEnded) res.end();
 });
 
 app.get('/api/admin/geocode', authAdmin, async (req, res) => {
@@ -1777,6 +1802,45 @@ initDB().then(() => {
     console.log(`👉 http://localhost:${PORT}`);
     console.log(`🔧 관리 페이지: http://localhost:${PORT}/admin.html\n`);
   });
+
+  // =====================================================
+  // 주간 자동수집 — 매주 월요일 06:00 KST (전국 × 전체 카테고리)
+  // =====================================================
+  cron.schedule('0 6 * * 1', async () => {
+    console.log('\n🗓️  [주간 자동수집] 시작 — 전국 × 전체 카테고리');
+
+    let cookie = '';
+    try {
+      cookie = await getFreshNaverCookie();
+      console.log(`🍪 [주간 자동수집] 네이버 쿠키 취득 완료 (${cookie.length}자)`);
+    } catch (e) {
+      console.warn(`⚠️  [주간 자동수집] 쿠키 취득 실패, 쿠키 없이 진행: ${e.message}`);
+    }
+
+    const send = (data) => {
+      if (data.type === 'result') {
+        console.log(`  ✅ ${data.district} [${data.category}] 발견:${data.found} 등록:${data.inserted} 스킵:${data.skipped}`);
+      } else if (data.type === 'done') {
+        console.log(`🏁 [주간 자동수집] 완료 — 총 등록:${data.totalInserted} 스킵:${data.totalSkipped}`);
+      } else if (data.type === 'error') {
+        console.error(`  ❌ ${data.district || ''} [${data.category || ''}]: ${data.msg}`);
+      } else if (data.type === 'start') {
+        console.log(`  📋 총 ${data.total}건 (지역 ${data.districts}개 × 카테고리 ${data.categories}개)`);
+      }
+    };
+
+    try {
+      await runAutoCollectJob(
+        { sido: '전국', catList: Object.keys(CATEGORY_KEYWORDS), cookie, purge: false, startIndex: 0 },
+        send,
+        () => false  // cron은 외부 중단 신호 없음
+      );
+    } catch (e) {
+      console.error(`❌ [주간 자동수집] 치명적 오류: ${e.message}`);
+    }
+  }, { timezone: 'Asia/Seoul' });
+
+  console.log('⏰ 주간 자동수집 스케줄 등록 완료 (매주 월요일 06:00 KST)\n');
 }).catch(err => {
   console.error('❌ DB 초기화 실패:', err.message);
   process.exit(1);

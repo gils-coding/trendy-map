@@ -4,9 +4,12 @@
   "description": "유행 상품 매장 지도 서비스",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "postinstall": "npx playwright install chromium --with-deps 2>/dev/null || npx playwright install chromium"
   },
   "dependencies": {
+    "node-cron": "^3.0.3",
+    "playwright": "^1.44.0",
     "axios": "^1.6.2",
     "cors": "^2.8.5",
     "dotenv": "^17.3.1",
