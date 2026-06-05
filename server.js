@@ -1806,7 +1806,7 @@ initDB().then(() => {
   // =====================================================
   // 주간 자동수집 — 매주 월요일 06:00 KST (전국 × 전체 카테고리)
   // =====================================================
-  cron.schedule('0 20 * * 1', async () => {
+  cron.schedule('0 20 * * 0', async () => {
     console.log('\n🗓️  [주간 자동수집] 시작 — 전국 × 전체 카테고리');
 
     let cookie = '';
@@ -1840,7 +1840,7 @@ initDB().then(() => {
     }
   }, { timezone: 'Asia/Seoul' });
 
-  console.log('⏰ 주간 자동수집 스케줄 등록 완료 (매주 월요일 20:00 KST)\n');
+  console.log('⏰ 주간 자동수집 스케줄 등록 완료 (매주 일요일 20:00 KST)\n');
 }).catch(err => {
   console.error('❌ DB 초기화 실패:', err.message);
   process.exit(1);
