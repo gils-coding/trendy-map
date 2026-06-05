@@ -874,8 +874,8 @@ app.delete('/api/admin/stores-by-category', authAdmin, async (req, res) => {
   res.json({ ok: true, deleted: result.rowCount });
 });
 
-// 이름+좌표 기준 중복 제거 (좌표 50m 이내 + 이름 동일 → id 낮은 것 유지)
-app.post('/api/admin/dedup', authAdmin, async (_req, res) => {
+// 이름+좌표 기준 중복 제거 — HTTP 라우트와 cron 양쪽에서 재사용
+async function runDedup() {
   const result = await pool.query('SELECT id, name, lat, lng FROM custom_stores ORDER BY id ASC');
   const stores = result.rows;
   const toDelete = new Set();
@@ -896,7 +896,12 @@ app.post('/api/admin/dedup', authAdmin, async (_req, res) => {
   if (toDelete.size > 0) {
     await pool.query('DELETE FROM custom_stores WHERE id = ANY($1)', [Array.from(toDelete)]);
   }
-  res.json({ ok: true, deleted: toDelete.size });
+  return toDelete.size;
+}
+
+app.post('/api/admin/dedup', authAdmin, async (_req, res) => {
+  const deleted = await runDedup();
+  res.json({ ok: true, deleted });
 });
 
 app.get('/api/admin/suggestions', authAdmin, async (req, res) => {
@@ -1837,6 +1842,13 @@ initDB().then(() => {
       );
     } catch (e) {
       console.error(`❌ [주간 자동수집] 치명적 오류: ${e.message}`);
+    }
+
+    try {
+      const deleted = await runDedup();
+      console.log(`🧹 [주간 자동수집] 중복 제거 완료 — ${deleted}개 삭제`);
+    } catch (e) {
+      console.error(`❌ [주간 자동수집] 중복 제거 오류: ${e.message}`);
     }
   }, { timezone: 'Asia/Seoul' });
 
