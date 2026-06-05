@@ -21,7 +21,15 @@ const { Strategy: GoogleStrategy } = require('passport-google-oauth20');
 
 const app = express();
 app.set('trust proxy', 1);
-app.use(cors({ origin: '*', methods: ['GET', 'POST', 'PUT', 'DELETE'] }));
+const corsOrigins = Array.from(new Set([
+  process.env.BASE_URL || 'http://localhost:8080',
+  'http://localhost:8080',
+]));
+app.use(cors({
+  origin: corsOrigins,
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'X-Admin-Password'],
+}));
 app.use(express.json({ limit: '10mb' }));
 app.use(session({
   secret: process.env.SESSION_SECRET || 'trendy-map-dev-secret',
@@ -51,9 +59,19 @@ const adminLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: '너무 많은 시도가 감지되었습니다. 1분 후 다시 시도해주세요.' },
 });
+// 제안 API: 1분에 5회 (스팸 방지)
+const suggestLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' },
+});
 app.use('/api/stores', apiLimiter);
 app.use('/api/store-search', apiLimiter);
 app.use('/api/admin', adminLimiter);
+app.use('/api/suggest', suggestLimiter);
+app.use('/api/suggest-food', suggestLimiter);
 
 // =====================================================
 // PostgreSQL 연결
@@ -228,8 +246,8 @@ async function searchNaverOpen(query, lat, lng, radius = 10000) {
     addr: item.roadAddress || item.address,
     phone: item.telephone || null,
     category: item.category || null,
-    lat: katecToWgs84(parseInt(item.mapy), parseInt(item.mapx)).lat,
-    lng: katecToWgs84(parseInt(item.mapy), parseInt(item.mapx)).lng,
+    lat: parseNaverOpenCoords(parseInt(item.mapy), parseInt(item.mapx)).lat,
+    lng: parseNaverOpenCoords(parseInt(item.mapy), parseInt(item.mapx)).lng,
     naverUrl: item.link || null,
     kakaoUrl: null,
     hours: null,
@@ -401,7 +419,8 @@ async function searchNaver(query, lat, lng, radius = 5000) {
   return searchNaverOpen(query, lat, lng, radius);
 }
 
-function katecToWgs84(mapy, mapx) {
+// Naver 공개 API는 위도·경도를 10^7배 정수로 반환 — 10^7로 나누면 WGS84 소수점 도(°)
+function parseNaverOpenCoords(mapy, mapx) {
   return { lat: mapy / 1e7, lng: mapx / 1e7 };
 }
 
@@ -766,15 +785,23 @@ setInterval(() => {
   for (const [k, v] of collectCookieTokens) if (v.expiresAt < now) collectCookieTokens.delete(k);
 }, 60_000);
 
+const adminSessionTokens = new Map(); // token → expiresAt (ms) — SSE 자동수집용 단기 세션
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of adminSessionTokens) if (v < now) adminSessionTokens.delete(k);
+}, 60_000);
+
 app.post('/api/admin/collect-token', authAdmin, (req, res) => {
   const cookie = (req.body?.cookie || '').trim();
   const token = crypto.randomUUID();
   collectCookieTokens.set(token, { cookie, expiresAt: Date.now() + 5 * 60_000 });
-  res.json({ token });
+  const authToken = crypto.randomUUID();
+  adminSessionTokens.set(authToken, Date.now() + 30 * 60_000); // SSE 세션 최대 30분
+  res.json({ token, authToken });
 });
 
 function authAdmin(req, res, next) {
-  const pw = req.query.pw || req.body?.pw || '';
+  const pw = req.headers['x-admin-password'] || '';
   try {
     const valid = crypto.timingSafeEqual(
       Buffer.from(pw).subarray(0, Math.max(pw.length, ADMIN_PASSWORD.length)),
@@ -785,6 +812,17 @@ function authAdmin(req, res, next) {
     return res.status(401).json({ error: '비밀번호가 틀렸습니다.' });
   }
   next();
+}
+
+// EventSource는 커스텀 헤더를 지원하지 않으므로 SSE 전용 단기 세션 토큰도 허용
+function authAdminOrToken(req, res, next) {
+  const authToken = req.query.authToken || '';
+  if (authToken) {
+    const exp = adminSessionTokens.get(authToken);
+    if (exp && exp > Date.now()) return next();
+    return res.status(401).json({ error: '세션이 만료됐습니다. 다시 시작해주세요.' });
+  }
+  return authAdmin(req, res, next);
 }
 
 app.get('/api/admin/stores', authAdmin, async (req, res) => {
@@ -1254,24 +1292,6 @@ app.post('/api/admin/bulk-import', authAdmin, async (req, res) => {
 
   let inserted = 0, skipped = 0, errors = [];
 
-  async function geocodeAddress(query) {
-    try {
-      const r = await axios.get('https://dapi.kakao.com/v2/local/search/address.json', {
-        params: { query, size: 1 },
-        headers: { Authorization: `KakaoAK ${KAKAO_REST_KEY}` },
-      });
-      const doc = r.data.documents?.[0];
-      if (doc) return { lat: parseFloat(doc.y), lng: parseFloat(doc.x) };
-      const kw = await axios.get('https://dapi.kakao.com/v2/local/search/keyword.json', {
-        params: { query, size: 1 },
-        headers: { Authorization: `KakaoAK ${KAKAO_REST_KEY}` },
-      });
-      const kd = kw.data.documents?.[0];
-      if (kd) return { lat: parseFloat(kd.y), lng: parseFloat(kd.x) };
-    } catch {}
-    return null;
-  }
-
   for (const item of list) {
     const name = item.name;
     // PlaceSummary는 fullAddress 우선, allSearch는 roadAddress 우선
@@ -1326,7 +1346,7 @@ app.post('/api/admin/bulk-import', authAdmin, async (req, res) => {
 });
 
 // 자동 수집 SSE 엔드포인트
-app.get('/api/admin/auto-collect', authAdmin, async (req, res) => {
+app.get('/api/admin/auto-collect', authAdminOrToken, async (req, res) => {
   const { sido, categories, cookieToken, query_tags, purge, startIndex: startIdxStr } = req.query;
   const cookieEntry = cookieToken ? collectCookieTokens.get(cookieToken) : null;
   if (cookieToken) collectCookieTokens.delete(cookieToken); // single-use
@@ -1552,7 +1572,9 @@ app.post('/auth/logout', (req, res) => {
 // 추천 라우트
 // =====================================================
 function normalizeStoreId(name, addr) {
-  return ((name || '').toLowerCase().trim() + '||' + (addr || '').toLowerCase().trim());
+  const normName = (name || '').toLowerCase().trim().replace(/\s+/g, ' ');
+  const normAddr = (addr || '').toLowerCase().trim().replace(/\s+/g, ' ');
+  return `${normName}||${normAddr}`;
 }
 
 app.post('/api/recommend', async (req, res) => {

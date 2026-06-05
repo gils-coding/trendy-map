@@ -631,6 +631,12 @@
     let adminPw = '';
     let editingId = null;
 
+    // 관리자 비밀번호를 URL 쿼리가 아닌 헤더로 전송 (서버 로그 노출 방지)
+    function adminFetch(url, opts = {}) {
+      const headers = Object.assign({ 'X-Admin-Password': adminPw }, opts.headers || {});
+      return fetch(url, { ...opts, headers });
+    }
+
     // ── 로그인 ──
     document.getElementById('pwInput').addEventListener('keydown', e => {
       if (e.key === 'Enter') doLogin();
@@ -640,7 +646,7 @@
       const pw = document.getElementById('pwInput').value.trim();
       if (!pw) return showToast('비밀번호를 입력해주세요.', 'err');
 
-      const res = await fetch(`/api/admin/stores?pw=${encodeURIComponent(pw)}`);
+      const res = await fetch('/api/admin/stores', { headers: { 'X-Admin-Password': pw } });
       if (res.status === 401) return showToast('비밀번호가 틀렸습니다.', 'err');
 
       adminPw = pw;
@@ -657,7 +663,7 @@
       if (!addr) return showToast('주소를 먼저 입력해주세요.', 'err');
 
       document.getElementById('coord_status').textContent = '검색 중...';
-      const res = await fetch(`/api/admin/geocode?pw=${encodeURIComponent(adminPw)}&query=${encodeURIComponent(addr)}`);
+      const res = await adminFetch(`/api/admin/geocode?query=${encodeURIComponent(addr)}`);
       const data = await res.json();
 
       if (data.error) {
@@ -697,7 +703,6 @@
       if (!tags) return showToast('검색 키워드를 하나 이상 입력해주세요.', 'err');
 
       const body = {
-        pw: adminPw,
         name, addr, lat, lng,
         phone: document.getElementById('f_phone').value.trim() || null,
         category: document.getElementById('f_category').value.trim() || null,
@@ -710,7 +715,7 @@
       const url = editingId ? `/api/admin/stores/${editingId}` : '/api/admin/stores';
       const method = editingId ? 'PUT' : 'POST';
 
-      const res = await fetch(url, {
+      const res = await adminFetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -752,7 +757,7 @@
     // ── 삭제 ──
     async function deleteStore(id, name) {
       if (!confirm(`"${name}"을 삭제할까요?`)) return;
-      const res = await fetch(`/api/admin/stores/${id}?pw=${encodeURIComponent(adminPw)}`, { method: 'DELETE' });
+      const res = await adminFetch(`/api/admin/stores/${id}`, { method: 'DELETE' });
       const data = await res.json();
       if (data.ok) { showToast('삭제됐습니다.', 'ok'); loadList(currentPage); }
       else showToast(data.error || '오류', 'err');
@@ -778,7 +783,7 @@
       page = page || currentPage;
       currentPage = page;
       document.getElementById('listArea').innerHTML = '<div class="empty-msg">로딩 중...</div>';
-      const res = await fetch(`/api/admin/stores?pw=${encodeURIComponent(adminPw)}&page=${page}`);
+      const res = await adminFetch(`/api/admin/stores?page=${page}`);
       const data = await res.json();
 
       if (!data.stores || data.stores.length === 0) {
@@ -834,7 +839,7 @@
     // ── 매장 제안 목록 ──
     async function loadSuggestions() {
       document.getElementById('suggestionArea').innerHTML = '<div class="empty-msg">로딩 중...</div>';
-      const res = await fetch(`/api/admin/suggestions?pw=${encodeURIComponent(adminPw)}`);
+      const res = await adminFetch('/api/admin/suggestions');
       const data = await res.json();
       if (!data.suggestions || data.suggestions.length === 0) {
         document.getElementById('suggestionArea').innerHTML = '<div class="empty-msg">제안된 매장이 없습니다.</div>';
@@ -869,10 +874,10 @@
     }
 
     async function doneSuggestion(id) {
-      await fetch(`/api/admin/suggestions/${id}?pw=${encodeURIComponent(adminPw)}`, {
+      await adminFetch(`/api/admin/suggestions/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pw: adminPw, status: 'done' })
+        body: JSON.stringify({ status: 'done' })
       });
       showToast('완료 처리됐습니다.', 'ok');
       loadSuggestions();
@@ -880,7 +885,7 @@
 
     async function deleteSuggestion(id) {
       if (!confirm('삭제할까요?')) return;
-      await fetch(`/api/admin/suggestions/${id}?pw=${encodeURIComponent(adminPw)}`, { method: 'DELETE' });
+      await adminFetch(`/api/admin/suggestions/${id}`, { method: 'DELETE' });
       showToast('삭제됐습니다.', 'ok');
       loadSuggestions();
     }
@@ -888,7 +893,7 @@
     // ── 음식 제안 목록 ──
     async function loadFoodSuggestions() {
       document.getElementById('foodSuggestionArea').innerHTML = '<div class="empty-msg">로딩 중...</div>';
-      const res = await fetch(`/api/admin/food-suggestions?pw=${encodeURIComponent(adminPw)}`);
+      const res = await adminFetch('/api/admin/food-suggestions');
       const data = await res.json();
       if (!data.suggestions || data.suggestions.length === 0) {
         document.getElementById('foodSuggestionArea').innerHTML = '<div class="empty-msg">제안된 음식이 없습니다.</div>';
@@ -928,10 +933,10 @@
     }
 
     async function doneFoodSuggestion(id) {
-      await fetch(`/api/admin/food-suggestions/${id}?pw=${encodeURIComponent(adminPw)}`, {
+      await adminFetch(`/api/admin/food-suggestions/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pw: adminPw, status: 'done' })
+        body: JSON.stringify({ status: 'done' })
       });
       showToast('완료 처리됐습니다.', 'ok');
       loadFoodSuggestions();
@@ -939,7 +944,7 @@
 
     async function deleteFoodSuggestion(id) {
       if (!confirm('삭제할까요?')) return;
-      await fetch(`/api/admin/food-suggestions/${id}?pw=${encodeURIComponent(adminPw)}`, { method: 'DELETE' });
+      await adminFetch(`/api/admin/food-suggestions/${id}`, { method: 'DELETE' });
       showToast('삭제됐습니다.', 'ok');
       loadFoodSuggestions();
     }
@@ -961,10 +966,10 @@
 
       let res, data;
       try {
-        res = await fetch(`/api/admin/bulk-import?pw=${encodeURIComponent(adminPw)}`, {
+        res = await adminFetch('/api/admin/bulk-import', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ json, query_tags, pw: adminPw })
+          body: JSON.stringify({ json, query_tags })
         });
       } catch (e) {
         statusEl.textContent = '';
@@ -1056,19 +1061,17 @@
       }
       document.getElementById('ac_status').textContent = isResume ? `재연결 중...` : '수집 중...';
 
-      // Exchange cookie for a short-lived server-side token so it never appears in the SSE URL/logs
-      let cookieToken = '';
-      if (cookie) {
-        const tokenRes = await fetch(`/api/admin/collect-token?pw=${encodeURIComponent(adminPw)}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ pw: adminPw, cookie })
-        });
-        const tokenData = await tokenRes.json();
-        cookieToken = tokenData.token || '';
-      }
+      // collect-token을 항상 호출 — SSE는 헤더 미지원이므로 authToken으로 인증
+      const tokenRes = await adminFetch('/api/admin/collect-token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cookie: cookie || '' })
+      });
+      const tokenData = await tokenRes.json();
+      const cookieToken = tokenData.token || '';
+      const authToken = tokenData.authToken || '';
 
-      const params = new URLSearchParams({ pw: adminPw, sido });
+      const params = new URLSearchParams({ authToken, sido });
       if (category) params.append('categories', category);
       if (tags) params.append('query_tags', tags);
       if (cookieToken) params.append('cookieToken', cookieToken);
@@ -1136,7 +1139,7 @@
     // ── 중복 제거 ──
     async function runDedup() {
       if (!confirm('이름이 같고 좌표가 50m 이내인 중복 가게를 자동 제거할까요? (ID가 낮은 것 유지)')) return;
-      const res = await fetch(`/api/admin/dedup?pw=${encodeURIComponent(adminPw)}`, { method: 'POST' });
+      const res = await adminFetch('/api/admin/dedup', { method: 'POST' });
       const data = await res.json();
       if (data.ok) { showToast(`중복 ${data.deleted}개 삭제됐습니다.`, 'ok'); loadList(1); }
       else showToast('오류가 발생했습니다.', 'err');
@@ -1159,7 +1162,7 @@
       const statusEl = document.getElementById('del_status');
       statusEl.textContent = '삭제 중...';
       try {
-        const res = await fetch(`/api/admin/stores-by-category?pw=${encodeURIComponent(adminPw)}&category=${encodeURIComponent(category)}`, { method: 'DELETE' });
+        const res = await adminFetch(`/api/admin/stores-by-category?category=${encodeURIComponent(category)}`, { method: 'DELETE' });
         const data = await res.json();
         if (data.ok) {
           statusEl.textContent = `완료: ${data.deleted}개 삭제됨`;
