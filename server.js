@@ -10,7 +10,6 @@ if (process.env.NODE_ENV !== 'production') {
 }
 const express = require('express');
 const cron = require('node-cron');
-const { chromium } = require('playwright');
 const axios = require('axios');
 const cors = require('cors');
 const path = require('path');
@@ -1186,24 +1185,20 @@ async function fetchNaverPlaceList(query, x, y, cookie, start = 1, endpointType 
 }
 
 // =====================================================
-// 네이버 쿠키 자동 취득 (headless Chrome → map.naver.com)
+// 네이버 쿠키 자동 취득 (axios → map.naver.com Set-Cookie 헤더 수집)
 // =====================================================
 async function getFreshNaverCookie() {
-  const browser = await chromium.launch({
-    headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+  const res = await axios.get('https://map.naver.com', {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+      'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8',
+    },
+    timeout: 10000,
+    maxRedirects: 5,
   });
-  try {
-    const context = await browser.newContext({
-      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-    });
-    const page = await context.newPage();
-    await page.goto('https://map.naver.com', { waitUntil: 'networkidle', timeout: 30000 });
-    const cookies = await context.cookies('https://map.naver.com');
-    return cookies.map(c => `${c.name}=${c.value}`).join('; ');
-  } finally {
-    await browser.close();
-  }
+  const setCookieHeaders = res.headers['set-cookie'] || [];
+  return setCookieHeaders.map(c => c.split(';')[0]).join('; ');
 }
 
 // =====================================================
