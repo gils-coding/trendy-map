@@ -469,6 +469,16 @@ function isDuplicate(store, referenceList) {
 }
 
 // =====================================================
+// 비음식 매장 필터 (기계·공업·건설 업체 제거)
+// =====================================================
+const NON_FOOD_KEYWORDS = ['기계', '공업', '건설'];
+
+function isNonFoodStore(store) {
+  const text = ((store.category || '') + ' ' + (store.name || '')).toLowerCase();
+  return NON_FOOD_KEYWORDS.some(kw => text.includes(kw));
+}
+
+// =====================================================
 // API: 프론트엔드 설정 (Naver Maps 키 등)
 // =====================================================
 const NAVER_MAP_CLIENT_ID = process.env.NAVER_MAP_CLIENT_ID || '';
@@ -491,12 +501,13 @@ app.get('/api/stores', async (req, res) => {
     // 지역 접두어 없이 순수 쿼리 + searchCoord/boundary로 로컬라이즈 (네이버 지도 프론트와 동일)
     console.log(`🔍 네이버 검색어: "${query}" (searchCoord: ${x};${y})`);
 
-    const [naverRaw, customRaw] = await Promise.all([
+    const [naverAll, customRaw] = await Promise.all([
       searchNaver(query, y, x, rad),
       searchCustomDB(query, y, x, rad),
     ]);
+    const naverRaw = naverAll.filter(s => !isNonFoodStore(s));
 
-    console.log(`✅ [${query}] 네이버 ${naverRaw.length} + DB ${customRaw.length}`);
+    console.log(`✅ [${query}] 네이버 ${naverAll.length}개 → 필터 후 ${naverRaw.length}개 + DB ${customRaw.length}`);
 
     const naverStores = naverRaw.map((s, i) => ({ ...s, id: i + 1 }));
 
@@ -610,7 +621,7 @@ app.get('/api/store-search', async (req, res) => {
       lng: parseFloat(s.x),
       kakaoUrl: s.place_url || null,
       source: 'kakao',
-    }));
+    })).filter(s => !isNonFoodStore(s));
 
     const kwLower = kw.toLowerCase();
     let dbStores = [];
