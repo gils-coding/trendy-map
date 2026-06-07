@@ -1515,6 +1515,32 @@ app.post('/api/admin/bulk-import', authAdmin, async (req, res) => {
   res.json({ ok: true, total: list.length, inserted, skipped, errors });
 });
 
+// 백그라운드 수집 트리거 — 응답 즉시 반환, 서버에서 완주 (SSE 연결 불필요)
+app.post('/api/admin/trigger-collect', authAdmin, async (req, res) => {
+  const { sido = '전국', categories, purge = false } = req.body || {};
+  const catList = categories
+    ? (Array.isArray(categories) ? categories : categories.split(',').map(s => s.trim()).filter(Boolean))
+    : ['우베', '버터떡', '두바이 쫀득쿠키'];
+  res.json({ ok: true, message: `수집 시작 — ${sido} × [${catList.join(', ')}]`, catList });
+
+  // 응답 후 백그라운드 실행 (isStopped = () => false → 연결 끊겨도 완주)
+  (async () => {
+    let cookie = '';
+    try { cookie = await getFreshNaverCookie(); } catch (e) { /* 쿠키 없이 진행 */ }
+    const send = (data) => {
+      if (data.type === 'done') console.log(`✅ [trigger-collect] 완료 — inserted:${data.inserted} skipped:${data.skipped}`);
+      else if (data.type === 'error') console.error(`❌ [trigger-collect] ${data.district} [${data.category}]: ${data.msg}`);
+    };
+    try {
+      await runAutoCollectJob({ sido, catList, cookie, purge: purge === true || purge === 'true', startIndex: 0 }, send, () => false);
+      const deleted = await runDedup();
+      console.log(`🧹 [trigger-collect] dedup 완료 — ${deleted}건 삭제`);
+    } catch (e) {
+      console.error(`❌ [trigger-collect] 치명적 오류: ${e.message}`);
+    }
+  })();
+});
+
 // 자동 수집 SSE 엔드포인트
 app.get('/api/admin/auto-collect', authAdminOrToken, async (req, res) => {
   const { sido, categories, cookieToken, query_tags, purge, startIndex: startIdxStr } = req.query;
