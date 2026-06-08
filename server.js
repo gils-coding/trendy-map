@@ -159,7 +159,57 @@ async function initDB() {
       UNIQUE(list_id, store_identifier)
     )
   `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS collect_jobs (
+      id          SERIAL PRIMARY KEY,
+      sido        TEXT NOT NULL,
+      cat_list    TEXT NOT NULL,
+      next_index  INTEGER NOT NULL DEFAULT 0,
+      total_units INTEGER,
+      status      TEXT NOT NULL DEFAULT 'pending',
+      created_at  TIMESTAMP DEFAULT NOW(),
+      updated_at  TIMESTAMP DEFAULT NOW()
+    )
+  `);
   console.log('✅ PostgreSQL 테이블 준비 완료');
+}
+
+// ─── 백그라운드 수집 실행 (trigger-collect / cron / 재개 공용) ───
+async function runCollectJobInBackground({ sido, catList, purge = false, startIndex = 0, jobId }) {
+  let cookie = '';
+  try { cookie = await getFreshNaverCookie(); } catch (e) { /* 쿠키 없이 진행 */ }
+  const send = (data) => {
+    if (data.type === 'result') console.log(`  ✅ [collect#${jobId}] ${data.district} [${data.category}] 등록:${data.inserted}`);
+    else if (data.type === 'done') console.log(`🏁 [collect#${jobId}] 완료 — inserted:${data.totalInserted} skipped:${data.totalSkipped}`);
+    else if (data.type === 'error') console.error(`❌ [collect#${jobId}] ${data.district} [${data.category}]: ${data.msg}`);
+    else if (data.type === 'start') console.log(`📋 [collect#${jobId}] 시작 — ${data.districts}지역 × ${data.categories}카테고리 (index ${startIndex}부터)`);
+  };
+  try {
+    await runAutoCollectJob({ sido, catList, cookie, purge, startIndex, jobId }, send, () => false);
+    const deleted = await runDedup();
+    console.log(`🧹 [collect#${jobId}] dedup 완료 — ${deleted}건 삭제`);
+  } catch (e) {
+    if (jobId) await finishCollectJob(jobId, 'failed').catch(() => {});
+    console.error(`❌ [collect#${jobId}] 치명적 오류: ${e.message}`);
+  }
+}
+
+// ─── 수집 작업 진행률 DB 저장 헬퍼 ───
+async function createCollectJob(sido, catList) {
+  const r = await pool.query(
+    `INSERT INTO collect_jobs (sido, cat_list, status) VALUES ($1, $2, 'pending') RETURNING id`,
+    [sido, JSON.stringify(catList)]
+  );
+  return r.rows[0].id;
+}
+async function updateCollectJobProgress(jobId, nextIndex, totalUnits) {
+  await pool.query(
+    `UPDATE collect_jobs SET next_index=$1, total_units=$2, status='running', updated_at=NOW() WHERE id=$3`,
+    [nextIndex, totalUnits, jobId]
+  );
+}
+async function finishCollectJob(jobId, status = 'done') {
+  await pool.query(`UPDATE collect_jobs SET status=$1, updated_at=NOW() WHERE id=$2`, [status, jobId]);
 }
 
 // =====================================================
@@ -1206,7 +1256,7 @@ async function getFreshNaverCookie() {
 // 자동수집 핵심 루프 — SSE 라우트와 cron 양쪽에서 재사용
 // send(data): 이벤트 콜백 / isStopped(): 중단 여부 반환
 // =====================================================
-async function runAutoCollectJob({ sido, catList, cookie, purge, startIndex = 0, queryTags }, send, isStopped) {
+async function runAutoCollectJob({ sido, catList, cookie, purge, startIndex = 0, queryTags, jobId }, send, isStopped) {
   let searchUnits;
   if (sido === '전국') {
     searchUnits = Object.entries(SIGUNGU_SERVER).flatMap(([s, guList]) =>
@@ -1225,8 +1275,11 @@ async function runAutoCollectJob({ sido, catList, cookie, purge, startIndex = 0,
     });
   }
 
+  const totalUnits = searchUnits.length;
+  if (jobId) await updateCollectJobProgress(jobId, startIndex, totalUnits).catch(() => {});
+
   const unitsToProcess = searchUnits.slice(startIndex);
-  send({ type: 'start', total: searchUnits.length * catList.length, startIndex, districts: unitsToProcess.length, categories: catList.length });
+  send({ type: 'start', total: totalUnits * catList.length, startIndex, districts: unitsToProcess.length, categories: catList.length });
 
   let totalInserted = 0, totalSkipped = 0;
   const foundNaverIds = new Set();
@@ -1323,6 +1376,11 @@ async function runAutoCollectJob({ sido, catList, cookie, purge, startIndex = 0,
 
       await new Promise(r => setTimeout(r, 1500 + Math.random() * 2000));
     }
+
+    // 20 지역마다 진행률 저장 — 서버 재시작 시 이 지점부터 재개
+    if (jobId && (ui + 1) % 20 === 0) {
+      await updateCollectJobProgress(jobId, startIndex + ui + 1, totalUnits).catch(() => {});
+    }
   }
 
   let totalPurged = 0;
@@ -1344,6 +1402,7 @@ async function runAutoCollectJob({ sido, catList, cookie, purge, startIndex = 0,
     }
   }
 
+  if (jobId) await finishCollectJob(jobId, 'done').catch(() => {});
   send({ type: 'done', totalInserted, totalSkipped, totalPurged });
   return { totalInserted, totalSkipped, totalPurged };
 }
@@ -1521,24 +1580,10 @@ app.post('/api/admin/trigger-collect', authAdmin, async (req, res) => {
   const catList = categories
     ? (Array.isArray(categories) ? categories : categories.split(',').map(s => s.trim()).filter(Boolean))
     : ['우베', '버터떡', '두바이 쫀득쿠키'];
-  res.json({ ok: true, message: `수집 시작 — ${sido} × [${catList.join(', ')}]`, catList });
+  const jobId = await createCollectJob(sido, catList).catch(() => null);
+  res.json({ ok: true, message: `수집 시작 — ${sido} × [${catList.join(', ')}]`, catList, jobId });
 
-  // 응답 후 백그라운드 실행 (isStopped = () => false → 연결 끊겨도 완주)
-  (async () => {
-    let cookie = '';
-    try { cookie = await getFreshNaverCookie(); } catch (e) { /* 쿠키 없이 진행 */ }
-    const send = (data) => {
-      if (data.type === 'done') console.log(`✅ [trigger-collect] 완료 — inserted:${data.inserted} skipped:${data.skipped}`);
-      else if (data.type === 'error') console.error(`❌ [trigger-collect] ${data.district} [${data.category}]: ${data.msg}`);
-    };
-    try {
-      await runAutoCollectJob({ sido, catList, cookie, purge: purge === true || purge === 'true', startIndex: 0 }, send, () => false);
-      const deleted = await runDedup();
-      console.log(`🧹 [trigger-collect] dedup 완료 — ${deleted}건 삭제`);
-    } catch (e) {
-      console.error(`❌ [trigger-collect] 치명적 오류: ${e.message}`);
-    }
-  })();
+  runCollectJobInBackground({ sido, catList, purge: purge === true || purge === 'true', jobId });
 });
 
 // 자동 수집 SSE 엔드포인트
@@ -1833,45 +1878,31 @@ initDB().then(() => {
   // =====================================================
   // 주간 자동수집 — 매주 월요일 06:00 KST (전국 × 전체 카테고리)
   // =====================================================
-  cron.schedule('0 20 * * 0', async () => {
-    console.log('\n🗓️  [주간 자동수집] 시작 — 전국 × 전체 카테고리');
-
-    let cookie = '';
+  // 서버 시작 시 중단된 수집 작업 자동 재개
+  (async () => {
     try {
-      cookie = await getFreshNaverCookie();
-      console.log(`🍪 [주간 자동수집] 네이버 쿠키 취득 완료 (${cookie.length}자)`);
-    } catch (e) {
-      console.warn(`⚠️  [주간 자동수집] 쿠키 취득 실패, 쿠키 없이 진행: ${e.message}`);
-    }
-
-    const send = (data) => {
-      if (data.type === 'result') {
-        console.log(`  ✅ ${data.district} [${data.category}] 발견:${data.found} 등록:${data.inserted} 스킵:${data.skipped}`);
-      } else if (data.type === 'done') {
-        console.log(`🏁 [주간 자동수집] 완료 — 총 등록:${data.totalInserted} 스킵:${data.totalSkipped}`);
-      } else if (data.type === 'error') {
-        console.error(`  ❌ ${data.district || ''} [${data.category || ''}]: ${data.msg}`);
-      } else if (data.type === 'start') {
-        console.log(`  📋 총 ${data.total}건 (지역 ${data.districts}개 × 카테고리 ${data.categories}개)`);
-      }
-    };
-
-    try {
-      await runAutoCollectJob(
-        { sido: '전국', catList: ['우베', '버터떡', '두바이 쫀득쿠키'], cookie, purge: false, startIndex: 0 },
-        send,
-        () => false  // cron은 외부 중단 신호 없음
+      const pending = await pool.query(
+        `SELECT id, sido, cat_list, next_index FROM collect_jobs WHERE status IN ('pending','running') ORDER BY id ASC`
       );
+      if (pending.rows.length > 0) {
+        console.log(`\n♻️  중단된 수집 작업 ${pending.rows.length}개 재개`);
+        for (const job of pending.rows) {
+          const catList = JSON.parse(job.cat_list);
+          console.log(`  → job#${job.id} ${job.sido} × [${catList.join(',')}] index:${job.next_index}부터`);
+          runCollectJobInBackground({ sido: job.sido, catList, purge: false, startIndex: job.next_index, jobId: job.id });
+        }
+      }
     } catch (e) {
-      console.error(`❌ [주간 자동수집] 치명적 오류: ${e.message}`);
+      console.error('재개 체크 실패:', e.message);
     }
+  })();
 
-    try {
-      const deleted = await runDedup();
-      console.log(`🧹 [주간 자동수집] 중복 제거 완료 — ${deleted}개 삭제`);
-    } catch (e) {
-      console.error(`❌ [주간 자동수집] 중복 제거 오류: ${e.message}`);
-    }
+  // 주간 자동수집 — 매주 일요일 20:00 KST
+  cron.schedule('0 20 * * 0', async () => {
+    console.log('\n🗓️  [주간 자동수집] 시작 — 전국 × 우베/버터떡/두바이 쫀득쿠키');
+    const catList = ['우베', '버터떡', '두바이 쫀득쿠키'];
+    const jobId = await createCollectJob('전국', catList).catch(() => null);
+    runCollectJobInBackground({ sido: '전국', catList, purge: false, startIndex: 0, jobId });
   }, { timezone: 'Asia/Seoul' });
 
   console.log('⏰ 주간 자동수집 스케줄 등록 완료 (매주 일요일 20:00 KST)\n');
