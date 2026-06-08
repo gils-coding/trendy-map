@@ -988,10 +988,13 @@ function findPlaceArray(obj, depth = 0) {
   return null;
 }
 
-// 자동 수집용 카테고리 대표 키워드
+// 자동 수집용 카테고리 대표 키워드 (배열이면 여러 키워드로 순차 검색, query_tags는 카테고리명으로 통일)
 const CATEGORY_KEYWORDS = {
-  '버터떡': '버터떡', '두바이 쫀득쿠키': '두바이 쫀득쿠키',
-  '소금빵': '소금빵', '탕후루': '탕후루', '우베': '우베',
+  '버터떡': ['버터떡'],
+  '두바이 쫀득쿠키': ['두바이 쫀득쿠키'],
+  '소금빵': ['소금빵'],
+  '탕후루': ['탕후루'],
+  '우베': ['우베', '우베 빵', '우베 버터떡', '우베 라떼', '우베 케이크', '우베 도넛'],
 };
 
 // 버터떡·우베는 PlaceSummary(/place/list), 두바이·소금빵·탕후루는 RestaurantListSummary(/restaurant/list)
@@ -1301,78 +1304,84 @@ async function runAutoCollectJob({ sido, catList, cookie, purge, startIndex = 0,
     for (const cat of catList) {
       if (isStopped()) break;
 
-      const keyword = CATEGORY_KEYWORDS[cat] || cat;
+      const kwEntry = CATEGORY_KEYWORDS[cat] || cat;
+      const keywords = Array.isArray(kwEntry) ? kwEntry : [kwEntry];
       const tags = catList.length === 1 && queryTags ? queryTags : cat;
       const endpointType = CATEGORY_ENDPOINT[cat] || 'place';
       const validTypenames = endpointType === 'restaurant'
         ? new Set(['RestaurantListSummary'])
         : new Set(['PlaceSummary', 'PlaceListBusinessesItem']);
+      const isDongLevel = unit.addr.trim().split(/\s+/).length >= 3;
 
-      send({ type: 'fetching', district: gu, category: cat });
+      const catSeenIds = new Set(); // 같은 cat+district 내 여러 키워드간 중복 제거
+      let catInserted = 0, catSkipped = 0;
 
-      try {
-        const html = await fetchNaverPlaceList(keyword, coords.lng, coords.lat, cookie, 1, endpointType);
-        const apolloState = extractApolloState(html);
-        if (!apolloState) {
-          send({ type: 'error', district: gu, category: cat, msg: '__APOLLO_STATE__ 없음 (차단됐거나 응답 구조 변경)' });
-          await new Promise(r => setTimeout(r, 2000));
-          continue;
+      for (const keyword of keywords) {
+        if (isStopped()) break;
+
+        send({ type: 'fetching', district: gu, category: keywords.length > 1 ? `${cat}(${keyword})` : cat });
+
+        try {
+          const html = await fetchNaverPlaceList(keyword, coords.lng, coords.lat, cookie, 1, endpointType);
+          const apolloState = extractApolloState(html);
+          if (!apolloState) {
+            send({ type: 'error', district: gu, category: `${cat}(${keyword})`, msg: '__APOLLO_STATE__ 없음 (차단됐거나 응답 구조 변경)' });
+            await new Promise(r => setTimeout(r, 2000));
+            continue;
+          }
+
+          const places = Object.entries(apolloState)
+            .filter(([, v]) =>
+              v && typeof v === 'object' && validTypenames.has(v.__typename) &&
+              v.name && typeof v.name === 'string' &&
+              (v.roadAddress || v.address || v.fullAddress || v.__typename === 'PlaceListBusinessesItem') &&
+              v.x && v.y
+            )
+            .map(([key, v]) => ({ ...v, id: v.id || key.split(':')[1] }))
+            .filter(p => {
+              if (!p.id || catSeenIds.has(p.id)) return false;
+              catSeenIds.add(p.id);
+              if (isDongLevel) {
+                const dlat = parseFloat(p.y) - coords.lat;
+                const dlng = parseFloat(p.x) - coords.lng;
+                const dist = Math.sqrt(dlat * dlat + dlng * dlng) * 111000;
+                if (dist > 1500) return false;
+              }
+              return true;
+            });
+
+          for (const p of places) { if (p.id) foundNaverIds.add(String(p.id)); }
+
+          for (const p of places) {
+            const addr = p.roadAddress || p.fullAddress || p.address;
+            const lat = parseFloat(p.y);
+            const lng = parseFloat(p.x);
+            const dup = await pool.query(
+              `SELECT id FROM custom_stores WHERE name=$1 AND (addr=$2 OR (
+                lat BETWEEN $3-0.0005 AND $3+0.0005 AND lng BETWEEN $4-0.0005 AND $4+0.0005
+              ))`,
+              [p.name, addr, lat, lng]
+            );
+            if (dup.rows.length > 0) { catSkipped++; continue; }
+            const phone = p.virtualPhone || p.phone || null;
+            const category = Array.isArray(p.category) ? p.category.join(', ') : (p.category || null);
+            const naver_url = p.id ? `https://map.naver.com/p/entry/place/${p.id}` : null;
+            await pool.query(
+              `INSERT INTO custom_stores (name,addr,phone,category,lat,lng,kakao_url,naver_url,query_tags) VALUES ($1,$2,$3,$4,$5,$6,NULL,$7,$8)`,
+              [p.name, addr, phone, category, lat, lng, naver_url, tags]
+            );
+            catInserted++;
+          }
+
+          if (!isStopped()) await new Promise(r => setTimeout(r, 2000 + Math.random() * 2000));
+        } catch (e) {
+          send({ type: 'error', district: gu, category: `${cat}(${keyword})`, msg: e.message });
         }
-
-        const isDongLevel = unit.addr.trim().split(/\s+/).length >= 3;
-        const seenIds = new Set();
-        const places = Object.entries(apolloState)
-          .filter(([, v]) =>
-            v && typeof v === 'object' && validTypenames.has(v.__typename) &&
-            v.name && typeof v.name === 'string' &&
-            (v.roadAddress || v.address || v.fullAddress || v.__typename === 'PlaceListBusinessesItem') &&
-            v.x && v.y
-          )
-          .map(([key, v]) => ({ ...v, id: v.id || key.split(':')[1] }))
-          .filter(p => {
-            if (!p.id || seenIds.has(p.id)) return false;
-            seenIds.add(p.id);
-            if (isDongLevel) {
-              const dlat = parseFloat(p.y) - coords.lat;
-              const dlng = parseFloat(p.x) - coords.lng;
-              const dist = Math.sqrt(dlat * dlat + dlng * dlng) * 111000;
-              if (dist > 1500) return false;
-            }
-            return true;
-          });
-
-        for (const p of places) { if (p.id) foundNaverIds.add(String(p.id)); }
-
-        let inserted = 0, skipped = 0;
-        for (const p of places) {
-          const addr = p.roadAddress || p.fullAddress || p.address;
-          const lat = parseFloat(p.y);
-          const lng = parseFloat(p.x);
-          const dup = await pool.query(
-            `SELECT id FROM custom_stores WHERE name=$1 AND (addr=$2 OR (
-              lat BETWEEN $3-0.0005 AND $3+0.0005 AND lng BETWEEN $4-0.0005 AND $4+0.0005
-            ))`,
-            [p.name, addr, lat, lng]
-          );
-          if (dup.rows.length > 0) { skipped++; continue; }
-          const phone = p.virtualPhone || p.phone || null;
-          const category = Array.isArray(p.category) ? p.category.join(', ') : (p.category || null);
-          const naver_url = p.id ? `https://map.naver.com/p/entry/place/${p.id}` : null;
-          await pool.query(
-            `INSERT INTO custom_stores (name,addr,phone,category,lat,lng,kakao_url,naver_url,query_tags) VALUES ($1,$2,$3,$4,$5,$6,NULL,$7,$8)`,
-            [p.name, addr, phone, category, lat, lng, naver_url, tags]
-          );
-          inserted++;
-        }
-
-        totalInserted += inserted;
-        totalSkipped += skipped;
-        send({ type: 'result', district: gu, category: cat, found: places.length, inserted, skipped, unitIndex: absoluteUnitIdx });
-
-        if (!isStopped()) await new Promise(r => setTimeout(r, 2000 + Math.random() * 2000));
-      } catch (e) {
-        send({ type: 'error', district: gu, category: cat, msg: e.message });
       }
+
+      totalInserted += catInserted;
+      totalSkipped += catSkipped;
+      send({ type: 'result', district: gu, category: cat, found: catSeenIds.size, inserted: catInserted, skipped: catSkipped, unitIndex: absoluteUnitIdx });
 
       await new Promise(r => setTimeout(r, 1500 + Math.random() * 2000));
     }
