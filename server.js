@@ -179,8 +179,8 @@ async function runCollectJobInBackground({ sido, catList, purge = false, startIn
   let cookie = '';
   try { cookie = await getFreshNaverCookie(); } catch (e) { /* 쿠키 없이 진행 */ }
   const send = (data) => {
-    if (data.type === 'result') console.log(`  ✅ [collect#${jobId}] ${data.district} [${data.category}] 등록:${data.inserted}`);
-    else if (data.type === 'done') console.log(`🏁 [collect#${jobId}] 완료 — inserted:${data.totalInserted} skipped:${data.totalSkipped}`);
+    if (data.type === 'result') console.log(`  ✅ [collect#${jobId}] ${data.district} [${data.category}] 발견:${data.found} 등록:${data.inserted} 스킵:${data.skipped}`);
+    else if (data.type === 'done') console.log(`🏁 [collect#${jobId}] 완료 — 등록:${data.totalInserted} 스킵:${data.totalSkipped}`);
     else if (data.type === 'error') console.error(`❌ [collect#${jobId}] ${data.district} [${data.category}]: ${data.msg}`);
     else if (data.type === 'start') console.log(`📋 [collect#${jobId}] 시작 — ${data.districts}지역 × ${data.categories}카테고리 (index ${startIndex}부터)`);
   };
