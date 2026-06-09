@@ -1586,14 +1586,28 @@ app.post('/api/admin/bulk-import', authAdmin, async (req, res) => {
 
 // 백그라운드 수집 트리거 — 응답 즉시 반환, 서버에서 완주 (SSE 연결 불필요)
 app.post('/api/admin/trigger-collect', authAdmin, async (req, res) => {
-  const { sido = '전국', categories, purge = false } = req.body || {};
+  const { sido = '전국', categories, purge = false, startIndex: startIdxRaw } = req.body || {};
   const catList = categories
     ? (Array.isArray(categories) ? categories : categories.split(',').map(s => s.trim()).filter(Boolean))
     : ['우베', '버터떡', '두바이 쫀득쿠키'];
-  const jobId = await createCollectJob(sido, catList).catch(() => null);
-  res.json({ ok: true, message: `수집 시작 — ${sido} × [${catList.join(', ')}]`, catList, jobId });
+  const startIndex = Math.max(0, parseInt(startIdxRaw) || 0);
 
-  runCollectJobInBackground({ sido, catList, purge: purge === true || purge === 'true', jobId });
+  // 기존 진행 중인 작업 모두 취소 후 새 작업 시작
+  await pool.query(`UPDATE collect_jobs SET status='cancelled' WHERE status IN ('pending','running')`).catch(() => {});
+
+  const jobId = await createCollectJob(sido, catList).catch(() => null);
+  if (jobId && startIndex > 0) {
+    await pool.query(`UPDATE collect_jobs SET next_index=$1 WHERE id=$2`, [startIndex, jobId]).catch(() => {});
+  }
+  res.json({ ok: true, message: `수집 시작 — ${sido} × [${catList.join(', ')}] (index ${startIndex}부터)`, catList, jobId, startIndex });
+
+  runCollectJobInBackground({ sido, catList, purge: purge === true || purge === 'true', startIndex, jobId });
+});
+
+// 진행 중인 수집 작업 전체 취소
+app.post('/api/admin/cancel-collect', authAdmin, async (req, res) => {
+  const r = await pool.query(`UPDATE collect_jobs SET status='cancelled' WHERE status IN ('pending','running') RETURNING id`);
+  res.json({ ok: true, cancelled: r.rows.map(row => row.id) });
 });
 
 // 자동 수집 SSE 엔드포인트
@@ -1888,19 +1902,23 @@ initDB().then(() => {
   // =====================================================
   // 주간 자동수집 — 매주 월요일 06:00 KST (전국 × 전체 카테고리)
   // =====================================================
-  // 서버 시작 시 중단된 수집 작업 자동 재개
+  // 서버 시작 시 중단된 수집 작업 자동 재개 — 가장 최근 1개만, 나머지 취소
   (async () => {
     try {
       const pending = await pool.query(
         `SELECT id, sido, cat_list, next_index FROM collect_jobs WHERE status IN ('pending','running') ORDER BY id ASC`
       );
       if (pending.rows.length > 0) {
-        console.log(`\n♻️  중단된 수집 작업 ${pending.rows.length}개 재개`);
-        for (const job of pending.rows) {
-          const catList = JSON.parse(job.cat_list);
-          console.log(`  → job#${job.id} ${job.sido} × [${catList.join(',')}] index:${job.next_index}부터`);
-          runCollectJobInBackground({ sido: job.sido, catList, purge: false, startIndex: job.next_index, jobId: job.id });
+        const staleJobs = pending.rows.slice(0, -1);
+        const latestJob = pending.rows[pending.rows.length - 1];
+        if (staleJobs.length > 0) {
+          const staleIds = staleJobs.map(j => j.id);
+          await pool.query(`UPDATE collect_jobs SET status='cancelled' WHERE id = ANY($1)`, [staleIds]);
+          console.log(`\n🗑️  중복 수집 작업 자동 취소: job#${staleIds.join(',')}`);
         }
+        const catList = JSON.parse(latestJob.cat_list);
+        console.log(`\n♻️  수집 작업 재개: job#${latestJob.id} ${latestJob.sido} × [${catList.join(',')}] index:${latestJob.next_index}부터`);
+        runCollectJobInBackground({ sido: latestJob.sido, catList, purge: false, startIndex: latestJob.next_index, jobId: latestJob.id });
       }
     } catch (e) {
       console.error('재개 체크 실패:', e.message);
