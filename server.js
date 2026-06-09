@@ -1313,8 +1313,8 @@ async function runAutoCollectJob({ sido, catList, cookie, purge, startIndex = 0,
         : new Set(['PlaceSummary', 'PlaceListBusinessesItem']);
       const isDongLevel = unit.addr.trim().split(/\s+/).length >= 3;
 
-      const catSeenIds = new Set(); // 같은 cat+district 내 여러 키워드간 중복 제거
-      let catInserted = 0, catSkipped = 0;
+      const catSeenIds = new Set(); // 같은 cat+district 내 여러 키워드간 ID 중복 제거
+      let catFound = 0, catInserted = 0, catSkipped = 0;
 
       for (const keyword of keywords) {
         if (isStopped()) break;
@@ -1350,6 +1350,7 @@ async function runAutoCollectJob({ sido, catList, cookie, purge, startIndex = 0,
               return true;
             });
 
+          catFound += places.length;
           for (const p of places) { if (p.id) foundNaverIds.add(String(p.id)); }
 
           for (const p of places) {
@@ -1381,7 +1382,7 @@ async function runAutoCollectJob({ sido, catList, cookie, purge, startIndex = 0,
 
       totalInserted += catInserted;
       totalSkipped += catSkipped;
-      send({ type: 'result', district: gu, category: cat, found: catSeenIds.size, inserted: catInserted, skipped: catSkipped, unitIndex: absoluteUnitIdx });
+      send({ type: 'result', district: gu, category: cat, found: catFound, inserted: catInserted, skipped: catSkipped, unitIndex: absoluteUnitIdx });
 
       await new Promise(r => setTimeout(r, 1500 + Math.random() * 2000));
     }
