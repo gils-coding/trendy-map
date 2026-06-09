@@ -1928,6 +1928,7 @@ initDB().then(() => {
   // 주간 자동수집 — 매주 일요일 20:00 KST
   cron.schedule('0 20 * * 0', async () => {
     console.log('\n🗓️  [주간 자동수집] 시작 — 전국 × 우베/버터떡/두바이 쫀득쿠키');
+    await pool.query(`UPDATE collect_jobs SET status='cancelled' WHERE status IN ('pending','running')`).catch(() => {});
     const catList = ['우베', '버터떡', '두바이 쫀득쿠키'];
     const jobId = await createCollectJob('전국', catList).catch(() => null);
     runCollectJobInBackground({ sido: '전국', catList, purge: false, startIndex: 0, jobId });
