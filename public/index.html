@@ -1993,19 +1993,6 @@
       }
 
       loadStores();
-
-      // 페이지 로드 시 OS 네이티브 위치 권한 다이얼로그 자동 트리거
-      if (navigator.geolocation && location.protocol === 'https:') {
-        navigator.geolocation.getCurrentPosition(
-          function(pos) {
-            naverMap.setCenter(new naver.maps.LatLng(pos.coords.latitude, pos.coords.longitude));
-            naverMap.setZoom(14);
-            loadStores();
-          },
-          function() { /* 거부 시 기본 위치 그대로 사용 */ },
-          { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
-        );
-      }
     }
 
     let _selectingStore = false;
