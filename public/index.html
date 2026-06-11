@@ -2836,7 +2836,16 @@
         }, 1500);
       } else if (isIOS) {
         // iOS Safari: prefs:// 스킴은 iOS 10부터 웹페이지에서 차단됨 → 텍스트 안내로 대체
-        showLocationModal('<b>설정</b> 앱 → <b>개인 정보 보호 및 보안</b> → <b>위치 서비스</b> → <b>Safari</b> → <b>앱 사용 중 허용</b> 선택 후 돌아와서 다시 시도해주세요.');
+        showLocationModal(
+          'iPhone <b>설정</b> 앱에서 아래 순서로 허용해주세요.<br><br>' +
+          '<div style="text-align:left;line-height:2;font-size:13px;">' +
+          '① <b>개인정보 보호 및 보안</b><br>' +
+          '② <b>위치 서비스</b><br>' +
+          '③ <b>Safari 웹사이트</b><br>' +
+          '④ <b>앱을 사용하는 동안</b> 선택' +
+          '</div><br>' +
+          '설정 후 돌아와서 다시 시도해주세요.'
+        );
       } else {
         showLocationModal('브라우저 주소창 왼쪽 아이콘 → <b>위치</b> 권한 → <b>허용</b> 후 새로고침해주세요.');
       }
