@@ -1273,8 +1273,8 @@
     }
 
     .location-modal-icon {
-      font-size: 36px;
-      margin-bottom: 10px;
+      font-size: 16px;
+      margin-bottom: 6px;
     }
 
     .location-modal-title {
@@ -2869,17 +2869,20 @@
       btn.textContent = '⏳ 위치 확인 중...';
       btn.classList.add('loading');
 
-      function onSuccess(pos) {
-        naverMap.setCenter(new naver.maps.LatLng(pos.coords.latitude, pos.coords.longitude));
-        naverMap.setZoom(14);
+      function resetBtn() {
         btn.textContent = '📍 내 위치 찾기';
         btn.classList.remove('loading');
+      }
+
+      function onSuccess(pos) {
+        resetBtn();
+        naverMap.setCenter(new naver.maps.LatLng(pos.coords.latitude, pos.coords.longitude));
+        naverMap.setZoom(14);
         loadStores();
       }
 
       function onError(err) {
-        btn.textContent = '📍 내 위치 찾기';
-        btn.classList.remove('loading');
+        resetBtn();
         if (err.code === 1) {
           showLocDeniedBanner();
         } else if (err.code === 2) {
@@ -2897,18 +2900,21 @@
         });
       }
 
-      // 권한 상태를 먼저 확인 — 이미 거부된 경우 OS 다이얼로그가 뜨지 않으므로 바로 안내
       if (navigator.permissions) {
         navigator.permissions.query({ name: 'geolocation' }).then(function(result) {
           if (result.state === 'denied') {
-            btn.textContent = '📍 내 위치 찾기';
-            btn.classList.remove('loading');
+            resetBtn();
             showLocDeniedBanner();
+          } else if (result.state === 'prompt') {
+            // 아직 권한 결정 전 — OS 다이얼로그가 뜨는 동안 로딩 표시 불필요
+            // 허용 안 함을 눌러도 버튼이 원상태 유지됨
+            resetBtn();
+            doRequest();
           } else {
-            // 'prompt' → OS 네이티브 다이얼로그 트리거, 'granted' → 바로 위치 반환
+            // 'granted': 바로 위치 반환 → 로딩 유지
             doRequest();
           }
-        }).catch(function() { doRequest(); });
+        }).catch(function() { resetBtn(); doRequest(); });
       } else {
         doRequest();
       }
