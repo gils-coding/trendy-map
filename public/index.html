@@ -1304,34 +1304,6 @@
       font-family: inherit;
     }
 
-    /* ── 위치 권한 배너 ── */
-    #locationPermBanner {
-      display: none;
-      position: fixed;
-      top: 0; left: 0; right: 0;
-      z-index: 9001;
-      background: #FF9900;
-      color: #1a1a1a;
-      font-size: 13px;
-      padding: 10px 14px;
-      align-items: center;
-      gap: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,.2);
-    }
-    #locationPermBanner.show { display: flex; }
-    #locationPermBanner span { flex: 1; font-weight: 600; line-height: 1.4; }
-    #locationPermBanner .lpb-allow {
-      background: #1a1a1a; color: #fff; border: none;
-      border-radius: 6px; padding: 6px 12px; font-size: 12px;
-      font-weight: 700; cursor: pointer; font-family: inherit;
-      white-space: nowrap; flex-shrink: 0;
-    }
-    #locationPermBanner .lpb-close {
-      background: none; border: none; font-size: 18px;
-      cursor: pointer; color: #1a1a1a; padding: 0 0 0 4px;
-      line-height: 1; flex-shrink: 0;
-    }
-
     /* ── 로그인 확인 모달 ── */
     .login-confirm-modal {
       display: none;
@@ -1497,13 +1469,6 @@
 </head>
 
 <body>
-
-  <!-- 위치 권한 배너 -->
-  <div id="locationPermBanner">
-    <span>내 주변 매장을 보려면 위치 권한이 필요합니다.</span>
-    <button class="lpb-allow" onclick="retryLocationPerm()">위치 허용</button>
-    <button class="lpb-close" onclick="this.parentNode.classList.remove('show')">✕</button>
-  </div>
 
   <!-- 위치 권한 안내 모달 -->
   <div class="location-modal" id="locationModal">
@@ -2028,6 +1993,19 @@
       }
 
       loadStores();
+
+      // 페이지 로드 시 OS 네이티브 위치 권한 다이얼로그 자동 트리거
+      if (navigator.geolocation && location.protocol === 'https:') {
+        navigator.geolocation.getCurrentPosition(
+          function(pos) {
+            naverMap.setCenter(new naver.maps.LatLng(pos.coords.latitude, pos.coords.longitude));
+            naverMap.setZoom(14);
+            loadStores();
+          },
+          function() { /* 거부 시 기본 위치 그대로 사용 */ },
+          { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
+        );
+      }
     }
 
     let _selectingStore = false;
@@ -2832,22 +2810,6 @@
       return /KAKAOTALK|NAVER|Instagram|FB_IAB|FBAN|FBAV|Line\/|Twitter|Snapchat/i.test(ua);
     }
 
-    function retryLocationPerm() {
-      navigator.geolocation.getCurrentPosition(
-        function(pos) {
-          document.getElementById('locationPermBanner').classList.remove('show');
-          naverMap.setCenter(new naver.maps.LatLng(pos.coords.latitude, pos.coords.longitude));
-          naverMap.setZoom(14);
-          loadStores();
-        },
-        function() {
-          // 재시도에서도 거부 → 배너 조용히 닫기
-          document.getElementById('locationPermBanner').classList.remove('show');
-        },
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-      );
-    }
-
     function goToMyLocation() {
       if (isInAppBrowser()) {
         showLocationModal('카카오톡 내에서는 위치 기능을 사용할 수 없어요.<br><strong>크롬 브라우저</strong>로 열어서 이용해주세요.');
@@ -2880,8 +2842,7 @@
         btn.textContent = '📍 내 위치 찾기';
         btn.classList.remove('loading');
         if (err.code === 1) {
-          // 권한 거부 → 재시도 배너 표시 (OS 네이티브 프롬프트 재트리거)
-          document.getElementById('locationPermBanner').classList.add('show');
+          // 권한 영구 거부 → 지도는 기본 위치로 그대로 사용
         } else if (err.code === 2) {
           showLocationModal('위치 정보를 가져올 수 없어요.<br>GPS가 켜져 있는지 확인해주세요.');
         } else {
