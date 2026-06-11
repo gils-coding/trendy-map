@@ -1954,7 +1954,7 @@
         if (lastSearchCenter && lastSearchRadius) {
           var c = naverMap.getCenter();
           var dist = haversineClientM(c.lat(), c.lng(), lastSearchCenter.lat, lastSearchCenter.lng);
-          if (dist < lastSearchRadius * 0.4) return;
+          if (dist < lastSearchRadius * 0.25) return;
         }
         loadStores();
       }, 500);
@@ -1976,8 +1976,8 @@
       var latM = latDiff * 111320;
       var lngM = lngDiff * 111320 * Math.cos(lat * Math.PI / 180);
       var viewportRadius = Math.round(Math.sqrt(latM * latM + lngM * lngM));
-      // 최소 5km, 최대 20km
-      var radius = Math.min(Math.max(viewportRadius, 5000), 20000);
+      // 1.5배 버퍼: 뷰포트 경계 밖까지 미리 가져와 경계 누락 방지. 최소 5km, 최대 20km
+      var radius = Math.min(Math.max(Math.round(viewportRadius * 1.5), 5000), 20000);
 
       // 검색 중심·반경 저장
       lastSearchCenter = { lat, lng };
@@ -2650,6 +2650,8 @@
 
       if (markerCluster) {
         markerCluster.setMarkers(markers);
+        // MarkerClustering은 idle 이벤트 기반으로 렌더링 — setMarkers 후 즉시 반영되도록 강제 트리거
+        naver.maps.Event.trigger(naverMap, 'idle');
       } else {
         // 클러스터 미지원 환경: 직접 지도에 표시
         markers.forEach(m => { if (!m.getMap()) m.setMap(naverMap); });
