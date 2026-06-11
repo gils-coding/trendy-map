@@ -1304,6 +1304,34 @@
       font-family: inherit;
     }
 
+    /* ── 위치 권한 배너 ── */
+    #locationPermBanner {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 9001;
+      background: #FF9900;
+      color: #1a1a1a;
+      font-size: 13px;
+      padding: 10px 14px;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.2);
+    }
+    #locationPermBanner.show { display: flex; }
+    #locationPermBanner span { flex: 1; font-weight: 600; line-height: 1.4; }
+    #locationPermBanner .lpb-allow {
+      background: #1a1a1a; color: #fff; border: none;
+      border-radius: 6px; padding: 6px 12px; font-size: 12px;
+      font-weight: 700; cursor: pointer; font-family: inherit;
+      white-space: nowrap; flex-shrink: 0;
+    }
+    #locationPermBanner .lpb-close {
+      background: none; border: none; font-size: 18px;
+      cursor: pointer; color: #1a1a1a; padding: 0 0 0 4px;
+      line-height: 1; flex-shrink: 0;
+    }
+
     /* ── 로그인 확인 모달 ── */
     .login-confirm-modal {
       display: none;
@@ -1469,6 +1497,13 @@
 </head>
 
 <body>
+
+  <!-- 위치 권한 배너 -->
+  <div id="locationPermBanner">
+    <span>내 주변 매장을 보려면 위치 권한이 필요합니다.</span>
+    <button class="lpb-allow" onclick="retryLocationPerm()">위치 허용</button>
+    <button class="lpb-close" onclick="this.parentNode.classList.remove('show')">✕</button>
+  </div>
 
   <!-- 위치 권한 안내 모달 -->
   <div class="location-modal" id="locationModal">
@@ -2797,49 +2832,20 @@
       return /KAKAOTALK|NAVER|Instagram|FB_IAB|FBAN|FBAV|Line\/|Twitter|Snapchat/i.test(ua);
     }
 
-    function getPermissionGuide() {
-      var ua = navigator.userAgent || '';
-      // iPad OS 13+는 UA에 iPad가 없고 Mac처럼 보임 → maxTouchPoints로 감지
-      var isIOS = /iPhone|iPad/i.test(ua) ||
-        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-      var isSafari = /Safari/i.test(ua) && !/Chrome/i.test(ua) && !/CriOS/i.test(ua);
-      var isAndroid = /Android/i.test(ua);
-      var isChrome = /Chrome/i.test(ua) || /CriOS/i.test(ua);
-      var isMobileChrome = isChrome && (/Mobile/i.test(ua) || /CriOS/i.test(ua));
-
-      if (isIOS && isSafari) {
-        return '아이폰/아이패드 위치 허용 방법:<br><br>' +
-          '<strong>방법 1</strong><br>' +
-          '설정 → <strong>개인 정보 보호 및 보안</strong><br>' +
-          '→ <strong>위치 서비스</strong> → <strong>Safari 웹사이트</strong><br>' +
-          '→ <strong>한 번 허용</strong> 또는 <strong>앱을 사용하는 동안 허용</strong><br><br>' +
-          '<strong>방법 2</strong><br>' +
-          '설정 → <strong>Safari</strong> → <strong>위치</strong><br>' +
-          '→ <strong>한 번 허용</strong> 또는 <strong>앱을 사용하는 동안 허용</strong><br><br>' +
-          '설정 후 버튼을 다시 눌러주세요.';
-      } else if (isIOS && isChrome) {
-        // 아이폰 크롬
-        return '아이폰 Chrome 위치 허용 방법:<br><br>' +
-          '설정 앱 → Chrome →<br>' +
-          '<strong>위치</strong> → <strong>앱 사용 중 허용</strong>';
-      } else if (isAndroid && isMobileChrome) {
-        // 갤럭시/안드로이드 크롬
-        return '안드로이드 Chrome 위치 허용 방법:<br><br>' +
-          '주소창 왼쪽 <strong>🔒</strong> 탭<br>' +
-          '→ <strong>권한</strong> → <strong>위치</strong> → <strong>허용</strong><br><br>' +
-          '또는 설정 → Chrome 앱 →<br>' +
-          '<strong>위치</strong> → <strong>허용</strong>';
-      } else if (isAndroid) {
-        // 안드로이드 기타 브라우저
-        return '위치 허용 방법:<br><br>' +
-          '주소창 왼쪽 아이콘 탭<br>' +
-          '→ <strong>위치</strong> → <strong>허용</strong><br><br>' +
-          '또는 휴대폰 설정 → 앱 → 브라우저<br>' +
-          '→ <strong>위치 권한 허용</strong>';
-      } else {
-        return '브라우저 주소창 왼쪽 아이콘을 탭하여<br>' +
-          '<strong>위치 권한을 허용</strong>으로 변경해주세요.';
-      }
+    function retryLocationPerm() {
+      navigator.geolocation.getCurrentPosition(
+        function(pos) {
+          document.getElementById('locationPermBanner').classList.remove('show');
+          naverMap.setCenter(new naver.maps.LatLng(pos.coords.latitude, pos.coords.longitude));
+          naverMap.setZoom(14);
+          loadStores();
+        },
+        function() {
+          // 재시도에서도 거부 → 배너 조용히 닫기
+          document.getElementById('locationPermBanner').classList.remove('show');
+        },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+      );
     }
 
     function goToMyLocation() {
@@ -2874,8 +2880,8 @@
         btn.textContent = '📍 내 위치 찾기';
         btn.classList.remove('loading');
         if (err.code === 1) {
-          // 권한 거부 → 브라우저/OS별 안내
-          showLocationModal(getPermissionGuide(), true);
+          // 권한 거부 → 재시도 배너 표시 (OS 네이티브 프롬프트 재트리거)
+          document.getElementById('locationPermBanner').classList.add('show');
         } else if (err.code === 2) {
           showLocationModal('위치 정보를 가져올 수 없어요.<br>GPS가 켜져 있는지 확인해주세요.');
         } else {
