@@ -2815,8 +2815,6 @@
       btn.textContent = '⏳ 위치 확인 중...';
       btn.classList.add('loading');
 
-      // 먼저 빠른 응답(낮은 정확도)으로 시도 → 성공 시 지도 이동
-      // 그 다음 고정밀 위치로 재시도하여 정확도 개선
       function onSuccess(pos) {
         naverMap.setCenter(new naver.maps.LatLng(pos.coords.latitude, pos.coords.longitude));
         naverMap.setZoom(14);
@@ -2829,7 +2827,7 @@
         btn.textContent = '📍 내 위치 찾기';
         btn.classList.remove('loading');
         if (err.code === 1) {
-          // 권한 영구 거부 → 지도는 기본 위치로 그대로 사용
+          showToast('위치 권한이 거부되어 있어요');
         } else if (err.code === 2) {
           showLocationModal('위치 정보를 가져올 수 없어요.<br>GPS가 켜져 있는지 확인해주세요.');
         } else {
@@ -2837,12 +2835,29 @@
         }
       }
 
-      // 고정밀 위치 1회 요청
-      navigator.geolocation.getCurrentPosition(onSuccess, onError, {
-        enableHighAccuracy: true,
-        timeout: 15000,
-        maximumAge: 0
-      });
+      function doRequest() {
+        navigator.geolocation.getCurrentPosition(onSuccess, onError, {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 0
+        });
+      }
+
+      // 권한 상태를 먼저 확인 — 이미 거부된 경우 OS 다이얼로그가 뜨지 않으므로 바로 안내
+      if (navigator.permissions) {
+        navigator.permissions.query({ name: 'geolocation' }).then(function(result) {
+          if (result.state === 'denied') {
+            btn.textContent = '📍 내 위치 찾기';
+            btn.classList.remove('loading');
+            showToast('위치 권한이 거부되어 있어요');
+          } else {
+            // 'prompt' → OS 네이티브 다이얼로그 트리거, 'granted' → 바로 위치 반환
+            doRequest();
+          }
+        }).catch(function() { doRequest(); });
+      } else {
+        doRequest();
+      }
     }
 
     function toggleBottomSheet() { toggleSheet(); }
