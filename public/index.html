@@ -2818,6 +2818,19 @@
       document.getElementById('locDeniedBanner').classList.remove('show');
       sessionStorage.setItem('loc_denied_dismissed', '1');
     }
+
+    // 설정 앱에서 권한 허용 후 탭 복귀 시 배너 자동 제거
+    document.addEventListener('visibilitychange', function() {
+      if (document.visibilityState !== 'visible') return;
+      var banner = document.getElementById('locDeniedBanner');
+      if (!banner || !banner.classList.contains('show')) return;
+      if (!navigator.permissions) return;
+      navigator.permissions.query({ name: 'geolocation' }).then(function(result) {
+        if (result.state === 'granted') {
+          banner.classList.remove('show');
+        }
+      });
+    });
     function openLocationSettings() {
       var ua = navigator.userAgent || '';
       var isAndroid = /Android/i.test(ua);
