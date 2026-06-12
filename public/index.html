@@ -2885,6 +2885,7 @@
       function onError(err) {
         resetBtn();
         if (err.code === 1) {
+          sessionStorage.removeItem('loc_denied_dismissed');
           showLocDeniedBanner();
         } else if (err.code === 2) {
           showLocationModal('위치 정보를 가져올 수 없어요.<br>GPS가 켜져 있는지 확인해주세요.');
@@ -2905,6 +2906,7 @@
         navigator.permissions.query({ name: 'geolocation' }).then(function(result) {
           if (result.state === 'denied') {
             resetBtn();
+            sessionStorage.removeItem('loc_denied_dismissed');
             showLocDeniedBanner();
           } else if (result.state === 'prompt') {
             // 아직 권한 결정 전 — OS 다이얼로그가 뜨는 동안 로딩 표시 불필요
