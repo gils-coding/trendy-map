@@ -1694,8 +1694,9 @@ app.post('/api/admin/insert-brand', async (req, res) => {
   if (!authorized) return res.status(401).json({ error: 'unauthorized' });
   if (!brand || !tag) return res.status(400).json({ error: 'brand, tag 필수' });
 
-  let inserted = 0, skipped = 0;
+  let inserted = 0, skipped = 0, errors = 0;
   const seenIds = new Set();
+  let firstError = null;
 
   for (const area of BRAND_SEARCH_AREAS) {
     for (let page = 1; page <= 3; page++) {
@@ -1725,13 +1726,15 @@ app.post('/api/admin/insert-brand', async (req, res) => {
         if (result.data.meta?.is_end) break;
         await new Promise(r => setTimeout(r, 300));
       } catch (e) {
+        errors++;
+        if (!firstError) firstError = e.response ? `HTTP ${e.response.status}: ${JSON.stringify(e.response.data)}` : e.message;
         console.error(`[insert-brand] ${brand} area(${area.lat},${area.lng}) page${page}: ${e.message}`);
       }
     }
   }
 
-  console.log(`[insert-brand] ${brand} → tag:${tag} inserted:${inserted} skipped:${skipped}`);
-  res.json({ ok: true, brand, tag, inserted, skipped });
+  console.log(`[insert-brand] ${brand} → tag:${tag} inserted:${inserted} skipped:${skipped} errors:${errors}`);
+  res.json({ ok: true, brand, tag, inserted, skipped, errors, firstError });
 });
 
 // 진행 중인 수집 작업 전체 취소
