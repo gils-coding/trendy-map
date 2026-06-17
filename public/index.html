@@ -1891,22 +1891,12 @@
       return FRANCHISE_KEYWORDS.some(kw => name.includes(kw.toLowerCase()));
     }
 
-    function updateMarkerVisibility() {
-      markers.forEach(function(m) {
-        if (excludeFranchise && m._isFranchise) {
-          m.setMap(null);
-        } else {
-          m.setMap(naverMap);
-        }
-      });
-    }
-
     function onFranchiseFilterChange() {
       const cb = document.getElementById('franchiseFilterCheck');
       const cbM = document.getElementById('franchiseFilterCheckMobile');
       excludeFranchise = cb.checked;
       if (cbM) cbM.checked = excludeFranchise;
-      updateMarkerVisibility();
+      applyMarkerVisibility();
       if (window._stores) renderStoreList(window._stores);
     }
 
@@ -1915,7 +1905,7 @@
       const cbM = document.getElementById('franchiseFilterCheckMobile');
       excludeFranchise = cbM.checked;
       if (cb) cb.checked = excludeFranchise;
-      updateMarkerVisibility();
+      applyMarkerVisibility();
       if (window._stores) renderStoreList(window._stores);
     }
 
@@ -2747,17 +2737,24 @@
           // 클러스터 사용 시 map을 직접 지정하지 않음
         });
         marker._storeKey = key;
+        marker._isFranchise = isFranchise(store);
         markers.push(marker);
         existKeys.add(key);
       });
 
+      applyMarkerVisibility();
+    }
+
+    function applyMarkerVisibility() {
+      const visibleMarkers = excludeFranchise ? markers.filter(m => !m._isFranchise) : markers;
       if (markerCluster) {
-        markerCluster.setMarkers(markers);
-        // MarkerClustering은 idle 이벤트 기반으로 렌더링 — setMarkers 후 즉시 반영되도록 강제 트리거
+        markerCluster.setMarkers(visibleMarkers);
         naver.maps.Event.trigger(naverMap, 'idle');
       } else {
-        // 클러스터 미지원 환경: 직접 지도에 표시
-        markers.forEach(m => { if (!m.getMap()) m.setMap(naverMap); });
+        markers.forEach(m => {
+          const shouldShow = !excludeFranchise || !m._isFranchise;
+          m.setMap(shouldShow ? naverMap : null);
+        });
       }
     }
 
