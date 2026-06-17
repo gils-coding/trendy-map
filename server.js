@@ -513,9 +513,15 @@ function parseNaverOpenCoords(mapy, mapx) {
 // PostgreSQL 커스텀 DB 검색
 // =====================================================
 async function searchCustomDB(query, lat, lng, radius) {
+  // 태그가 검색어의 일부이거나, 검색어가 태그의 일부인 경우 모두 매칭
+  // 예: query="우베 디저트", tag="우베" → "우베 디저트" LIKE '%우베%' → 매칭
   const result = await pool.query(
-    `SELECT * FROM custom_stores WHERE ',' || query_tags || ',' LIKE $1`,
-    [`%,${query},%`]
+    `SELECT * FROM custom_stores
+     WHERE EXISTS (
+       SELECT 1 FROM unnest(string_to_array(query_tags, ',')) AS tag
+       WHERE trim(tag) != '' AND $1 LIKE '%' || trim(tag) || '%'
+     )`,
+    [query]
   );
   // 반경 내 매장만 표시, 가까운 순 정렬
   return result.rows
