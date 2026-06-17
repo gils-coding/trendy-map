@@ -245,7 +245,6 @@ if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
   }));
 }
 
-const KAKAO_REST_KEY = process.env.KAKAO_REST_KEY || '';
 if (KAKAO_REST_KEY) {
   passport.use(new KakaoStrategy({
     clientID: KAKAO_REST_KEY,
