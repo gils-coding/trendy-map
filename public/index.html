@@ -1891,11 +1891,22 @@
       return FRANCHISE_KEYWORDS.some(kw => name.includes(kw.toLowerCase()));
     }
 
+    function updateMarkerVisibility() {
+      markers.forEach(function(m) {
+        if (excludeFranchise && m._isFranchise) {
+          m.setMap(null);
+        } else {
+          m.setMap(naverMap);
+        }
+      });
+    }
+
     function onFranchiseFilterChange() {
       const cb = document.getElementById('franchiseFilterCheck');
       const cbM = document.getElementById('franchiseFilterCheckMobile');
       excludeFranchise = cb.checked;
       if (cbM) cbM.checked = excludeFranchise;
+      updateMarkerVisibility();
       if (window._stores) renderStoreList(window._stores);
     }
 
@@ -1904,6 +1915,7 @@
       const cbM = document.getElementById('franchiseFilterCheckMobile');
       excludeFranchise = cbM.checked;
       if (cb) cb.checked = excludeFranchise;
+      updateMarkerVisibility();
       if (window._stores) renderStoreList(window._stores);
     }
 
@@ -2779,6 +2791,7 @@
           },
         });
         marker._storeKey = store.name + '|' + store.addr;
+        marker._isFranchise = isFranchise(store);
         markers.push(marker);
       });
     }
