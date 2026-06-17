@@ -1028,7 +1028,7 @@ const CATEGORY_KEYWORDS = {
   '두바이 쫀득쿠키': ['두바이 쫀득쿠키'],
   '소금빵': ['소금빵'],
   '탕후루': ['탕후루'],
-  '우베': ['우베', '우베 빵', '우베 버터떡', '우베 라떼', '우베 케이크', '우베 도넛', '우베 아이스크림', '투썸플레이스 우베', '이디야 우베'],
+  '우베': ['우베', '우베 빵', '우베 버터떡', '우베 라떼', '우베 케이크', '우베 도넛', '우베 아이스크림'],
 };
 
 // 버터떡·우베는 PlaceSummary(/place/list), 두바이·소금빵·탕후루는 RestaurantListSummary(/restaurant/list)
@@ -1653,6 +1653,85 @@ app.post('/api/cron/collect', async (req, res) => {
   const jobId = await createCollectJob(sido, catList).catch(() => null);
   res.json({ ok: true, jobId, sido, catList });
   runCollectJobInBackground({ sido, catList, purge: false, startIndex: 0, jobId });
+});
+
+// 브랜드 체인 전국 삽입 (투썸플레이스, 이디야 등을 특정 태그로 DB에 추가)
+const BRAND_SEARCH_AREAS = [
+  // 서울
+  { lat: 37.5636, lng: 126.9817 }, { lat: 37.5172, lng: 127.0473 }, { lat: 37.6035, lng: 126.9291 },
+  // 경기
+  { lat: 37.2636, lng: 127.0286 }, { lat: 37.3640, lng: 127.1092 }, { lat: 37.6596, lng: 126.8320 },
+  { lat: 37.3233, lng: 127.0980 }, { lat: 37.5034, lng: 126.7660 }, { lat: 37.3942, lng: 126.9568 },
+  { lat: 37.3236, lng: 126.8310 }, { lat: 37.2077, lng: 127.0739 }, { lat: 36.9944, lng: 127.0870 },
+  { lat: 37.4038, lng: 127.1171 }, { lat: 37.7400, lng: 126.8693 }, { lat: 37.6541, lng: 127.0764 },
+  // 인천
+  { lat: 37.4563, lng: 126.7052 }, { lat: 37.3945, lng: 126.6428 },
+  // 충청
+  { lat: 36.3504, lng: 127.3845 }, { lat: 36.6424, lng: 127.4890 }, { lat: 36.8065, lng: 127.1519 },
+  { lat: 36.4801, lng: 127.2890 },
+  // 전라
+  { lat: 35.1595, lng: 126.8526 }, { lat: 35.8219, lng: 127.1489 }, { lat: 34.9506, lng: 127.4875 },
+  { lat: 35.1550, lng: 126.9057 },
+  // 경상
+  { lat: 35.8714, lng: 128.6014 }, { lat: 35.8688, lng: 128.6066 }, { lat: 35.2280, lng: 128.6811 },
+  { lat: 36.0190, lng: 129.3435 }, { lat: 35.1800, lng: 128.1076 }, { lat: 36.1194, lng: 128.3445 },
+  { lat: 36.5684, lng: 128.7294 }, { lat: 35.5384, lng: 129.3114 }, { lat: 35.3318, lng: 129.0153 },
+  // 부산
+  { lat: 35.1028, lng: 129.0327 }, { lat: 35.1629, lng: 129.1636 }, { lat: 35.1944, lng: 129.0132 },
+  // 강원
+  { lat: 37.8747, lng: 127.7342 }, { lat: 37.3422, lng: 127.9202 }, { lat: 37.7519, lng: 128.8759 },
+  // 제주
+  { lat: 33.4996, lng: 126.5312 }, { lat: 33.2541, lng: 126.5600 },
+];
+
+app.post('/api/admin/insert-brand', async (req, res) => {
+  const CRON_SECRET = process.env.CRON_SECRET;
+  const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+  const { brand, tag, pw } = req.body || {};
+  const authorized =
+    (ADMIN_PASSWORD && pw === ADMIN_PASSWORD) ||
+    (CRON_SECRET && req.headers['x-cron-secret'] === CRON_SECRET);
+  if (!authorized) return res.status(401).json({ error: 'unauthorized' });
+  if (!brand || !tag) return res.status(400).json({ error: 'brand, tag 필수' });
+
+  let inserted = 0, skipped = 0;
+  const seenIds = new Set();
+
+  for (const area of BRAND_SEARCH_AREAS) {
+    for (let page = 1; page <= 3; page++) {
+      try {
+        const result = await axios.get('https://dapi.kakao.com/v2/local/search/keyword.json', {
+          params: { query: brand, x: area.lng, y: area.lat, radius: 20000, page, size: 15 },
+          headers: { Authorization: `KakaoAK ${KAKAO_REST_KEY}` },
+        });
+        const docs = result.data.documents || [];
+        for (const p of docs) {
+          if (seenIds.has(p.id)) continue;
+          seenIds.add(p.id);
+          const lat = parseFloat(p.y);
+          const lng = parseFloat(p.x);
+          const addr = p.road_address_name || p.address_name;
+          const dup = await pool.query(
+            `SELECT id FROM custom_stores WHERE name=$1 AND (addr=$2 OR (lat BETWEEN $3-0.0005 AND $3+0.0005 AND lng BETWEEN $4-0.0005 AND $4+0.0005))`,
+            [p.place_name, addr, lat, lng]
+          );
+          if (dup.rows.length > 0) { skipped++; continue; }
+          await pool.query(
+            `INSERT INTO custom_stores (name,addr,phone,category,lat,lng,kakao_url,naver_url,query_tags) VALUES ($1,$2,$3,$4,$5,$6,$7,NULL,$8)`,
+            [p.place_name, addr, p.phone || null, p.category_name || null, lat, lng, p.place_url || null, tag]
+          );
+          inserted++;
+        }
+        if (result.data.meta?.is_end) break;
+        await new Promise(r => setTimeout(r, 300));
+      } catch (e) {
+        console.error(`[insert-brand] ${brand} area(${area.lat},${area.lng}) page${page}: ${e.message}`);
+      }
+    }
+  }
+
+  console.log(`[insert-brand] ${brand} → tag:${tag} inserted:${inserted} skipped:${skipped}`);
+  res.json({ ok: true, brand, tag, inserted, skipped });
 });
 
 // 진행 중인 수집 작업 전체 취소
