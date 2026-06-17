@@ -2794,7 +2794,6 @@
       if (store.lat && store.lng) {
         _selectingStore = true;
         smoothPanTo(store.lat, store.lng, function () {
-          if (naverMap.getZoom() < 15) naverMap.setZoom(15);
           setTimeout(function () { _selectingStore = false; }, 600);
         });
       }
