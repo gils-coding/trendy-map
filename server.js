@@ -1632,6 +1632,23 @@ app.post('/api/admin/trigger-collect', authAdmin, async (req, res) => {
   runCollectJobInBackground({ sido, catList, purge: purge === true || purge === 'true', startIndex, jobId });
 });
 
+// 크론 전용 수집 트리거 — CRON_SECRET으로 인증 (어드민 비밀번호 불필요)
+app.post('/api/cron/collect', async (req, res) => {
+  const CRON_SECRET = process.env.CRON_SECRET;
+  if (!CRON_SECRET || req.headers['x-cron-secret'] !== CRON_SECRET) {
+    return res.status(401).json({ error: 'unauthorized' });
+  }
+  const { sido = '전국', categories } = req.body || {};
+  const catList = categories
+    ? (Array.isArray(categories) ? categories : categories.split(',').map(s => s.trim()).filter(Boolean))
+    : ['우베', '버터떡', '두바이 쫀득쿠키', '소금빵', '탕후루'];
+
+  await pool.query(`UPDATE collect_jobs SET status='cancelled' WHERE status IN ('pending','running')`).catch(() => {});
+  const jobId = await createCollectJob(sido, catList).catch(() => null);
+  res.json({ ok: true, jobId, sido, catList });
+  runCollectJobInBackground({ sido, catList, purge: false, startIndex: 0, jobId });
+});
+
 // 진행 중인 수집 작업 전체 취소
 app.post('/api/admin/cancel-collect', authAdmin, async (req, res) => {
   const r = await pool.query(`UPDATE collect_jobs SET status='cancelled' WHERE status IN ('pending','running') RETURNING id`);
