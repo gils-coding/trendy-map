@@ -1978,7 +1978,7 @@
         },
       });
       naver.maps.Event.addListener(naverMap, 'dragend', () => scheduleSearch());
-      // zoom_changed 시 재검색 안 함 → 확대해도 기존 마커 유지
+      naver.maps.Event.addListener(naverMap, 'zoom_changed', () => scheduleSearch());
 
       // 클러스터 초기화
       if (typeof MarkerClustering !== 'undefined') {
@@ -2015,11 +2015,19 @@
       if (_selectingStore) return;
       clearTimeout(searchTimer);
       searchTimer = setTimeout(() => {
-        // 마지막 검색 중심에서 반경의 40% 미만으로 이동했으면 재검색 안 함
         if (lastSearchCenter && lastSearchRadius) {
           var c = naverMap.getCenter();
           var dist = haversineClientM(c.lat(), c.lng(), lastSearchCenter.lat, lastSearchCenter.lng);
-          if (dist < lastSearchRadius * 0.25) return;
+          // 현재 뷰포트 반경 계산
+          var bounds = naverMap.getBounds();
+          var ne = bounds.getNE(); var sw = bounds.getSW();
+          var latDiff = Math.abs(ne.lat() - sw.lat()) / 2;
+          var lngDiff = Math.abs(ne.lng() - sw.lng()) / 2;
+          var latM = latDiff * 111320;
+          var lngM = lngDiff * 111320 * Math.cos(c.lat() * Math.PI / 180);
+          var viewportRadius = Math.sqrt(latM * latM + lngM * lngM);
+          // 이동도 적고 뷰포트도 기존 검색 범위 안이면 재검색 안 함
+          if (dist < lastSearchRadius * 0.25 && viewportRadius * 1.5 <= lastSearchRadius) return;
         }
         loadStores();
       }, 500);
