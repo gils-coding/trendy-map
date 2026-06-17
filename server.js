@@ -608,24 +608,12 @@ app.get('/api/stores', async (req, res) => {
   }
 
   try {
-    console.log(`🔍 네이버 검색어: "${query}" (searchCoord: ${x};${y})`);
+    const customRaw = await searchCustomDB(query, y, x, rad);
 
-    const [naverAll, customRaw] = await Promise.all([
-      searchNaver(query, y, x, rad),
-      searchCustomDB(query, y, x, rad),
-    ]);
-    const naverRaw = naverAll.filter(s => !isNonFoodStore(s));
-
-    console.log(`✅ [${query}] 네이버 ${naverAll.length}개 → 필터 후 ${naverRaw.length}개 + DB ${customRaw.length}`);
-
-    const naverStores = naverRaw.map((s, i) => ({ ...s, id: i + 1 }));
-
-    const customUnique = customRaw.filter(s => !isDuplicate(s, naverStores));
-    const customStores = customUnique.map((s, i) => ({ ...s, id: naverStores.length + i + 1 }));
-
-    const stores = [...naverStores, ...customStores]
+    const stores = customRaw
+      .map((s, i) => ({ ...s, id: i + 1 }))
       .sort((a, b) => haversineM(y, x, a.lat, a.lng) - haversineM(y, x, b.lat, b.lng));
-    console.log(`📦 최종 ${stores.length}개 (네이버 ${naverStores.length} + DB ${customStores.length})`);
+    console.log(`📦 [${query}] DB ${stores.length}개`);
 
     // rec_count 일괄 조회
     const identifiers = stores.map(s => normalizeStoreId(s.name, s.addr));
