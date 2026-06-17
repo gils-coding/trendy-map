@@ -23,6 +23,21 @@ const KakaoStrategy = require('passport-kakao').Strategy;
 
 const app = express();
 app.set('trust proxy', 1);
+
+// 검색 결과 캐시 (5분 TTL)
+const searchCache = new Map();
+const CACHE_TTL = 5 * 60 * 1000;
+function getCacheKey(query, lat, lng, radius) {
+  const rLat = Math.round(parseFloat(lat) * 100) / 100;
+  const rLng = Math.round(parseFloat(lng) * 100) / 100;
+  return `${query}|${rLat}|${rLng}|${radius}`;
+}
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, val] of searchCache) {
+    if (now - val.ts > CACHE_TTL) searchCache.delete(key);
+  }
+}, 60 * 1000);
 const corsOrigins = Array.from(new Set([
   process.env.BASE_URL || 'http://localhost:8080',
   'http://localhost:8080',
@@ -586,8 +601,13 @@ app.get('/api/stores', async (req, res) => {
   const y = parseFloat(lat) || 37.5665;
   const rad = parseInt(radius);
 
+  const cacheKey = getCacheKey(query, y, x, rad);
+  const cached = searchCache.get(cacheKey);
+  if (cached && Date.now() - cached.ts < CACHE_TTL) {
+    return res.json(cached.data);
+  }
+
   try {
-    // 지역 접두어 없이 순수 쿼리 + searchCoord/boundary로 로컬라이즈 (네이버 지도 프론트와 동일)
     console.log(`🔍 네이버 검색어: "${query}" (searchCoord: ${x};${y})`);
 
     const [naverAll, customRaw] = await Promise.all([
@@ -623,7 +643,9 @@ app.get('/api/stores', async (req, res) => {
       stores.forEach(s => { s.rec_count = 0; });
     }
 
-    res.json({ total: stores.length, stores });
+    const result = { total: stores.length, stores };
+    searchCache.set(cacheKey, { data: result, ts: Date.now() });
+    res.json(result);
   } catch (error) {
     console.error('오류:', error.response?.data || error.message);
     res.status(500).json({ error: '검색 중 오류가 발생했습니다.' });
