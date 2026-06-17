@@ -2049,8 +2049,8 @@
       var latM = latDiff * 111320;
       var lngM = lngDiff * 111320 * Math.cos(lat * Math.PI / 180);
       var viewportRadius = Math.round(Math.sqrt(latM * latM + lngM * lngM));
-      // 1.5배 버퍼: 뷰포트 경계 밖까지 미리 가져와 경계 누락 방지. 최소 5km, 최대 20km
-      var radius = Math.min(Math.max(Math.round(viewportRadius * 1.5), 5000), 20000);
+      // 1.5배 버퍼: 뷰포트 경계 밖까지 미리 가져와 경계 누락 방지. 최소 5km, 최대 500km (DB 전용)
+      var radius = Math.min(Math.max(Math.round(viewportRadius * 1.5), 5000), 500000);
 
       // 검색 중심·반경 저장
       lastSearchCenter = { lat, lng };
