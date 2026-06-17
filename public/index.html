@@ -1657,6 +1657,7 @@
     <div class="map-area">
       <div id="map"></div>
       <button class="locate-btn" id="locateBtn">📍 내 위치 찾기</button>
+      <button id="reSearchBtn" onclick="reSearchHere()" style="display:none;position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:200;background:#fff;border:1.5px solid #ff6b35;color:#ff6b35;font-size:13px;font-weight:700;font-family:inherit;padding:7px 18px;border-radius:20px;box-shadow:0 2px 10px rgba(0,0,0,0.18);cursor:pointer;white-space:nowrap;">🔍 이 지역 재검색</button>
       <div class="map-loading" id="mapLoading">
         <div class="mini-spinner"></div>
         <span>이 지역 매장 검색 중...</span>
@@ -2015,14 +2016,22 @@
       if (_selectingStore) return;
       clearTimeout(searchTimer);
       searchTimer = setTimeout(() => {
-        // 마지막 검색 중심에서 반경의 40% 미만으로 이동했으면 재검색 안 함
-        if (lastSearchCenter && lastSearchRadius) {
-          var c = naverMap.getCenter();
-          var dist = haversineClientM(c.lat(), c.lng(), lastSearchCenter.lat, lastSearchCenter.lng);
-          if (dist < lastSearchRadius * 0.25) return;
+        if (!lastSearchCenter || !lastSearchRadius) {
+          loadStores();
+          return;
         }
-        loadStores();
-      }, 500);
+        var c = naverMap.getCenter();
+        var dist = haversineClientM(c.lat(), c.lng(), lastSearchCenter.lat, lastSearchCenter.lng);
+        // 검색 반경의 50% 이상 이동했을 때만 버튼 표시
+        if (dist >= lastSearchRadius * 0.5) {
+          document.getElementById('reSearchBtn').style.display = 'block';
+        }
+      }, 300);
+    }
+
+    function reSearchHere() {
+      document.getElementById('reSearchBtn').style.display = 'none';
+      loadStores();
     }
 
     async function loadStores() {
@@ -2048,6 +2057,7 @@
       lastSearchCenter = { lat, lng };
       lastSearchRadius = radius;
 
+      document.getElementById('reSearchBtn').style.display = 'none';
       showMapLoading(true);
       closeDetail();
       document.getElementById('storeList').innerHTML = '<div class="loading"><div class="spinner"></div>매장 검색 중...</div>';
