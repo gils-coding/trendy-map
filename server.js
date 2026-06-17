@@ -19,6 +19,7 @@ const { Pool } = require('pg');
 const session = require('express-session');
 const passport = require('passport');
 const { Strategy: GoogleStrategy } = require('passport-google-oauth20');
+const KakaoStrategy = require('passport-kakao').Strategy;
 
 const app = express();
 app.set('trust proxy', 1);
@@ -239,9 +240,27 @@ if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
       name: profile.displayName,
       email: profile.emails?.[0]?.value || null,
       picture: profile.photos?.[0]?.value || null,
+      provider: 'google',
     });
   }));
 }
+
+const KAKAO_REST_KEY = process.env.KAKAO_REST_KEY || '';
+if (KAKAO_REST_KEY) {
+  passport.use(new KakaoStrategy({
+    clientID: KAKAO_REST_KEY,
+    callbackURL: `${BASE_URL}/auth/kakao/callback`,
+  }, (accessToken, refreshToken, profile, done) => {
+    done(null, {
+      id: `kakao_${profile.id}`,
+      name: profile.displayName || profile.username || '카카오 사용자',
+      email: profile._json?.kakao_account?.email || null,
+      picture: profile._json?.properties?.profile_image || null,
+      provider: 'kakao',
+    });
+  }));
+}
+
 passport.serializeUser((user, done) => done(null, user));
 passport.deserializeUser((user, done) => done(null, user));
 
@@ -1670,12 +1689,21 @@ app.get('/api/admin/geocode', authAdmin, async (req, res) => {
 });
 
 // =====================================================
-// 인증 라우트 (Google OAuth)
+// 인증 라우트 (Google / Kakao OAuth)
 // =====================================================
 app.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
 
 app.get('/auth/google/callback',
   passport.authenticate('google', { failureRedirect: '/?login=failed' }),
+  (req, res) => {
+    res.send('<script>if(window.opener){window.opener.postMessage("login-success","*");}window.close();</script>');
+  }
+);
+
+app.get('/auth/kakao', passport.authenticate('kakao'));
+
+app.get('/auth/kakao/callback',
+  passport.authenticate('kakao', { failureRedirect: '/?login=failed' }),
   (req, res) => {
     res.send('<script>if(window.opener){window.opener.postMessage("login-success","*");}window.close();</script>');
   }

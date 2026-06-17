@@ -1351,6 +1351,10 @@
       background: var(--accent);
       color: #fff;
     }
+    .login-confirm-kakao {
+      background: #FEE500;
+      color: #191919;
+    }
     .login-confirm-cancel {
       background: var(--surface);
       color: var(--muted);
@@ -1488,7 +1492,8 @@
   <div class="login-confirm-modal" id="loginConfirmModal" onclick="if(event.target===this)hideLoginModal()">
     <div class="login-confirm-box">
       <div class="login-confirm-title">로그인이 필요합니다.<br>로그인 하시겠습니까?</div>
-      <div class="login-confirm-btns">
+      <div class="login-confirm-btns" style="flex-direction:column;">
+        <button class="login-confirm-kakao" onclick="doKakaoLogin()">카카오 로그인</button>
         <button class="login-confirm-google" onclick="doGoogleLogin()">구글 로그인</button>
         <button class="login-confirm-cancel" onclick="hideLoginModal()">아니오</button>
       </div>
@@ -2248,6 +2253,24 @@
     function hideLoginModal() {
       document.getElementById('loginConfirmModal').classList.remove('show');
       _pendingAction = null;
+    }
+
+    function doKakaoLogin() {
+      var action = _pendingAction;
+      hideLoginModal();
+      var popup = window.open('/auth/kakao', 'kakao-login', 'width=500,height=700,scrollbars=yes');
+      var timer = setInterval(function() {
+        if (popup && popup.closed) {
+          clearInterval(timer);
+          fetch('/auth/me').then(function(r){ return r.json(); }).then(function(d) {
+            window.currentUser = d;
+            if (d.loggedIn && action) {
+              if (action.mode === 'save') showSaveModal(action.btn);
+              else doRecommend(action.btn);
+            }
+          });
+        }
+      }, 500);
     }
 
     function doGoogleLogin() {
